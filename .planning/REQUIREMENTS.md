@@ -86,38 +86,38 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Pending | Pending |
-| NAV-02 | Pending | Pending |
-| NAV-03 | Pending | Pending |
-| NAV-04 | Pending | Pending |
-| NAV-05 | Pending | Pending |
-| NAV-06 | Pending | Pending |
-| DEC-01 | Pending | Pending |
-| DEC-02 | Pending | Pending |
-| DEC-03 | Pending | Pending |
-| DEC-04 | Pending | Pending |
-| EDT-01 | Pending | Pending |
-| EDT-02 | Pending | Pending |
-| EDT-03 | Pending | Pending |
-| EDT-04 | Pending | Pending |
-| CLB-01 | Pending | Pending |
-| CLB-02 | Pending | Pending |
-| CLB-03 | Pending | Pending |
-| RCP-01 | Pending | Pending |
-| RCP-02 | Pending | Pending |
-| RCP-03 | Pending | Pending |
-| GIT-01 | Pending | Pending |
-| GIT-02 | Pending | Pending |
-| GIT-03 | Pending | Pending |
-| HLT-01 | Pending | Pending |
-| HLT-02 | Pending | Pending |
-| HLT-03 | Pending | Pending |
+| HLT-01 | Phase 1 | Pending |
+| HLT-02 | Phase 1 | Pending |
+| NAV-03 | Phase 1 | Pending |
+| NAV-05 | Phase 1 | Pending |
+| NAV-06 | Phase 1 | Pending |
+| NAV-01 | Phase 2 | Pending |
+| NAV-02 | Phase 2 | Pending |
+| NAV-04 | Phase 2 | Pending |
+| DEC-03 | Phase 2 | Pending |
+| DEC-04 | Phase 2 | Pending |
+| DEC-01 | Phase 3 | Pending |
+| DEC-02 | Phase 3 | Pending |
+| EDT-01 | Phase 3 | Pending |
+| EDT-02 | Phase 3 | Pending |
+| EDT-03 | Phase 3 | Pending |
+| EDT-04 | Phase 3 | Pending |
+| CLB-01 | Phase 4 | Pending |
+| CLB-02 | Phase 4 | Pending |
+| CLB-03 | Phase 4 | Pending |
+| GIT-01 | Phase 4 | Pending |
+| GIT-02 | Phase 4 | Pending |
+| GIT-03 | Phase 4 | Pending |
+| RCP-01 | Phase 5 | Pending |
+| RCP-02 | Phase 5 | Pending |
+| RCP-03 | Phase 5 | Pending |
+| HLT-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after initial definition*
+*Last updated: 2026-04-13 after roadmap creation*
