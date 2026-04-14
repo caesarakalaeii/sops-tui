@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Go module setup, design system colors/styles, keybinding contracts
-- [ ] 01-02-PLAN.md — Startup validation (sops/age/.sops.yaml) and styled stderr error box
-- [ ] 01-03-PLAN.md — File list and YAML tree detail view components
-- [ ] 01-04-PLAN.md — Help overlay, status bar, root model wiring, main.go entry point
+- [x] 01-01-PLAN.md — Go module setup, design system colors/styles, keybinding contracts
+- [x] 01-02-PLAN.md — Startup validation (sops/age/.sops.yaml) and styled stderr error box
+- [x] 01-03-PLAN.md — File list and YAML tree detail view components
+- [x] 01-04-PLAN.md — Help overlay, status bar, root model wiring, main.go entry point
 
 **UI hint**: yes
 
