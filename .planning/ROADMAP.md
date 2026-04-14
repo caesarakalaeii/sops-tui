@@ -49,11 +49,11 @@ Plans:
   2. Selecting a file shows all key names with values masked by default — no decryption has occurred
   3. User can view SOPS metadata (version, lastmodified, recipients, MAC status) for any file without decrypting it
   4. Pressing `/` opens a fuzzy search that filters across file names and key names in real time
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
-- [ ] 02-01-PLAN.md — SopsDiscoverer + YamlParser backend services, goccy/go-yaml dependency, TreeNode extension
-- [ ] 02-02-PLAN.md — MetadataModel overlay, SearchModel with fuzzy matching, 5 new named styles
+- [x] 02-01-PLAN.md — SopsDiscoverer + YamlParser backend services, goccy/go-yaml dependency, TreeNode extension
+- [x] 02-02-PLAN.md — MetadataModel overlay, SearchModel with fuzzy matching, 5 new named styles
 - [ ] 02-03-PLAN.md — AppModel wiring: discovery, parsing, metadata overlay, search, keybindings, state machine
 
 **UI hint**: yes
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | - |
-| 2. Read Loop | 0/3 | Planned | - |
+| 2. Read Loop | 2/3 | In Progress|  |
 | 3. Write Loop | 0/? | Not started | - |
 | 4. Clipboard & Git | 0/? | Not started | - |
 | 5. Power Features | 0/? | Not started | - |
