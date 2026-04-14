@@ -30,7 +30,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can navigate any view using hjkl, g/G, and ctrl-d/u without errors
   4. Pressing `?` opens a contextual help panel listing all keybindings
   5. A persistent status bar is visible on every screen showing file path and operation feedback
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Go module setup, design system colors/styles, keybinding contracts
+- [ ] 01-02-PLAN.md — Startup validation (sops/age/.sops.yaml) and styled stderr error box
+- [ ] 01-03-PLAN.md — File list and YAML tree detail view components
+- [ ] 01-04-PLAN.md — Help overlay, status bar, root model wiring, main.go entry point
+
 **UI hint**: yes
 
 ### Phase 2: Read Loop
@@ -89,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 0/4 | Planned | - |
 | 2. Read Loop | 0/? | Not started | - |
 | 3. Write Loop | 0/? | Not started | - |
 | 4. Clipboard & Git | 0/? | Not started | - |
