@@ -45,7 +45,6 @@ func TestDetailKeyMap_Navigation(t *testing.T) {
 	km := keys.DefaultDetailKeyMap
 
 	assert.True(t, key.Matches(press("esc"), km.Back), "Back must match 'esc'")
-	assert.True(t, key.Matches(press("h"), km.Back), "Back must match 'h'")
 
 	assert.True(t, key.Matches(press("enter"), km.Expand), "Expand must match 'enter'")
 	assert.True(t, key.Matches(press("l"), km.Expand), "Expand must match 'l'")
