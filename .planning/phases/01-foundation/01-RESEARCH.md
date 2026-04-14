@@ -803,32 +803,29 @@ func TestHelpOverlay(t *testing.T) {
 
 ## Assumptions Log
 
-| # | Claim | Section | Risk if Wrong |
-|---|-------|---------|---------------|
-| A1 | `.sops.yaml` walk-up uses `filepath.Dir` loop to root; no stdlib helper exists | Code Examples | Low risk — standard pattern; would need to switch to a library |
-| A2 | `bubbles/v2/viewport` automatically handles `ctrl+d`/`ctrl+u` when `vp.Update(msg)` is called | Architecture Patterns (Pattern 1, Viewport) | Medium — if not auto-handled, must call `HalfPageDown()`/`HalfPageUp()` explicitly in Update |
-| A3 | `charm.land/bubbles/v2/list` `DefaultKeyMap` includes `g`/`G` for GoToStart/GoToEnd | Architecture Patterns | Medium — if not included, must add custom binding |
+| # | Claim | Section | Risk if Wrong | Status |
+|---|-------|---------|---------------|--------|
+| A1 | `.sops.yaml` walk-up uses `filepath.Dir` loop to root; no stdlib helper exists | Code Examples | Low risk — standard pattern; would need to switch to a library | ACCEPTED |
+| A2 | `bubbles/v2/viewport` automatically handles `ctrl+d`/`ctrl+u` when `vp.Update(msg)` is called | Architecture Patterns (Pattern 1, Viewport) | Medium — if not auto-handled, must call `HalfPageDown()`/`HalfPageUp()` explicitly in Update | RESOLVED: Defensive — plans explicitly handle all navigation keys rather than relying on auto-dispatch |
+| A3 | `charm.land/bubbles/v2/list` `DefaultKeyMap` includes `g`/`G` for GoToStart/GoToEnd | Architecture Patterns | Medium — if not included, must add custom binding | RESOLVED: Defensive — FileListModel.Update explicitly intercepts g/G/ctrl-d/u before delegating to list |
 
-**Claims A2 and A3:** Viewport and list key defaults were confirmed via pkg.go.dev docs but exact auto-routing behavior (whether `vp.Update(msg)` or `m.list.Update(msg)` handles the keys internally vs. needing explicit branch) should be confirmed against a live Go build. The docs show `GotoTop()` / `GotoBottom()` as methods, suggesting they may need explicit calls.
+**Claims A2 and A3 (RESOLVED 2026-04-14):** Defensive approach adopted. Plans do NOT rely on bubbles list/viewport default keybindings for g/G/ctrl-d/ctrl-u. FileListModel.Update explicitly intercepts these keys using `key.Matches` against our custom `FileListKeyMap` before delegating remaining messages to `m.list.Update(msg)`. DetailModel already handles all keys explicitly (no viewport dependency). This ensures correct behavior regardless of what the bubbles defaults include.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `bubbles/v2/list` include `g`/`G` in its default KeyMap?**
-   - What we know: list.DefaultKeyMap includes GoToStart/GoToEnd bindings
-   - What's unclear: Whether they are bound to `g`/`G` by default or require explicit configuration
-   - Recommendation: Write a small probe program in Wave 0; if not default, add to custom KeyMap
+1. **Does `bubbles/v2/list` include `g`/`G` in its default KeyMap?** (RESOLVED)
+   - **Resolution:** Assume NO. Defensive approach: `FileListModel.Update` explicitly intercepts `g`/`G` (and `ctrl+d`/`ctrl+u`) using `key.Matches(msg, m.keys.GoTop)` etc. before delegating to `m.list.Update(msg)`. This makes the code correct regardless of what the bubbles list default KeyMap includes. If the list also handles these keys, our explicit interception takes priority (we consume the message before the list sees it).
+   - **Impact on plans:** Plan 01-03 Task 1 updated to explicitly handle g/G/ctrl-d/u in FileListModel.Update rather than relying on list defaults.
 
-2. **Does viewport's `Update(msg)` automatically consume `ctrl+d`/`ctrl+u`, or must Update explicitly call `HalfPageDown()`/`HalfPageUp()`?**
-   - What we know: Viewport has `HalfPageDown()`, `HalfPageUp()`, `GotoTop()`, `GotoBottom()` methods; docs show default KeyMap includes ctrl+d/u
-   - What's unclear: Whether `vp.Update(msg)` internally dispatches or requires external key matching
-   - Recommendation: Pass all messages to `vp.Update(msg)` and verify in Wave 0 test; add explicit branches only if needed
+2. **Does viewport's `Update(msg)` automatically consume `ctrl+d`/`ctrl+u`?** (RESOLVED)
+   - **Resolution:** Assume NO. Defensive approach: Plan 01-03 Task 2 (DetailModel) already implements all key handling explicitly via `key.Matches(msg, m.keys.HalfUp)` etc. DetailModel does NOT use viewport — it uses a custom cursor + scrollTop model. No change needed.
+   - **Impact on plans:** None — Plan 01-03 Task 2 was already correct.
 
-3. **Terminal width for stderr error box before TUI starts**
-   - What we know: `lipgloss.Width()` measures rendered strings; terminal width must come from `os.Stdout` or environment
-   - What's unclear: Best way to query terminal width without bubbletea running (before `tea.WindowSizeMsg`)
-   - Recommendation: Use `golang.org/x/term` `GetSize(int(os.Stdout.Fd()))` or `COLUMNS` env var with fallback to 80
+3. **Terminal width for stderr error box before TUI starts** (RESOLVED)
+   - **Resolution:** Use `golang.org/x/term.GetSize(int(os.Stderr.Fd()))` with fallback to 80 columns if detection fails. `golang.org/x/term` is the standard Go approach for terminal size queries outside of bubbletea. Added to Plan 01-01 Task 1 dependency list.
+   - **Impact on plans:** Plan 01-01 Task 1 updated to install `golang.org/x/term`. Plan 01-02 Task 2 already references this approach.
 
 ---
 
