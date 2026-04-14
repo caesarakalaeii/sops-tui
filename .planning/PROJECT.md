@@ -12,7 +12,9 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Vim-like keyboard navigation throughout — Validated in Phase 1: Foundation (hjkl, g/G, ctrl-d/u)
+- [x] Startup error if `sops` binary missing — Validated in Phase 1: Foundation
+- [x] Startup error if age key missing — Validated in Phase 1: Foundation (soft warning, TUI still launches)
 
 ### Active
 
@@ -82,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after initialization*
+*Last updated: 2026-04-14 after Phase 1 completion*
