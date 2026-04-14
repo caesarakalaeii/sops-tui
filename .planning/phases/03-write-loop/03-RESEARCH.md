@@ -591,22 +591,22 @@ type DetailModel struct {
 
 **Most claims are VERIFIED:** sops binary is at `/usr/sbin/sops` (v3.12.2), bubbletea v2 source is in module cache, all existing code patterns are directly observed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **sops set behavior with array keys**
+1. **sops set behavior with array keys** (RESOLVED -- guarded in plans)
    - What we know: sops set index syntax supports `["key"][0]` for arrays
    - What's unclear: Our `dotPathToIndex` uses dot notation which doesn't encode array indices
-   - Recommendation: Phase 3 only targets string-keyed YAML maps (the common case). Add a note that array-indexed keys are not editable in Phase 3 and display `e`-disabled if keyPath contains `[N]`.
+   - Disposition: Phase 3 only targets string-keyed YAML maps (the common case). Array-indexed keys are blocked from edit/rotate with an explicit guard: `e`/`X` key handlers in detail.go detect keyPaths containing array index notation (e.g. `[0]`, `[1]`) and return `EditBlockedMsg` with message "Array-indexed keys not editable in Phase 3". Guard implemented in Plan 02 Task 1 (e key) and Plan 03 Task 2 (X key). Test case added in Plan 01 Task 1 (`TestDotPathToIndexArrayNotation`) and Plan 02 Task 1 (`TestEditOnArrayKeyReturnsBlocked`).
 
-2. **SOPS stdin editing with encrypted_regex**
-   - What we know: STATE.md explicitly flags this as a known concern: "SOPS stdin editing with `encrypted_regex` — behavior undocumented, may surface during Phase 3 implementation"
+2. **SOPS stdin editing with encrypted_regex** (RESOLVED -- accepted with code comment)
+   - What we know: STATE.md explicitly flags this as a known concern: "SOPS stdin editing with `encrypted_regex` -- behavior undocumented, may surface during Phase 3 implementation"
    - What's unclear: If a file uses `encrypted_regex`, does `sops set` re-apply the regex filter when re-encrypting? This could mean unencrypted-regex fields get re-encrypted unintentionally.
-   - Recommendation: Use `sops set` (not stdin encrypt) for inline edits — `sops set` targets a specific key and preserves the rest of the file as-is. Test with a fixture file that has `encrypted_regex`. [ASSUMED based on sops behavior knowledge — verify empirically in Wave 0]
+   - Disposition: Accepted as known limitation. `sops set` targets a specific key by path and preserves the rest of the file as-is, so the regex filter is not re-evaluated on other fields. A code comment in executor.go documents this assumption. A unit test in executor_test.go (`TestSetKeyEncryptedRegexComment`) validates that SetKey constructs correct arguments regardless of `encrypted_regex` configuration (sops CLI handles re-encryption scope internally). If edge cases surface during testing, they will be addressed as bugs. See Plan 01 Task 1.
 
-3. **Context cancellation timeout for sops subprocess**
+3. **Context cancellation timeout for sops subprocess** (RESOLVED -- implemented in Plan 01)
    - What we know: CLAUDE.md mandates `exec.CommandContext` with `context.WithTimeout`
    - What's unclear: Appropriate timeout value for decrypt operations (depends on key size, network, age key derivation)
-   - Recommendation: Use 30 seconds as a reasonable timeout for age-based operations (age key derivation is fast; 30s is ample). Make it a constant in `executor.go`.
+   - Disposition: 30 seconds constant `SopsTimeout` in `executor.go`. Age key derivation is fast; 30s is ample for any reasonable file size. Implemented and tested in Plan 01 Task 1.
 
 ## Environment Availability
 
@@ -706,7 +706,7 @@ type DetailModel struct {
 - `/home/caesar/go/pkg/mod/golang.org/x/crypto@v0.50.0/bcrypt/bcrypt.go` — bcrypt.GenerateFromPassword, DefaultCost confirmed in module cache
 
 ### Tertiary (LOW confidence)
-- [ASSUMED] sops set with `encrypted_regex` files preserves existing unencrypted keys — verify empirically during implementation
+- [ACCEPTED] sops set with `encrypted_regex` files preserves existing unencrypted keys — accepted as known limitation with code comment and test (see Open Questions #2 RESOLVED disposition)
 
 ## Metadata
 
