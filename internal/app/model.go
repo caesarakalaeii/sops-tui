@@ -632,13 +632,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				return m, nil
 			}
-			// Priority 2: Close overlays (stateDiff handled above in stateDiff block,
-			// but also handle it here as a fallback for the Esc priority chain).
-			if m.state == stateDiff {
-				m.state = m.prevState
-				m.status, _ = m.status.Flash("Cancelled")
-				return m, nil
-			}
+			// Priority 2: Close overlays.
+			// Note: stateDiff Esc is fully handled by the stateDiff block above (line ~481)
+			// which returns early after setting Cancelled. This chain only handles
+			// stateHelp and stateMetadata overlays.
 			if m.state == stateHelp {
 				m.state = m.prevState
 				return m, nil
