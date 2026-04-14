@@ -1,5 +1,5 @@
 # Binaries
-sops-tui
+/sops-tui
 *.exe
 *.dll
 *.so
