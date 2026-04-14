@@ -71,9 +71,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — SOPS executor subprocess wrapper, on-demand decrypt/reveal, keybinding and style extensions
-- [ ] 03-02-PLAN.md — Diff confirmation overlay, inline single-key editing with textinput, stateDiff wiring
-- [ ] 03-03-PLAN.md — $EDITOR full-file editing flow, format-aware secret rotation with X key
+- [x] 03-01-PLAN.md — SOPS executor subprocess wrapper, on-demand decrypt/reveal, keybinding and style extensions
+- [x] 03-02-PLAN.md — Diff confirmation overlay, inline single-key editing with textinput, stateDiff wiring
+- [x] 03-03-PLAN.md — $EDITOR full-file editing flow, format-aware secret rotation with X key
 
 **UI hint**: yes
 
