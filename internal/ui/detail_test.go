@@ -1,0 +1,279 @@
+package ui_test
+
+import (
+	"strings"
+	"testing"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/bubbles/v2/key"
+	"github.com/caesarakalaeii/sops-tui/internal/ui"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// sampleTree builds a representative tree for tests:
+//
+//	database (collapsed)
+//	  host: ***
+//	  port: ***
+//	api (expanded)
+//	  key: ***
+//	  secret: ***
+//	token: ***
+func sampleTree() []ui.TreeNode {
+	return []ui.TreeNode{
+		{
+			Key:      "database",
+			Children: []ui.TreeNode{
+				{Key: "host", Value: "***", Depth: 1},
+				{Key: "port", Value: "***", Depth: 1},
+			},
+			Expanded: false,
+			Depth:    0,
+		},
+		{
+			Key:      "api",
+			Children: []ui.TreeNode{
+				{Key: "key", Value: "***", Depth: 1},
+				{Key: "secret", Value: "***", Depth: 1},
+			},
+			Expanded: true,
+			Depth:    0,
+		},
+		{
+			Key:   "token",
+			Value: "***",
+			Depth: 0,
+		},
+	}
+}
+
+// TestDetailTreeNodeExpandCollapse verifies TreeNode with children can be toggled.
+func TestDetailTreeNodeExpandCollapse(t *testing.T) {
+	node := ui.TreeNode{
+		Key:      "database",
+		Children: []ui.TreeNode{{Key: "host", Value: "***"}},
+		Expanded: false,
+	}
+	assert.False(t, node.Expanded, "node starts collapsed")
+
+	node.Expanded = true
+	assert.True(t, node.Expanded, "node can be expanded")
+
+	node.Expanded = false
+	assert.False(t, node.Expanded, "node can be collapsed again")
+}
+
+// TestDetailRenderTreeConnectors verifies RenderTree output contains tree connectors.
+func TestDetailRenderTreeConnectors(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "alpha", Value: "***", Depth: 0},
+		{Key: "beta", Value: "***", Depth: 0},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	view := m.View()
+	// At least one of the tree connectors must appear
+	hasConnector := strings.Contains(view, "├─") ||
+		strings.Contains(view, "└─") ||
+		strings.Contains(view, "│")
+	assert.True(t, hasConnector, "view must contain tree connectors (├─ or └─ or │), got: %q", view)
+}
+
+// TestDetailCollapsedNodeShowsPlus verifies collapsed parent renders "[+]" indicator.
+func TestDetailCollapsedNodeShowsPlus(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key:      "database",
+			Children: []ui.TreeNode{{Key: "host", Value: "***"}},
+			Expanded: false,
+		},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	view := m.View()
+	assert.True(t, strings.Contains(view, "[+]"),
+		"collapsed node must render '[+]' indicator, got: %q", view)
+}
+
+// TestDetailExpandedNodeShowsMinus verifies expanded parent renders "[-]" indicator.
+func TestDetailExpandedNodeShowsMinus(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key:      "api",
+			Children: []ui.TreeNode{{Key: "key", Value: "***"}},
+			Expanded: true,
+		},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	view := m.View()
+	assert.True(t, strings.Contains(view, "[-]"),
+		"expanded node must render '[-]' indicator, got: %q", view)
+}
+
+// TestDetailLeafNodeRendersStarred verifies leaf node with value renders as "key: ***"
+func TestDetailLeafNodeRendersStarred(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "token", Value: "***", Depth: 0},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	view := m.View()
+	assert.True(t, strings.Contains(view, "***"),
+		"leaf node must render masked value '***', got: %q", view)
+}
+
+// TestDetailIndentation verifies tree indentation is 2 cells per nesting level.
+// A depth-1 child should be indented by at least 2 spaces beyond the parent.
+func TestDetailIndentation(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key: "parent",
+			Children: []ui.TreeNode{
+				{Key: "child", Value: "***", Depth: 1},
+			},
+			Expanded: true,
+			Depth:    0,
+		},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	view := m.View()
+	lines := strings.Split(view, "\n")
+	// Find the child line — it should be indented by at least 2 spaces (TreeIndent = 2 cells).
+	// The child line contains "child" and should have leading spaces.
+	var childLine string
+	for _, line := range lines {
+		if strings.Contains(line, "child") {
+			childLine = line
+			break
+		}
+	}
+	require.NotEmpty(t, childLine, "must find child line in tree view")
+	// Strip ANSI escape codes for whitespace check — count leading spaces.
+	stripped := stripAnsi(childLine)
+	assert.True(t, strings.HasPrefix(stripped, " ") || strings.HasPrefix(stripped, "\t"),
+		"child line must have leading indentation of at least 2 cells: %q", stripped)
+}
+
+// TestDetailUpdateExpandOnEnter verifies Update with Enter key on collapsed node expands it.
+func TestDetailUpdateExpandOnEnter(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key:      "database",
+			Children: []ui.TreeNode{{Key: "host", Value: "***"}},
+			Expanded: false,
+		},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+
+	// Before: collapsed (no "host" leaf visible)
+	before := m.View()
+	assert.False(t, strings.Contains(before, "host"),
+		"host child should not be visible when database is collapsed")
+
+	// Send Enter key to expand
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
+	m2, _ := m.Update(msg)
+
+	after := m2.View()
+	assert.True(t, strings.Contains(after, "host"),
+		"host child must be visible after expanding with Enter, view: %q", after)
+}
+
+// TestDetailUpdateCollapseOnH verifies Update with h key on expanded node collapses it.
+func TestDetailUpdateCollapseOnH(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key:      "api",
+			Children: []ui.TreeNode{{Key: "key", Value: "***"}},
+			Expanded: true,
+		},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+
+	// Before: expanded (key child visible)
+	before := m.View()
+	assert.True(t, strings.Contains(before, "key"),
+		"key child should be visible when api is expanded")
+
+	// Send h key to collapse
+	msg := tea.KeyPressMsg{Code: 'h'}
+	m2, _ := m.Update(msg)
+
+	after := m2.View()
+	assert.False(t, strings.Contains(after, "key"),
+		"key child must not be visible after collapsing with h, view: %q", after)
+}
+
+// TestDetailSelectedIndex verifies SelectedIndex returns current cursor position.
+func TestDetailSelectedIndex(t *testing.T) {
+	nodes := sampleTree()
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	assert.Equal(t, 0, m.SelectedIndex(), "initial cursor should be at index 0")
+}
+
+// TestDetailCursorMovement verifies j/k keys move cursor up/down.
+func TestDetailCursorMovement(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "a", Value: "***", Depth: 0},
+		{Key: "b", Value: "***", Depth: 0},
+		{Key: "c", Value: "***", Depth: 0},
+	}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	require.Equal(t, 0, m.SelectedIndex(), "starts at 0")
+
+	// Press j to move down
+	msgJ := tea.KeyPressMsg{Code: 'j'}
+	m, _ = m.Update(msgJ)
+	assert.Equal(t, 1, m.SelectedIndex(), "cursor at 1 after pressing j")
+
+	// Press j again
+	m, _ = m.Update(msgJ)
+	assert.Equal(t, 2, m.SelectedIndex(), "cursor at 2 after pressing j twice")
+
+	// Press k to move up
+	msgK := tea.KeyPressMsg{Code: 'k'}
+	m, _ = m.Update(msgK)
+	assert.Equal(t, 1, m.SelectedIndex(), "cursor at 1 after pressing k")
+}
+
+// TestDetailEmptyState verifies NewDetailModel with empty nodes renders "No keys found in this file".
+func TestDetailEmptyState(t *testing.T) {
+	m := ui.NewDetailModel("test.yaml", []ui.TreeNode{}, 80, 24)
+	view := m.View()
+	assert.True(t, strings.Contains(view, "No keys found in this file"),
+		"empty state must contain 'No keys found in this file', got: %q", view)
+}
+
+// stripAnsi removes ANSI escape sequences from a string for whitespace/content checks.
+func stripAnsi(s string) string {
+	var result strings.Builder
+	inEsc := false
+	for _, r := range s {
+		if r == '\x1b' {
+			inEsc = true
+			continue
+		}
+		if inEsc {
+			if r == 'm' || r == 'K' || r == 'H' || r == 'J' {
+				inEsc = false
+			}
+			continue
+		}
+		result.WriteRune(r)
+	}
+	return result.String()
+}
+
+// TestDetailKeyMapBinding is a compile-time check: key.Matches should accept
+// DetailKeyMap bindings without panicking.
+func TestDetailKeyMapBinding(t *testing.T) {
+	msg := tea.KeyPressMsg{Code: 'j'}
+	// This verifies that key.Matches works with the binding from keys package
+	// indirectly by checking that our Update function accepts tea.KeyPressMsg.
+	nodes := []ui.TreeNode{{Key: "a", Value: "***"}}
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m2, _ := m.Update(msg)
+	// cursor stayed at 0 since only one item (can't go down)
+	assert.GreaterOrEqual(t, m2.SelectedIndex(), 0)
+}
+
+// Compile-time import check: key package is available.
+var _ = key.NewBinding

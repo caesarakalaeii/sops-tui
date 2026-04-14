@@ -1,5 +1,5 @@
 # Binaries
-sops-tui
+/sops-tui
 *.exe
 *.dll
 *.so
@@ -24,5 +24,8 @@ coverage.txt
 .DS_Store
 Thumbs.db
 
-# Planning
-.planning/
+# Planning debug artifacts
+.planning/debug/
+
+# Runtime debug logs
+tea_debug.log
