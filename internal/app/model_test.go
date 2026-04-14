@@ -453,3 +453,75 @@ func TestMultiEntryDiffConfirmUsesEncryptFile(t *testing.T) {
 	_, cmd := m2.Update(tea.KeyPressMsg{Code: 'y'})
 	assert.NotNil(t, cmd, "y in multi-entry stateDiff must return a non-nil cmd (EncryptFile path)")
 }
+
+// ---- Task 2: Rotation model tests ----
+
+// TestRotateReadyMsgTransitionsToStateDiff verifies that RotateReadyMsg transitions to stateDiff.
+func TestRotateReadyMsgTransitionsToStateDiff(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.RotateReadyMsg{
+		KeyPath:  "password",
+		OldValue: "hunter2",
+		NewValue: "newval123",
+		Format:   ui.FormatAlphanumeric,
+	})
+	v := m2.View()
+	assert.Contains(t, v.Content, "confirm re-encrypt",
+		"RotateReadyMsg must transition to stateDiff, got: %q", v.Content)
+}
+
+// TestRotateFormatMenuMsgShowsMenu verifies that RotateFormatMenuMsg transitions to stateFormatMenu.
+func TestRotateFormatMenuMsgShowsMenu(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.RotateFormatMenuMsg{
+		KeyPath:  "password",
+		OldValue: "some plain value",
+	})
+	v := m2.View()
+	// Format menu must show the selection prompt
+	assert.Contains(t, v.Content, "Select format for new secret:",
+		"RotateFormatMenuMsg must show format menu, got: %q", v.Content)
+}
+
+// TestFormatMenuEscCancels verifies that Esc in stateFormatMenu returns to previous state.
+func TestFormatMenuEscCancels(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	// Enter format menu
+	m2 := send(t, m, ui.RotateFormatMenuMsg{
+		KeyPath:  "password",
+		OldValue: "some plain value",
+	})
+	// Press Esc — should leave format menu
+	m3 := send(t, m2, tea.KeyPressMsg{Code: tea.KeyEsc})
+	v := m3.View()
+	assert.NotContains(t, v.Content, "Select format for new secret:",
+		"Esc in format menu must dismiss menu, got: %q", v.Content)
+}
+
+// TestRotateOnMaskedLeafFlashes verifies that EditBlockedMsg without Reason flashes
+// "Reveal first with r" (the AppModel flash for any unrevealable operation).
+func TestRotateOnMaskedLeafFlashes(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.EditBlockedMsg{})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Reveal first with r",
+		"EditBlockedMsg without reason must flash 'Reveal first with r', got: %q", v.Content)
+}
+
+// TestReEncryptDoneMsgRotationFlash verifies that ReEncryptDoneMsg after rotation
+// flashes "Rotated to {format}" instead of "Re-encrypted".
+func TestReEncryptDoneMsgRotationFlash(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	// First drive to stateDiff via RotateReadyMsg
+	m2 := send(t, m, ui.RotateReadyMsg{
+		KeyPath:  "password",
+		OldValue: "hunter2",
+		NewValue: "newbase64==",
+		Format:   ui.FormatBase64,
+	})
+	// Simulate successful re-encryption
+	m3 := send(t, m2, app.ReEncryptDoneMsg{Err: nil})
+	v := m3.View()
+	assert.Contains(t, v.Content, "Rotated to",
+		"rotation ReEncryptDoneMsg must flash 'Rotated to ...', got: %q", v.Content)
+}

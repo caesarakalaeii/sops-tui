@@ -516,3 +516,80 @@ func TestEditFileOnNoneRevealedReturnsEditBlockedMsg(t *testing.T) {
 	_, ok := result.(ui.EditBlockedMsg)
 	assert.True(t, ok, "cmd must return EditBlockedMsg when no nodes revealed, got: %T", result)
 }
+
+// ---- Task 2: X key (rotation) tests ----
+
+// TestRotateKeyOnRevealed verifies X key on a revealed leaf with a detectable format
+// returns a RotateReadyMsg (or a cmd that produces one).
+// Uses a 32-byte base64 value (44 chars) which matches the regex {22,}.
+func TestRotateKeyOnRevealed(t *testing.T) {
+	// 32-byte base64 = 44 chars, well above the 22-char regex threshold
+	base64Val := strings.Repeat("A", 44) // 44 uppercase A's — valid base64 chars, 44 chars
+	nodes := []ui.TreeNode{
+		{Key: "token", Encrypted: true, Revealed: true, DecryptedValue: base64Val},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	msg := tea.KeyPressMsg{Code: 'X'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "X key on revealed detectable leaf must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.RotateReadyMsg)
+	assert.True(t, ok, "cmd must return RotateReadyMsg for auto-detected format, got: %T", result)
+}
+
+// TestRotateKeyOnUnknownFormat verifies X key on a revealed leaf with an unknown format
+// returns a RotateFormatMenuMsg.
+func TestRotateKeyOnUnknownFormat(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "secret", Encrypted: true, Revealed: true, DecryptedValue: "just a regular string"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	msg := tea.KeyPressMsg{Code: 'X'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "X key on unknown-format leaf must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.RotateFormatMenuMsg)
+	assert.True(t, ok, "cmd must return RotateFormatMenuMsg for unknown format, got: %T", result)
+}
+
+// TestRotateKeyOnMasked verifies X key on a masked (unrevealed) leaf returns an EditBlockedMsg.
+func TestRotateKeyOnMasked(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "secret", Encrypted: true, Revealed: false},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	msg := tea.KeyPressMsg{Code: 'X'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "X key on masked leaf must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.EditBlockedMsg)
+	assert.True(t, ok, "cmd must return EditBlockedMsg for masked leaf, got: %T", result)
+}
+
+// TestRotateKeyOnArrayIndexed verifies X key on a revealed leaf with an array-indexed
+// keyPath returns EditBlockedMsg with "Array-indexed keys not editable in Phase 3" reason.
+func TestRotateKeyOnArrayIndexed(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{
+			Key:      "items",
+			Expanded: true,
+			Children: []ui.TreeNode{
+				{Key: "items[0]", Encrypted: true, Revealed: true, DecryptedValue: "val"},
+			},
+		},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+
+	// Move cursor to the child node
+	msgJ := tea.KeyPressMsg{Code: 'j'}
+	m, _ = m.Update(msgJ)
+
+	msg := tea.KeyPressMsg{Code: 'X'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "X key on array-indexed key must return a cmd")
+	result := cmd()
+	blocked, ok := result.(ui.EditBlockedMsg)
+	require.True(t, ok, "must return EditBlockedMsg for array-indexed key, got: %T", result)
+	assert.Equal(t, "Array-indexed keys not editable in Phase 3", blocked.Reason,
+		"must set correct block reason")
+}
