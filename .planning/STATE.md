@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-read-loop 02-02-PLAN.md
-last_updated: "2026-04-14T15:26:28.382Z"
+stopped_at: Completed 02-read-loop 02-03-PLAN.md
+last_updated: "2026-04-14T15:56:03.396Z"
 last_activity: 2026-04-14 -- Phase 2 planning complete
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 02-read-loop P02 | 22 | 2 tasks | 7 files |
+| Phase 02-read-loop P03 | 19 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - Roadmap: Recipient management deferred to Phase 5 — highest-risk multi-file operation
 - [Phase 02-read-loop]: MetadataContent defined as display-only struct independent of parser.SopsMetadata to avoid cross-plan build dependency during Wave 1 parallel execution
 - [Phase 02-read-loop]: sahilm/fuzzy promoted to direct dependency in go.mod as SearchModel imports it directly
+- [Phase 02-read-loop]: Metadata overlay opened synchronously (parser.ParseFile inline on i keypress) to keep state machine simple
+- [Phase 02-read-loop]: Esc priority chain: search deactivation > overlay close > navigate back (matches k9s behavior)
+- [Phase 02-read-loop]: ItemCount() returns len(allItems) not len(list.Items()) so status bar count is stable during search
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T15:26:28.379Z
-Stopped at: Completed 02-read-loop 02-02-PLAN.md
+Last session: 2026-04-14T15:56:03.393Z
+Stopped at: Completed 02-read-loop 02-03-PLAN.md
 Resume file: None

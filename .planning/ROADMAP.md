@@ -13,7 +13,7 @@ sops-tui is built in five phases that progressively unlock capability while mana
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation** - TUI skeleton, SOPS subprocess wrapper, config discovery, security groundwork, startup validation
-- [ ] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation
+- [x] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation (completed 2026-04-14)
 - [ ] **Phase 3: Write Loop** - On-demand decrypt, reveal, edit with diff, format-aware rotation, re-encryption
 - [ ] **Phase 4: Clipboard & Git** - Clipboard with auto-clear and signal safety, git change badges, blame/history, cross-file search
 - [ ] **Phase 5: Power Features** - Recipient management, bulk re-key, secret health checks
@@ -49,12 +49,12 @@ Plans:
   2. Selecting a file shows all key names with values masked by default — no decryption has occurred
   3. User can view SOPS metadata (version, lastmodified, recipients, MAC status) for any file without decrypting it
   4. Pressing `/` opens a fuzzy search that filters across file names and key names in real time
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 02-01-PLAN.md — SopsDiscoverer + YamlParser backend services, goccy/go-yaml dependency, TreeNode extension
 - [x] 02-02-PLAN.md — MetadataModel overlay, SearchModel with fuzzy matching, 5 new named styles
-- [ ] 02-03-PLAN.md — AppModel wiring: discovery, parsing, metadata overlay, search, keybindings, state machine
+- [x] 02-03-PLAN.md — AppModel wiring: discovery, parsing, metadata overlay, search, keybindings, state machine
 
 **UI hint**: yes
 
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | - |
-| 2. Read Loop | 2/3 | In Progress|  |
+| 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
 | 3. Write Loop | 0/? | Not started | - |
 | 4. Clipboard & Git | 0/? | Not started | - |
 | 5. Power Features | 0/? | Not started | - |
