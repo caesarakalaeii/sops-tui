@@ -107,6 +107,8 @@ type AppModel struct {
 	help         ui.HelpModel
 	status       ui.StatusBarModel
 	metadata     ui.MetadataModel
+	diff         ui.DiffModel     // stateDiff overlay for confirming writes
+	editFilePath string           // file path for current edit operation (for SetKey)
 	sopsYamlPath string             // path to .sops.yaml
 	files        []sops.DiscoveredFile // cached discovery results
 	currentFile  sops.DiscoveredFile   // file currently shown in detail
@@ -167,6 +169,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detail.SetSize(m.width, mainH)
 		m.help.SetSize(m.width, mainH)
 		m.metadata.SetSize(m.width, mainH)
+		m.diff.SetSize(m.width, mainH)
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -258,7 +261,82 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status, _ = m.status.Flash("All values decrypted")
 		return m, nil
 
+	case ui.EditConfirmMsg:
+		// User confirmed edit in textinput — transition to stateDiff if values differ.
+		if msg.OldValue == msg.NewValue {
+			m.status, _ = m.status.Flash("No changes")
+			return m, nil
+		}
+		mainH := m.height - statusBarHeight(m)
+		if mainH < 0 {
+			mainH = 0
+		}
+		m.diff = ui.NewDiffModel(
+			"Changes: "+msg.KeyPath,
+			[]ui.DiffEntry{{KeyPath: msg.KeyPath, OldValue: msg.OldValue, NewValue: msg.NewValue}},
+			m.width, mainH,
+		)
+		m.editFilePath = m.currentFile.AbsPath
+		m.prevState = m.state
+		m.state = stateDiff
+		return m, nil
+
+	case ui.EditBlockedMsg:
+		// User pressed e on an un-editable node — flash appropriate message.
+		if msg.Reason != "" {
+			m.status, _ = m.status.Flash(msg.Reason)
+		} else {
+			m.status, _ = m.status.Flash("Reveal first with r")
+		}
+		return m, nil
+
+	case ui.EditCancelMsg:
+		// User pressed Esc in edit mode — no-op (detail model already reset itself).
+		return m, nil
+
+	case ReEncryptDoneMsg:
+		// Result of sops.SetKey subprocess call.
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Re-encryption failed: " + msg.Err.Error())
+		} else {
+			m.status, _ = m.status.Flash("Re-encrypted")
+			// Update the revealed node's DecryptedValue to the new value
+			entries := m.diff.Entries()
+			if len(entries) == 1 {
+				m.detail.RevealNode(entries[0].KeyPath, entries[0].NewValue)
+			}
+		}
+		m.state = stateDetail
+		return m, nil
+
 	case tea.KeyPressMsg:
+		// stateDiff: route all keys to diff model, then check Confirmed/Cancelled.
+		// This runs before global key handling so y/n/Esc are captured by the overlay.
+		if m.state == stateDiff {
+			m.diff, _ = m.diff.Update(msg)
+			if m.diff.Confirmed() {
+				// Trigger re-encryption via sops.SetKey
+				entries := m.diff.Entries()
+				if len(entries) == 1 {
+					entry := entries[0]
+					filePath := m.editFilePath
+					return m, func() tea.Msg {
+						ctx, cancel := context.WithTimeout(context.Background(), sops.SopsTimeout)
+						defer cancel()
+						err := sops.SetKey(ctx, filePath, entry.KeyPath, entry.NewValue)
+						return ReEncryptDoneMsg{Err: err}
+					}
+				}
+				// Multi-entry handled in Plan 03 ($EDITOR flow)
+			}
+			if m.diff.Cancelled() {
+				m.state = m.prevState
+				m.status, _ = m.status.Flash("Cancelled")
+				return m, nil
+			}
+			return m, nil
+		}
+
 		// Global key: toggle help overlay
 		if key.Matches(msg, keys.DefaultGlobalKeyMap.Help) {
 			if m.state == stateHelp {
@@ -362,7 +440,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				return m, nil
 			}
-			// Priority 2: Close overlays
+			// Priority 2: Close overlays (stateDiff handled above in stateDiff block,
+			// but also handle it here as a fallback for the Esc priority chain).
+			if m.state == stateDiff {
+				m.state = m.prevState
+				m.status, _ = m.status.Flash("Cancelled")
+				return m, nil
+			}
 			if m.state == stateHelp {
 				m.state = m.prevState
 				return m, nil
@@ -448,6 +532,8 @@ func (m AppModel) View() tea.View {
 		content = m.help.View(ui.ViewState(m.prevState))
 	case stateMetadata:
 		content = m.metadata.View()
+	case stateDiff:
+		content = m.diff.View()
 	}
 
 	// Render status bar

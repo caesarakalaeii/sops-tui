@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"fmt"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -201,4 +202,128 @@ func TestAppModelEscDeactivatesSearchFirst(t *testing.T) {
 	m5, _ := m4.Update(tea.KeyPressMsg{Code: 27})
 	v := m5.View()
 	assert.NotEmpty(t, v.Content, "View must not be empty after Esc from search")
+}
+
+// helper: drive AppModel into stateDetail with a revealed leaf so we can test edit flows.
+func modelInDetailWithRevealedLeaf(t *testing.T) tea.Model {
+	t.Helper()
+	m := app.NewAppModel(defaultEnv(), "")
+	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
+	// Inject a parsed file with a revealed leaf
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "hunter2"},
+	}
+	parsed := app.ParsedFileForTest(nodes)
+	m3 := send(t, m2, app.FilesParsedMsg{Parsed: parsed})
+	return m3
+}
+
+// TestEditConfirmMsgTransitionsToStateDiff verifies that EditConfirmMsg (old != new)
+// transitions AppModel to stateDiff and renders the diff overlay.
+func TestEditConfirmMsgTransitionsToStateDiff(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.EditConfirmMsg{
+		KeyPath:  "password",
+		OldValue: "hunter2",
+		NewValue: "new_password",
+	})
+	v := m2.View()
+	// stateDiff renders the DiffModel which contains "confirm re-encrypt"
+	assert.Contains(t, v.Content, "confirm re-encrypt",
+		"stateDiff view must contain 'confirm re-encrypt', got: %q", v.Content)
+}
+
+// TestEditConfirmMsgNoChangeFlashes verifies that EditConfirmMsg with OldValue == NewValue
+// flashes "No changes" instead of transitioning to stateDiff.
+func TestEditConfirmMsgNoChangeFlashes(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.EditConfirmMsg{
+		KeyPath:  "password",
+		OldValue: "same",
+		NewValue: "same",
+	})
+	v := m2.View()
+	// Must not show the diff overlay
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"no-change edit must not show diff overlay")
+}
+
+// TestEditBlockedMsgFlashes verifies that EditBlockedMsg with empty Reason
+// flashes "Reveal first with r".
+func TestEditBlockedMsgFlashes(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.EditBlockedMsg{})
+	v := m2.View()
+	// The flash should appear in the status bar
+	assert.Contains(t, v.Content, "Reveal first with r",
+		"EditBlockedMsg must flash 'Reveal first with r', got: %q", v.Content)
+}
+
+// TestEditBlockedMsgWithReasonFlashes verifies that EditBlockedMsg with a non-empty Reason
+// flashes the reason string.
+func TestEditBlockedMsgWithReasonFlashes(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, ui.EditBlockedMsg{Reason: "Array-indexed keys not editable in Phase 3"})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Array-indexed keys not editable in Phase 3",
+		"EditBlockedMsg with reason must flash the reason, got: %q", v.Content)
+}
+
+// helper: drive AppModel into stateDiff state.
+func modelInStateDiff(t *testing.T) tea.Model {
+	t.Helper()
+	m := modelInDetailWithRevealedLeaf(t)
+	return send(t, m, ui.EditConfirmMsg{
+		KeyPath:  "password",
+		OldValue: "hunter2",
+		NewValue: "new_password",
+	})
+}
+
+// TestDiffConfirmYTriggersReEncrypt verifies that pressing y in stateDiff returns a non-nil cmd.
+func TestDiffConfirmYTriggersReEncrypt(t *testing.T) {
+	m := modelInStateDiff(t)
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'y'})
+	assert.NotNil(t, cmd, "y in stateDiff must return a non-nil cmd (sops.SetKey dispatch)")
+}
+
+// TestDiffCancelNReturnsToDetail verifies that pressing n in stateDiff returns to stateDetail.
+func TestDiffCancelNReturnsToDetail(t *testing.T) {
+	m := modelInStateDiff(t)
+	m2 := send(t, m, tea.KeyPressMsg{Code: 'n'})
+	v := m2.View()
+	// stateDetail renders the tree — should NOT contain diff overlay
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"n in stateDiff must dismiss diff overlay, got: %q", v.Content)
+}
+
+// TestDiffCancelEscReturnsToDetail verifies that pressing Esc in stateDiff returns to stateDetail.
+func TestDiffCancelEscReturnsToDetail(t *testing.T) {
+	m := modelInStateDiff(t)
+	m2 := send(t, m, tea.KeyPressMsg{Code: tea.KeyEsc})
+	v := m2.View()
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"Esc in stateDiff must dismiss diff overlay, got: %q", v.Content)
+}
+
+// TestReEncryptDoneMsgSuccess verifies that ReEncryptDoneMsg{Err: nil} transitions to
+// stateDetail and flashes "Re-encrypted".
+func TestReEncryptDoneMsgSuccess(t *testing.T) {
+	m := modelInStateDiff(t)
+	m2 := send(t, m, app.ReEncryptDoneMsg{Err: nil})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Re-encrypted",
+		"success ReEncryptDoneMsg must flash 'Re-encrypted', got: %q", v.Content)
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"success ReEncryptDoneMsg must leave stateDiff, got: %q", v.Content)
+}
+
+// TestReEncryptDoneMsgError verifies that ReEncryptDoneMsg{Err: error} flashes
+// "Re-encryption failed" and transitions to stateDetail.
+func TestReEncryptDoneMsgError(t *testing.T) {
+	m := modelInStateDiff(t)
+	m2 := send(t, m, app.ReEncryptDoneMsg{Err: fmt.Errorf("sops set failed")})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Re-encryption failed",
+		"error ReEncryptDoneMsg must flash 'Re-encryption failed', got: %q", v.Content)
 }
