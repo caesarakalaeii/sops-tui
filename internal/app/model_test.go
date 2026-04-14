@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -326,4 +327,129 @@ func TestReEncryptDoneMsgError(t *testing.T) {
 	v := m2.View()
 	assert.Contains(t, v.Content, "Re-encryption failed",
 		"error ReEncryptDoneMsg must flash 'Re-encryption failed', got: %q", v.Content)
+}
+
+// ---- Task 1: $EDITOR flow tests ----
+
+// TestEditorRequestMsgReturnsCmd verifies that EditorRequestMsg dispatched from
+// AppModel (when in stateDetail with currentFile set) returns a non-nil cmd.
+func TestEditorRequestMsgReturnsCmd(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	_, cmd := m.Update(ui.EditorRequestMsg{FilePath: "/some/path.yaml"})
+	assert.NotNil(t, cmd, "EditorRequestMsg must return a non-nil cmd")
+}
+
+// TestEditorFinishedMsgWithError verifies that EditorFinishedMsg with Err set
+// flashes the error and does not enter stateDiff.
+func TestEditorFinishedMsgWithError(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, app.EditorFinishedMsg{Err: fmt.Errorf("editor exited with error")})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Editor error",
+		"EditorFinishedMsg with Err must flash 'Editor error', got: %q", v.Content)
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"EditorFinishedMsg with Err must not enter stateDiff, got: %q", v.Content)
+}
+
+// TestEditorFinishedMsgNoChanges verifies that EditorFinishedMsg with identical content
+// flashes "No changes detected" and does not enter stateDiff.
+func TestEditorFinishedMsgNoChanges(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	sameContent := []byte("password: hunter2\n")
+	// Write to temp file so the handler can read it back
+	tmpFile, err := os.CreateTemp("", "sops-tui-test-*.yaml")
+	require.NoError(t, err)
+	_, err = tmpFile.Write(sameContent)
+	require.NoError(t, err)
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+	t.Cleanup(func() { os.Remove(tmpPath) })
+
+	m2 := send(t, m, app.EditorFinishedMsg{
+		TmpPath:         tmpPath,
+		OriginalContent: sameContent,
+	})
+	v := m2.View()
+	assert.Contains(t, v.Content, "No changes detected",
+		"EditorFinishedMsg with identical content must flash 'No changes detected', got: %q", v.Content)
+	assert.NotContains(t, v.Content, "confirm re-encrypt",
+		"EditorFinishedMsg with no changes must not enter stateDiff, got: %q", v.Content)
+}
+
+// TestEditorFinishedMsgWithChanges verifies that EditorFinishedMsg with different content
+// triggers stateDiff.
+func TestEditorFinishedMsgWithChanges(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	original := []byte("password: hunter2\n")
+	edited := []byte("password: new_secret\n")
+	// Write edited content to temp file
+	tmpFile, err := os.CreateTemp("", "sops-tui-test-*.yaml")
+	require.NoError(t, err)
+	_, err = tmpFile.Write(edited)
+	require.NoError(t, err)
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+	t.Cleanup(func() { os.Remove(tmpPath) })
+
+	m2 := send(t, m, app.EditorFinishedMsg{
+		TmpPath:         tmpPath,
+		OriginalContent: original,
+	})
+	v := m2.View()
+	assert.Contains(t, v.Content, "confirm re-encrypt",
+		"EditorFinishedMsg with changes must enter stateDiff, got: %q", v.Content)
+}
+
+// TestCompareDecryptedYAML verifies that compareDecryptedYAML detects key value differences.
+func TestCompareDecryptedYAML(t *testing.T) {
+	original := []byte("password: hunter2\ntoken: abc123\n")
+	edited := []byte("password: new_secret\ntoken: abc123\n")
+	diffs, err := app.CompareDecryptedYAML(original, edited)
+	require.NoError(t, err)
+	require.Len(t, diffs, 1, "should find exactly 1 diff")
+	assert.Equal(t, "password", diffs[0].KeyPath)
+	assert.Equal(t, "hunter2", diffs[0].OldValue)
+	assert.Equal(t, "new_secret", diffs[0].NewValue)
+}
+
+// TestCompareDecryptedYAMLNoChanges verifies that identical YAML returns empty diffs.
+func TestCompareDecryptedYAMLNoChanges(t *testing.T) {
+	content := []byte("password: secret\ntoken: abc\n")
+	diffs, err := app.CompareDecryptedYAML(content, content)
+	require.NoError(t, err)
+	assert.Empty(t, diffs, "identical YAML must return no diffs")
+}
+
+// TestCompareDecryptedYAMLKeyOrderIndependent verifies that key order does not affect diff result.
+func TestCompareDecryptedYAMLKeyOrderIndependent(t *testing.T) {
+	original := []byte("a: 1\nb: 2\n")
+	reordered := []byte("b: 2\na: 1\n")
+	diffs, err := app.CompareDecryptedYAML(original, reordered)
+	require.NoError(t, err)
+	assert.Empty(t, diffs, "reordered YAML must produce no diffs (key-order independent)")
+}
+
+// TestMultiEntryDiffConfirmUsesEncryptFile verifies that when stateDiff holds multiple
+// entries (from $EDITOR) and y is pressed, a non-nil cmd is returned (EncryptFile path).
+func TestMultiEntryDiffConfirmUsesEncryptFile(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	// Drive into a multi-entry diff state by sending EditorFinishedMsg with changes
+	original := []byte("password: hunter2\ntoken: old\n")
+	edited := []byte("password: new_secret\ntoken: new_token\n")
+	// Write edited content to temp file
+	tmpFile, err := os.CreateTemp("", "sops-tui-test-*.yaml")
+	require.NoError(t, err)
+	_, err = tmpFile.Write(edited)
+	require.NoError(t, err)
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+	t.Cleanup(func() { os.Remove(tmpPath) })
+
+	m2 := send(t, m, app.EditorFinishedMsg{
+		TmpPath:         tmpPath,
+		OriginalContent: original,
+	})
+	// Should be in stateDiff now; press y to confirm
+	_, cmd := m2.Update(tea.KeyPressMsg{Code: 'y'})
+	assert.NotNil(t, cmd, "y in multi-entry stateDiff must return a non-nil cmd (EncryptFile path)")
 }

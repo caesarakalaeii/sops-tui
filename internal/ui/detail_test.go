@@ -483,3 +483,36 @@ func TestEditInputEatsNavigationKeys(t *testing.T) {
 	assert.Equal(t, initialCursor, m2.SelectedIndex(),
 		"j key in edit mode must not move cursor (textinput consumes it)")
 }
+
+// ---- Task 1: E key ($EDITOR) tests ----
+
+// TestEditFileOnRevealedReturnsEditorRequestMsg verifies E key on a detail model
+// that has at least one revealed node returns an EditorRequestMsg cmd.
+func TestEditFileOnRevealedReturnsEditorRequestMsg(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	// E key (upper-case E)
+	msg := tea.KeyPressMsg{Code: 'E'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "E key with revealed nodes must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.EditorRequestMsg)
+	assert.True(t, ok, "cmd must return EditorRequestMsg, got: %T", result)
+}
+
+// TestEditFileOnNoneRevealedReturnsEditBlockedMsg verifies E key on a detail model
+// with no revealed nodes returns an EditBlockedMsg.
+func TestEditFileOnNoneRevealedReturnsEditBlockedMsg(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: false},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	msg := tea.KeyPressMsg{Code: 'E'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "E key with no revealed nodes must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.EditBlockedMsg)
+	assert.True(t, ok, "cmd must return EditBlockedMsg when no nodes revealed, got: %T", result)
+}

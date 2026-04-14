@@ -55,6 +55,35 @@ type EditBlockedMsg struct {
 	Reason string
 }
 
+// EditorRequestMsg is sent by DetailModel.Update when the user presses E (EditFile key)
+// and at least one node is revealed. AppModel handles it by decrypting the file and
+// launching $EDITOR via tea.ExecProcess.
+type EditorRequestMsg struct {
+	FilePath string // informational — AppModel uses currentFile.AbsPath
+}
+
+// RotateFormatMenuMsg is sent by DetailModel.Update when the user presses X on a revealed
+// leaf whose format cannot be auto-detected (FormatUnknown). AppModel opens the format
+// selection menu.
+type RotateFormatMenuMsg struct {
+	KeyPath  string
+	OldValue string
+}
+
+// RotateReadyMsg is sent by DetailModel.Update when the user presses X on a revealed
+// leaf with a detectable format. AppModel transitions directly to stateDiff.
+type RotateReadyMsg struct {
+	KeyPath  string
+	OldValue string
+	NewValue string
+	Format   SecretFormat
+}
+
+// RotateErrorMsg is sent by DetailModel.Update when value generation for rotation fails.
+type RotateErrorMsg struct {
+	Err error
+}
+
 // TreeNode represents a single node in the YAML key tree.
 // Group nodes (those with Children) can be collapsed or expanded.
 // Leaf nodes (no Children) display a masked value ("***" in Phase 1).
@@ -405,6 +434,62 @@ func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
 					m.editInput = ti
 					cmd := m.editInput.Focus()
 					return m, cmd
+				} else if node.Encrypted && !node.Revealed {
+					// Masked leaf — return blocked msg for AppModel to flash "Reveal first with r"
+					return m, func() tea.Msg {
+						return EditBlockedMsg{}
+					}
+				}
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keys.EditFile):
+			// E key: open decrypted file in $EDITOR (EDT-01).
+			if m.AnyRevealed() {
+				filename := m.filename
+				return m, func() tea.Msg {
+					return EditorRequestMsg{FilePath: filename}
+				}
+			}
+			return m, func() tea.Msg { return EditBlockedMsg{} }
+
+		case key.Matches(msg, m.keys.Rotate):
+			// X key: format-aware secret rotation (EDT-03).
+			if len(m.flatRows) > 0 {
+				row := m.flatRows[m.cursor]
+				node := row.node
+				// Guard: block rotation on array-indexed keys (Open Question 1 resolution)
+				if sops.IsArrayIndexedKeyPath(row.keyPath) {
+					return m, func() tea.Msg {
+						return EditBlockedMsg{Reason: "Array-indexed keys not editable in Phase 3"}
+					}
+				}
+				if node.Encrypted && node.Revealed {
+					detected := DetectFormat(node.DecryptedValue)
+					if detected == FormatUnknown {
+						// Ambiguous: trigger format selection menu
+						keyPath := row.keyPath
+						oldValue := node.DecryptedValue
+						return m, func() tea.Msg {
+							return RotateFormatMenuMsg{KeyPath: keyPath, OldValue: oldValue}
+						}
+					}
+					// Auto-detected: generate new value and go to diff
+					keyPath := row.keyPath
+					oldValue := node.DecryptedValue
+					format := detected
+					return m, func() tea.Msg {
+						newVal, err := GenerateValue(format)
+						if err != nil {
+							return RotateErrorMsg{Err: err}
+						}
+						return RotateReadyMsg{
+							KeyPath:  keyPath,
+							OldValue: oldValue,
+							NewValue: newVal,
+							Format:   format,
+						}
+					}
 				} else if node.Encrypted && !node.Revealed {
 					// Masked leaf — return blocked msg for AppModel to flash "Reveal first with r"
 					return m, func() tea.Msg {
