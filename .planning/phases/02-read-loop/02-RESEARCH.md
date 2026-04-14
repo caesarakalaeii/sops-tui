@@ -709,19 +709,19 @@ if msg.String() == "i" && m.state == stateMetadata {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does SOPS use `type:int` or `type:float` for integer YAML values?**
+1. **RESOLVED: Does SOPS use `type:int` or `type:float` for integer YAML values?**
    - What we know: The example.yaml shows `type:str`, `type:float`, `type:bool`. The CLAUDE.md UI-SPEC mentions `*** (int)` in display.
    - What's unclear: Whether SOPS ever emits `type:int` vs always using `type:float` for numeric values.
    - Recommendation: Display whatever `type:X` appears in the ENC string verbatim. Show `(int)` only if the hint is literally `int`. This is safe regardless of SOPS behavior.
 
-2. **Performance of eager file walk at startup for large repos**
+2. **RESOLVED: Performance of eager file walk at startup for large repos**
    - What we know: `filepath.WalkDir` is synchronous; large repos with many YAML files may cause TUI startup delay.
    - What's unclear: Whether a spinner/loading state is needed or startup latency is acceptable.
    - Recommendation: Run discovery as a `tea.Cmd` (goroutine) and send results as a `FilesDiscoveredMsg`. File list shows spinner until results arrive. This is the idiomatic Bubbletea pattern and avoids blocking `Init()`.
 
-3. **goccy/go-yaml behavior with SOPS MAC field**
+3. **RESOLVED: goccy/go-yaml behavior with SOPS MAC field**
    - What we know: The `sops.mac` field value is itself an `ENC[...]` string.
    - What's unclear: Whether to display the MAC as the full ENC string or as `[encrypted]` in the metadata overlay.
    - Recommendation: Display the full MAC hex string after SOPS decrypts it — but since Phase 2 has no decryption, display `[encrypted until decrypted]` for MAC in the metadata overlay. This is a discretionary display decision.
