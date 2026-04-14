@@ -15,11 +15,11 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 - [x] Vim-like keyboard navigation throughout — Validated in Phase 1: Foundation (hjkl, g/G, ctrl-d/u)
 - [x] Startup error if `sops` binary missing — Validated in Phase 1: Foundation
 - [x] Startup error if age key missing — Validated in Phase 1: Foundation (soft warning, TUI still launches)
+- [x] Browse all SOPS-encrypted files discovered via `.sops.yaml` path rules — Validated in Phase 2: Read Loop
+- [x] View encrypted keys at a glance without decrypting — Validated in Phase 2: Read Loop
+- [x] Fuzzy search across all files and keys (k9s-style `/` search) — Validated in Phase 2: Read Loop
 
 ### Active
-
-- [ ] Browse all SOPS-encrypted files discovered via `.sops.yaml` path rules
-- [ ] View encrypted keys at a glance without decrypting
 - [ ] Decrypt and reveal secret values on demand (single key or full file)
 - [ ] Edit secret values with automatic re-encryption via `sops` subprocess
 - [ ] Rotate secrets to format-aware random values (base64, hex, UUID, bcrypt, etc.)
@@ -28,7 +28,6 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 - [ ] Secret health checks — detect weak secrets, duplicates across files, stale values
 - [ ] Clipboard copy with auto-clear after configurable timeout
 - [ ] Git integration — blame/history per secret, detect uncommitted changes
-- [ ] Fuzzy search across all files and keys (k9s-style `/` search)
 - [ ] Vim-like keyboard navigation throughout
 
 ### Out of Scope
@@ -84,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 1 completion*
+*Last updated: 2026-04-14 after Phase 2 completion*
