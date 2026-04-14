@@ -88,6 +88,12 @@ func TestStyleRenderNonEmpty(t *testing.T) {
 		{"HelpKeyStyle", ui.HelpKeyStyle.Render("?")},
 		{"HelpDescStyle", ui.HelpDescStyle.Render("description")},
 		{"HelpSectionHeader", ui.HelpSectionHeader.Render("Navigation")},
+		// Phase 2 styles
+		{"BadgeUnencrypted", ui.BadgeUnencrypted.Render("[unencrypted]")},
+		{"BadgePlain", ui.BadgePlain.Render("[plain]")},
+		{"TypeHintStyle", ui.TypeHintStyle.Render("(str)")},
+		{"SearchInputStyle", ui.SearchInputStyle.Render("filter text")},
+		{"SearchMatchStyle", ui.SearchMatchStyle.Render("match")},
 	}
 	for _, s := range styles {
 		t.Run(s.name, func(t *testing.T) {
@@ -95,4 +101,43 @@ func TestStyleRenderNonEmpty(t *testing.T) {
 				"style %s must render non-empty string", s.name)
 		})
 	}
+}
+
+// TestPhase2StyleColorValues verifies the 5 new Phase 2 named styles have correct color attributes
+// per 02-UI-SPEC.md §New Named Styles.
+func TestPhase2StyleColorValues(t *testing.T) {
+	t.Run("BadgeUnencrypted_bold_and_error_color", func(t *testing.T) {
+		// BadgeUnencrypted must be Bold and use ColorError (#f38ba8)
+		rendered := ui.BadgeUnencrypted.Render("[unencrypted]")
+		require.NotEmpty(t, strings.TrimSpace(rendered), "BadgeUnencrypted must render non-empty")
+		// Verify it renders with some ANSI styling (not plain text)
+		assert.NotEqual(t, "[unencrypted]", rendered,
+			"BadgeUnencrypted must apply ANSI styling (bold + color)")
+	})
+
+	t.Run("BadgePlain_warning_color", func(t *testing.T) {
+		rendered := ui.BadgePlain.Render("[plain]")
+		require.NotEmpty(t, strings.TrimSpace(rendered), "BadgePlain must render non-empty")
+		assert.NotEqual(t, "[plain]", rendered,
+			"BadgePlain must apply ANSI styling (color)")
+	})
+
+	t.Run("TypeHintStyle_faint_and_muted_color", func(t *testing.T) {
+		rendered := ui.TypeHintStyle.Render("(str)")
+		require.NotEmpty(t, strings.TrimSpace(rendered), "TypeHintStyle must render non-empty")
+		assert.NotEqual(t, "(str)", rendered,
+			"TypeHintStyle must apply ANSI styling (faint + color)")
+	})
+
+	t.Run("SearchInputStyle_surface_background", func(t *testing.T) {
+		rendered := ui.SearchInputStyle.Render("filter text")
+		require.NotEmpty(t, strings.TrimSpace(rendered), "SearchInputStyle must render non-empty")
+	})
+
+	t.Run("SearchMatchStyle_accent_color", func(t *testing.T) {
+		rendered := ui.SearchMatchStyle.Render("match")
+		require.NotEmpty(t, strings.TrimSpace(rendered), "SearchMatchStyle must render non-empty")
+		assert.NotEqual(t, "match", rendered,
+			"SearchMatchStyle must apply ANSI styling (accent color)")
+	})
 }

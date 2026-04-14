@@ -125,4 +125,27 @@ var (
 	// HelpSectionHeader renders section names (Navigation, Global) in bold in help overlay.
 	HelpSectionHeader = lipgloss.NewStyle().
 				Bold(true)
+
+	// BadgeUnencrypted renders the [unencrypted] badge on file list items (per D-02).
+	BadgeUnencrypted = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorError)
+
+	// BadgePlain renders the [plain] badge on unencrypted leaf values (per D-06).
+	BadgePlain = lipgloss.NewStyle().
+			Foreground(ColorWarning)
+
+	// TypeHintStyle renders type hints like (str), (int), (bool) after masked values (per D-04).
+	TypeHintStyle = lipgloss.NewStyle().
+			Faint(true).
+			Foreground(ColorMuted)
+
+	// SearchInputStyle is the background style for the inline search bar (per D-10).
+	SearchInputStyle = lipgloss.NewStyle().
+				Background(ColorSurface).
+				Foreground(ColorFg)
+
+	// SearchMatchStyle highlights matched characters in fuzzy search results (per D-12).
+	SearchMatchStyle = lipgloss.NewStyle().
+				Foreground(ColorAccent)
 )
