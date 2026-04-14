@@ -19,11 +19,12 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 - [x] View encrypted keys at a glance without decrypting — Validated in Phase 2: Read Loop
 - [x] Fuzzy search across all files and keys (k9s-style `/` search) — Validated in Phase 2: Read Loop
 
+- [x] Decrypt and reveal secret values on demand (single key or full file) — Validated in Phase 3: Write Loop
+- [x] Edit secret values with automatic re-encryption via `sops` subprocess — Validated in Phase 3: Write Loop
+- [x] Rotate secrets to format-aware random values (base64, hex, UUID, bcrypt, etc.) — Validated in Phase 3: Write Loop
+- [x] Diff view before re-encrypting to prevent accidental edits — Validated in Phase 3: Write Loop
+
 ### Active
-- [ ] Decrypt and reveal secret values on demand (single key or full file)
-- [ ] Edit secret values with automatic re-encryption via `sops` subprocess
-- [ ] Rotate secrets to format-aware random values (base64, hex, UUID, bcrypt, etc.)
-- [ ] Diff view before re-encrypting to prevent accidental edits
 - [ ] Recipient management — add/remove age keys across files, bulk re-key
 - [ ] Secret health checks — detect weak secrets, duplicates across files, stale values
 - [ ] Clipboard copy with auto-clear after configurable timeout
@@ -83,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 2 completion*
+*Last updated: 2026-04-14 after Phase 3 completion*
