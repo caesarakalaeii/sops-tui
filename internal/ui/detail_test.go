@@ -275,7 +275,5 @@ func TestDetailKeyMapBinding(t *testing.T) {
 	assert.GreaterOrEqual(t, m2.SelectedIndex(), 0)
 }
 
-// Compile-time interface check: key.Binding must be usable in key.Matches calls.
-var _ = func() {
-	_ = key.Matches
-}
+// Compile-time import check: key package is available.
+var _ = key.NewBinding
