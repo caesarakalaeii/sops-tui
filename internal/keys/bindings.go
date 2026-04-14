@@ -149,20 +149,31 @@ type DetailKeyMap struct {
 	Search key.Binding
 	// Info opens the metadata overlay for the current file.
 	Info key.Binding
+	// Reveal decrypts and reveals the selected encrypted value inline (r = toggle reveal/mask).
+	Reveal key.Binding
+	// RevealAll decrypts and reveals all values in the current file (R = toggle reveal-all/mask-all).
+	RevealAll key.Binding
+	// Edit enters inline edit mode on the selected revealed value.
+	Edit key.Binding
+	// EditFile suspends the TUI and opens the decrypted file in $EDITOR.
+	EditFile key.Binding
+	// Rotate generates a format-aware random replacement value for the selected leaf.
+	Rotate key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
-// Groups: navigation, tree actions, global. Implements help.KeyMap.
+// Groups: navigation, tree actions, secret actions, global. Implements help.KeyMap.
 func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
 		{k.Expand, k.Collapse, k.Back, k.Search, k.Info},
+		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate},
 		{k.Help, k.Quit},
 	}
 }
@@ -214,5 +225,25 @@ var DefaultDetailKeyMap = DetailKeyMap{
 	Info: key.NewBinding(
 		key.WithKeys("i"),
 		key.WithHelp("i", "file info"),
+	),
+	Reveal: key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "reveal/hide value"),
+	),
+	RevealAll: key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("R", "reveal/hide all values"),
+	),
+	Edit: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "edit value"),
+	),
+	EditFile: key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("E", "edit in $EDITOR"),
+	),
+	Rotate: key.NewBinding(
+		key.WithKeys("X"),
+		key.WithHelp("X", "rotate secret"),
 	),
 }

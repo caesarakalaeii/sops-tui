@@ -148,4 +148,32 @@ var (
 	// SearchMatchStyle highlights matched characters in fuzzy search results (per D-12).
 	SearchMatchStyle = lipgloss.NewStyle().
 				Foreground(ColorAccent)
+
+	// RevealedValueStyle renders revealed secret values (normal weight, no faint) per 03-UI-SPEC.md.
+	// Replaces DimText for rows where Revealed=true.
+	RevealedValueStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// RevealedIconStyle renders the 🔓 suffix after a revealed value per 03-UI-SPEC.md.
+	RevealedIconStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// DiffAddedStyle renders diff "+" lines (new value) in the DiffModel per 03-UI-SPEC.md.
+	DiffAddedStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// DiffRemovedStyle renders diff "−" lines (old value) in the DiffModel per 03-UI-SPEC.md.
+	DiffRemovedStyle = lipgloss.NewStyle().Foreground(ColorError)
+
+	// DiffKeyStyle renders the key path label in the diff header row per 03-UI-SPEC.md.
+	DiffKeyStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorFg)
+
+	// DiffContextStyle renders unchanged context lines in multi-key diffs per 03-UI-SPEC.md.
+	DiffContextStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// EditInputStyle is the background style for the inline textinput during stateEdit per 03-UI-SPEC.md.
+	EditInputStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
+
+	// ConfirmPromptStyle renders the [y/n] prompt label in the diff overlay footer per 03-UI-SPEC.md.
+	ConfirmPromptStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorAccent)
+
+	// FormatMenuStyle renders format selection menu items (base64/hex/UUID/bcrypt) per 03-UI-SPEC.md.
+	FormatMenuStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
 )

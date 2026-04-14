@@ -16,9 +16,13 @@
 package app
 
 import (
+	"context"
+	"fmt"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
+	yaml "github.com/goccy/go-yaml"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/parser"
@@ -38,6 +42,16 @@ const (
 	stateHelp
 	// stateMetadata is the full-screen SOPS metadata overlay.
 	stateMetadata
+	// stateDiff is the full-screen diff overlay before re-encryption (D-09, D-10).
+	stateDiff
+	// stateEdit is the inline value edit mode (D-05).
+	stateEdit
+)
+
+// StateDiff and StateEdit are exported for tests to verify the constants exist.
+const (
+	StateDiff = stateDiff
+	StateEdit = stateEdit
 )
 
 // FilesDiscoveredMsg carries the result of SOPS file discovery.
@@ -50,6 +64,35 @@ type FilesDiscoveredMsg struct {
 type FilesParsedMsg struct {
 	Parsed parser.ParsedFile
 	Err    error
+}
+
+// DecryptKeyMsg carries the result of a sops.DecryptKey subprocess call.
+// KeyPath is the dot-joined path of the decrypted key; Value is the plaintext.
+// If Err is non-nil the decrypt failed and Value is empty.
+type DecryptKeyMsg struct {
+	KeyPath string
+	Value   string
+	Err     error
+}
+
+// DecryptAllMsg carries the result of a sops.DecryptFile subprocess call.
+// Values maps dot-joined key paths to plaintext values for all encrypted leaves.
+// If Err is non-nil the decrypt failed and Values is nil.
+type DecryptAllMsg struct {
+	Values map[string]string
+	Err    error
+}
+
+// ReEncryptDoneMsg carries the result of a sops.SetKey or sops.EncryptFile call.
+// Err is non-nil if the re-encryption failed.
+type ReEncryptDoneMsg struct {
+	Err error
+}
+
+// ParsedFileForTest is a test helper that builds a parser.ParsedFile from tree nodes.
+// It is exported so external test packages (_test suffix) can drive AppModel into stateDetail.
+func ParsedFileForTest(nodes []ui.TreeNode) parser.ParsedFile {
+	return parser.ParsedFile{Nodes: nodes}
 }
 
 // AppModel is the root Bubble Tea model. It owns a sessionState enum and
@@ -171,6 +214,50 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status.SetItemCount(countLeafNodes(msg.Parsed.Nodes), "keys")
 		return m, nil
 
+	case ui.RevealRequestMsg:
+		// User pressed r on an encrypted leaf — dispatch async sops.DecryptKey (DEC-01).
+		// T-03-04: context.WithTimeout prevents hung sops process.
+		absPath := m.currentFile.AbsPath
+		keyPath := msg.KeyPath
+		return m, func() tea.Msg {
+			ctx, cancel := context.WithTimeout(context.Background(), sops.SopsTimeout)
+			defer cancel()
+			value, err := sops.DecryptKey(ctx, absPath, keyPath)
+			return DecryptKeyMsg{KeyPath: keyPath, Value: value, Err: err}
+		}
+
+	case ui.RevealAllRequestMsg:
+		// User pressed R with no values revealed — dispatch async sops.DecryptFile (DEC-02).
+		absPath := m.currentFile.AbsPath
+		return m, func() tea.Msg {
+			ctx, cancel := context.WithTimeout(context.Background(), sops.SopsTimeout)
+			defer cancel()
+			data, err := sops.DecryptFile(ctx, absPath)
+			if err != nil {
+				return DecryptAllMsg{Err: err}
+			}
+			values, err := parseDecryptedValues(data)
+			return DecryptAllMsg{Values: values, Err: err}
+		}
+
+	case DecryptKeyMsg:
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Decrypt error: " + msg.Err.Error())
+			return m, nil
+		}
+		m.detail.RevealNode(msg.KeyPath, msg.Value)
+		m.status, _ = m.status.Flash("Decrypted")
+		return m, nil
+
+	case DecryptAllMsg:
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Decrypt error: " + msg.Err.Error())
+			return m, nil
+		}
+		m.detail.RevealAllNodes(msg.Values)
+		m.status, _ = m.status.Flash("All values decrypted")
+		return m, nil
+
 	case tea.KeyPressMsg:
 		// Global key: toggle help overlay
 		if key.Matches(msg, keys.DefaultGlobalKeyMap.Help) {
@@ -285,7 +372,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Priority 3: Navigate back from detail to file list
+			// Per D-04 and T-03-02: clear all revealed values before leaving detail view.
 			if m.state == stateDetail {
+				m.detail.ClearAllRevealed()
 				m.state = stateFileList
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
@@ -399,4 +488,46 @@ func countLeafNodes(nodes []ui.TreeNode) int {
 		}
 	}
 	return count
+}
+
+// parseDecryptedValues parses a fully-decrypted YAML byte slice (output of sops decrypt)
+// and returns a flat map of dot-joined key path → string value for all leaf nodes.
+// Used by the RevealAllRequestMsg handler to populate DecryptAllMsg.Values.
+func parseDecryptedValues(data []byte) (map[string]string, error) {
+	var root yaml.MapSlice
+	if err := yaml.UnmarshalWithOptions(data, &root, yaml.UseOrderedMap()); err != nil {
+		return nil, err
+	}
+	result := make(map[string]string)
+	collectLeafValues(root, "", result)
+	return result, nil
+}
+
+// collectLeafValues walks a yaml.MapSlice recursively, building dot-joined key paths
+// and collecting string representations of leaf values into the result map.
+func collectLeafValues(slice yaml.MapSlice, parentPath string, result map[string]string) {
+	for _, item := range slice {
+		key, ok := item.Key.(string)
+		if !ok {
+			continue
+		}
+		// Skip the sops metadata block — it is not a secret value
+		if parentPath == "" && key == "sops" {
+			continue
+		}
+		path := key
+		if parentPath != "" {
+			path = parentPath + "." + key
+		}
+		switch v := item.Value.(type) {
+		case yaml.MapSlice:
+			collectLeafValues(v, path, result)
+		case string:
+			result[path] = v
+		case int, int64, float64, bool:
+			result[path] = fmt.Sprintf("%v", v)
+		default:
+			// Skip non-scalar, non-map values (arrays, nulls, etc.)
+		}
+	}
 }

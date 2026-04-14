@@ -6,6 +6,7 @@
 // Per D-07: [+]/[-] indicators show node collapse state.
 // Per NAV-03: j/k/g/G/ctrl-d/u navigation; Enter/l expands, h/left collapses.
 // Per 01-UI-SPEC.md §YAML Tree Rendering: connectors ├─ └─ │ in muted color.
+// Per D-01..D-04: r/R reveal/mask with ClearAllRevealed on Esc (T-03-02).
 //
 // Note: Never use type any. Never use lipgloss.AdaptiveColor (issue #1036).
 package ui
@@ -18,6 +19,19 @@ import (
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
+
+// RevealRequestMsg is sent by DetailModel.Update when the user presses r on an
+// encrypted, non-revealed leaf. AppModel handles it by dispatching a sops.DecryptKey
+// subprocess and returning DecryptKeyMsg.
+type RevealRequestMsg struct {
+	KeyPath string // dot-joined key path, e.g. "database.password"
+}
+
+// RevealAllRequestMsg is sent by DetailModel.Update when the user presses R and
+// no values are currently revealed. AppModel handles it by dispatching sops.DecryptFile.
+type RevealAllRequestMsg struct {
+	FilePath string // absolute path to the SOPS-encrypted file
+}
 
 // TreeNode represents a single node in the YAML key tree.
 // Group nodes (those with Children) can be collapsed or expanded.
@@ -41,6 +55,12 @@ type TreeNode struct {
 	// IsPlain indicates a leaf value that SOPS left unencrypted (via encrypted_regex/unencrypted_regex).
 	// These display their plaintext value with a [plain] badge.
 	IsPlain bool
+	// Revealed is true when the user has decrypted this leaf and the plaintext is visible.
+	// Per D-01: toggled by r key; cleared by ClearAllRevealed on Esc (D-04, T-03-02).
+	Revealed bool
+	// DecryptedValue holds the plaintext secret value when Revealed=true.
+	// It is zeroed by ClearAllRevealed to prevent memory retention (T-03-02).
+	DecryptedValue string
 }
 
 // flatRow is an internal representation of a single visible row in the tree.
@@ -262,6 +282,39 @@ func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
 				}
 			}
 			return m, nil
+
+		case key.Matches(msg, m.keys.Reveal):
+			// r key: toggle reveal/mask for the selected encrypted leaf (D-01).
+			if len(m.flatRows) > 0 {
+				row := m.flatRows[m.cursor]
+				node := row.node
+				if node.Encrypted {
+					if node.Revealed {
+						// Already revealed → mask it
+						m.MaskNode(row.keyPath)
+						return m, nil
+					}
+					// Not yet revealed → request decrypt from AppModel
+					keyPath := row.keyPath
+					return m, func() tea.Msg {
+						return RevealRequestMsg{KeyPath: keyPath}
+					}
+				}
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keys.RevealAll):
+			// R key: toggle reveal-all / mask-all (D-02).
+			if m.AnyRevealed() {
+				// Some/all revealed → mask all
+				m.MaskAllNodes()
+				return m, nil
+			}
+			// None revealed → request full-file decrypt from AppModel
+			filename := m.filename
+			return m, func() tea.Msg {
+				return RevealAllRequestMsg{FilePath: filename}
+			}
 		}
 	}
 	return m, nil
@@ -372,7 +425,12 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 		// Leaf node rendering depends on encryption state
 		sb.WriteString(node.Key)
 		sb.WriteString(": ")
-		if node.Encrypted {
+		if node.Encrypted && node.Revealed {
+			// Revealed encrypted value: show plaintext + lock-open icon (D-03, 03-UI-SPEC.md)
+			sb.WriteString(RevealedValueStyle.Render(node.DecryptedValue))
+			sb.WriteString("  ")
+			sb.WriteString(RevealedIconStyle.Render("\U0001F513"))
+		} else if node.Encrypted {
 			// Encrypted value: show *** with type hint using canonical TypeHintStyle
 			sb.WriteString(DimText.Render("***"))
 			sb.WriteString(TypeHintStyle.Render(" (" + node.TypeHint + ")"))
@@ -402,4 +460,115 @@ func (m *DetailModel) SetSize(width, height int) {
 // SelectedIndex returns the current cursor position into the flat row list.
 func (m DetailModel) SelectedIndex() int {
 	return m.cursor
+}
+
+// ClearAllRevealed walks all nodes recursively and sets Revealed=false, DecryptedValue=""
+// on every node. Called on Esc-to-file-list transition (D-04, T-03-02: prevent memory leak).
+func (m *DetailModel) ClearAllRevealed() {
+	clearRevealedNodes(m.nodes)
+	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+	m.allFlatRows = m.flatRows
+}
+
+// clearRevealedNodes recursively clears Revealed/DecryptedValue on all nodes.
+func clearRevealedNodes(nodes []TreeNode) {
+	for i := range nodes {
+		nodes[i].Revealed = false
+		nodes[i].DecryptedValue = ""
+		if len(nodes[i].Children) > 0 {
+			clearRevealedNodes(nodes[i].Children)
+		}
+	}
+}
+
+// RevealNode finds the node matching dotKeyPath and sets Revealed=true with the given value.
+// Matching by keyPath (not cursor index) avoids Pitfall 2 (cursor race condition).
+// Re-flattens after mutation.
+func (m *DetailModel) RevealNode(dotKeyPath, value string) {
+	setRevealedByPath(m.nodes, dotKeyPath, "", value, true)
+	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+	m.allFlatRows = m.flatRows
+}
+
+// MaskNode finds the node matching dotKeyPath and sets Revealed=false, DecryptedValue="".
+// Re-flattens after mutation.
+func (m *DetailModel) MaskNode(dotKeyPath string) {
+	setRevealedByPath(m.nodes, dotKeyPath, "", "", false)
+	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+	m.allFlatRows = m.flatRows
+}
+
+// MaskAllNodes masks all revealed nodes. Alias for ClearAllRevealed for consistency.
+func (m *DetailModel) MaskAllNodes() {
+	m.ClearAllRevealed()
+}
+
+// RevealAllNodes walks all leaf nodes and sets Revealed=true / DecryptedValue from the
+// provided map (keyPath → plaintext value). Re-flattens after mutation.
+func (m *DetailModel) RevealAllNodes(values map[string]string) {
+	revealAllByPath(m.nodes, "", values)
+	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+	m.allFlatRows = m.flatRows
+}
+
+// AnyRevealed returns true if any leaf node has Revealed=true.
+func (m DetailModel) AnyRevealed() bool {
+	return anyRevealedNodes(m.nodes)
+}
+
+// anyRevealedNodes recursively checks if any node has Revealed=true.
+func anyRevealedNodes(nodes []TreeNode) bool {
+	for i := range nodes {
+		if nodes[i].Revealed {
+			return true
+		}
+		if len(nodes[i].Children) > 0 && anyRevealedNodes(nodes[i].Children) {
+			return true
+		}
+	}
+	return false
+}
+
+// setRevealedByPath walks nodes recursively, computing each node's dot-joined keyPath.
+// When a match is found, sets Revealed=reveal and DecryptedValue=value.
+func setRevealedByPath(nodes []TreeNode, targetPath, parentPath, value string, reveal bool) {
+	for i := range nodes {
+		path := parentPath
+		if path != "" {
+			path += "."
+		}
+		path += nodes[i].Key
+		if path == targetPath {
+			nodes[i].Revealed = reveal
+			if reveal {
+				nodes[i].DecryptedValue = value
+			} else {
+				nodes[i].DecryptedValue = ""
+			}
+			return
+		}
+		if len(nodes[i].Children) > 0 {
+			setRevealedByPath(nodes[i].Children, targetPath, path, value, reveal)
+		}
+	}
+}
+
+// revealAllByPath walks all leaf nodes and reveals those whose keyPath is in the values map.
+func revealAllByPath(nodes []TreeNode, parentPath string, values map[string]string) {
+	for i := range nodes {
+		path := parentPath
+		if path != "" {
+			path += "."
+		}
+		path += nodes[i].Key
+		if len(nodes[i].Children) == 0 {
+			// Leaf node — reveal if in map
+			if val, ok := values[path]; ok {
+				nodes[i].Revealed = true
+				nodes[i].DecryptedValue = val
+			}
+		} else {
+			revealAllByPath(nodes[i].Children, path, values)
+		}
+	}
 }
