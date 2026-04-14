@@ -51,13 +51,20 @@ var (
 // DetectFormat attempts to identify the format of a secret value.
 // Detection order: bcrypt → UUID → hex → base64 → unknown.
 // bcrypt is checked first because bcrypt hashes can match the base64 regex (D-13).
+//
+// Hex detection requires an even-length string: valid hex encodes whole bytes so the
+// character count must be even. This guards against misclassifying a base64 value
+// whose characters happen to all fall within [0-9a-fA-F] — such values share the hex
+// alphabet but have lengths that are not always even (e.g. 44-char base64). If
+// auto-detection produces the wrong format, the user can select the correct format
+// from the rotation menu.
 func DetectFormat(value string) SecretFormat {
 	switch {
 	case reBcrypt.MatchString(value):
 		return FormatBcrypt
 	case reUUID.MatchString(value):
 		return FormatUUID
-	case reHex.MatchString(value):
+	case reHex.MatchString(value) && len(value)%2 == 0:
 		return FormatHex
 	case reBase64.MatchString(value):
 		return FormatBase64
