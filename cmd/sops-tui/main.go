@@ -50,7 +50,8 @@ func main() {
 	}
 
 	// Step 6: Create and run the root TUI program (View().AltScreen = true in AppModel)
-	model := app.NewAppModel(env)
+	sopsYamlPath, _ := validator.FindSopsYaml(opts.StartDir)
+	model := app.NewAppModel(env, sopsYamlPath)
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running sops-tui: %v\n", err)

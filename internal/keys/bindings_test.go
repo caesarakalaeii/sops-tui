@@ -81,3 +81,19 @@ func TestDetailKeyMap_ImplementsHelpKeyMap(t *testing.T) {
 	full := keys.DefaultDetailKeyMap.FullHelp()
 	assert.NotEmpty(t, full, "FullHelp must return at least one group")
 }
+
+// TestFileListKeyMap_SearchAndInfoBindings verifies Search and Info bindings on DefaultFileListKeyMap.
+func TestFileListKeyMap_SearchAndInfoBindings(t *testing.T) {
+	km := keys.DefaultFileListKeyMap
+
+	assert.True(t, key.Matches(press("/"), km.Search), "Search must match '/'")
+	assert.True(t, key.Matches(press("i"), km.Info), "Info must match 'i'")
+}
+
+// TestDetailKeyMap_SearchAndInfoBindings verifies Search and Info bindings on DefaultDetailKeyMap.
+func TestDetailKeyMap_SearchAndInfoBindings(t *testing.T) {
+	km := keys.DefaultDetailKeyMap
+
+	assert.True(t, key.Matches(press("/"), km.Search), "Search must match '/'")
+	assert.True(t, key.Matches(press("i"), km.Info), "Info must match 'i'")
+}

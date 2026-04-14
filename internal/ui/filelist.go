@@ -17,6 +17,7 @@ import (
 	"charm.land/bubbles/v2/list"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
+	"github.com/caesarakalaeii/sops-tui/internal/sops"
 )
 
 // FileItem represents a SOPS-encrypted file entry in the file browser.
@@ -27,11 +28,22 @@ type FileItem struct {
 	Name string
 	// Path is the absolute path for later use in decrypt/edit operations.
 	Path string
+	// IsEncrypted indicates whether the file contains a SOPS encryption marker.
+	// Per D-02: false shows [unencrypted] badge.
+	IsEncrypted bool
+	// Rule is the matched .sops.yaml creation rule for this file (used by parser).
+	Rule sops.CreationRule
 }
 
 // Title returns the display name used by the default list delegate.
+// Appends [unencrypted] badge when IsEncrypted is false.
 // Implements list.DefaultItem.
-func (i FileItem) Title() string { return i.Name }
+func (i FileItem) Title() string {
+	if !i.IsEncrypted {
+		return i.Name + " " + BadgeUnencrypted.Render("[unencrypted]")
+	}
+	return i.Name
+}
 
 // Description returns the absolute path shown as a secondary line.
 // Implements list.DefaultItem.
@@ -43,13 +55,15 @@ func (i FileItem) FilterValue() string { return i.Name }
 
 // FileListModel wraps charm.land/bubbles/v2/list.Model and provides
 // vim-style navigation (j/k/g/G/ctrl-d/u) via the custom FileListKeyMap.
-//
-// Phase 1: renders placeholder data. No file discovery yet.
+// Supports inline fuzzy search via SearchModel.
 type FileListModel struct {
-	list   list.Model
-	keys   keys.FileListKeyMap
-	width  int
-	height int
+	list         list.Model
+	keys         keys.FileListKeyMap
+	width        int
+	height       int
+	searchActive bool
+	search       SearchModel
+	allItems     []FileItem // full unfiltered list
 }
 
 // NewFileListModel creates a FileListModel with the given items and dimensions.
@@ -73,11 +87,37 @@ func NewFileListModel(items []FileItem, width, height int) FileListModel {
 	l.SetFilteringEnabled(false)
 
 	return FileListModel{
-		list:   l,
-		keys:   keys.DefaultFileListKeyMap,
-		width:  width,
-		height: height,
+		list:     l,
+		keys:     keys.DefaultFileListKeyMap,
+		width:    width,
+		height:   height,
+		allItems: items,
+		search:   NewSearchModel(width),
 	}
+}
+
+// ActivateSearch activates inline fuzzy search mode.
+// Returns the Focus cmd from the textinput.
+func (m *FileListModel) ActivateSearch() tea.Cmd {
+	m.searchActive = true
+	return m.search.SetActive(true)
+}
+
+// DeactivateSearch deactivates search mode and restores the full item list.
+func (m *FileListModel) DeactivateSearch() {
+	m.searchActive = false
+	m.search.Reset()
+	// Restore full item list
+	listItems := make([]list.Item, len(m.allItems))
+	for i, item := range m.allItems {
+		listItems[i] = item
+	}
+	m.list.SetItems(listItems)
+}
+
+// IsSearchActive returns whether search mode is currently active.
+func (m FileListModel) IsSearchActive() bool {
+	return m.searchActive
 }
 
 // Update processes messages. Navigation keys (g/G/ctrl-d/u) are intercepted
@@ -85,6 +125,45 @@ func NewFileListModel(items []FileItem, width, height int) FileListModel {
 // Per RESEARCH.md Open Questions Q1 RESOLVED: we do not rely on bubbles/list
 // default KeyMap for g/G/ctrl-d/u — we handle them explicitly.
 func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
+	if m.searchActive {
+		switch msg := msg.(type) {
+		case tea.KeyPressMsg:
+			switch msg.String() {
+			case "esc":
+				m.DeactivateSearch()
+				return m, nil
+			case "enter":
+				m.searchActive = false
+				m.search.Reset()
+				return m, nil
+			}
+		}
+		// Route all other messages to search model
+		var cmd tea.Cmd
+		m.search, cmd = m.search.Update(msg)
+		// Apply filter to item list
+		pattern := m.search.Value()
+		if pattern == "" {
+			listItems := make([]list.Item, len(m.allItems))
+			for i, item := range m.allItems {
+				listItems[i] = item
+			}
+			m.list.SetItems(listItems)
+		} else {
+			names := make([]string, len(m.allItems))
+			for i, item := range m.allItems {
+				names[i] = item.Name
+			}
+			matches := ApplyFilter(pattern, names)
+			filtered := make([]list.Item, 0, len(matches))
+			for _, match := range matches {
+				filtered = append(filtered, m.allItems[match.Index])
+			}
+			m.list.SetItems(filtered)
+		}
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch {
@@ -125,24 +204,37 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 
 // View renders the file list. If there are no items, the empty state is shown
 // per 01-UI-SPEC.md §Copywriting Contract.
+// When search is active, the search bar is appended at the bottom.
 func (m FileListModel) View() string {
-	if len(m.list.Items()) == 0 {
+	var content string
+	if len(m.list.Items()) == 0 && !m.searchActive {
 		lines := []string{
 			"No SOPS files found",
 			"",
 			DimText.Render("No .sops.yaml discovered in this directory or parents."),
 			DimText.Render("Run sops-tui in a repository with a .sops.yaml configuration."),
 		}
-		return strings.Join(lines, "\n")
+		content = strings.Join(lines, "\n")
+	} else {
+		content = m.list.View()
 	}
-	return m.list.View()
+
+	if m.searchActive {
+		return content + "\n" + m.search.View()
+	}
+	return content
 }
 
 // SetSize updates the component dimensions and propagates to the embedded list.
 func (m *FileListModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
-	m.list.SetSize(width, height)
+	m.search.SetWidth(width)
+	if m.searchActive {
+		m.list.SetSize(width, height-1)
+	} else {
+		m.list.SetSize(width, height)
+	}
 }
 
 // SelectedItem returns the currently selected FileItem and whether a selection exists.
@@ -156,7 +248,18 @@ func (m FileListModel) SelectedItem() (FileItem, bool) {
 	return fi, ok
 }
 
+// SelectedFileItem returns the currently selected FileItem including Rule and IsEncrypted.
+// Returns (FileItem{}, false) if the list is empty or selection is invalid.
+func (m FileListModel) SelectedFileItem() (FileItem, bool) {
+	item := m.list.SelectedItem()
+	if item == nil {
+		return FileItem{}, false
+	}
+	fi, ok := item.(FileItem)
+	return fi, ok
+}
+
 // ItemCount returns the total number of items in the list.
 func (m FileListModel) ItemCount() int {
-	return len(m.list.Items())
+	return len(m.allItems)
 }

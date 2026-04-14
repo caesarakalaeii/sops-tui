@@ -25,6 +25,9 @@ const (
 	ViewFileList ViewState = iota
 	// ViewDetail indicates the YAML tree detail view is the active pane.
 	ViewDetail
+	// ViewMetadata indicates the metadata overlay is the active pane.
+	// Falls through to ViewFileList for help rendering (metadata has minimal bindings).
+	ViewMetadata
 )
 
 // HelpModel renders a full-screen keybinding overlay.

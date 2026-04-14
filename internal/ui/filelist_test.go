@@ -75,6 +75,53 @@ func TestFileListItemInterfaces(t *testing.T) {
 	item := ui.FileItem{Name: "test.yaml", Path: "/test.yaml"}
 	// Compile-time check: FileItem must satisfy list.Item (FilterValue), list.DefaultItem (Title, Description)
 	assert.Equal(t, "test.yaml", item.FilterValue())
-	assert.Equal(t, "test.yaml", item.Title())
 	assert.Equal(t, "/test.yaml", item.Description())
+}
+
+// TestFileItemTitleEncrypted verifies FileItem.Title() with IsEncrypted=true
+// does NOT contain "[unencrypted]".
+func TestFileItemTitleEncrypted(t *testing.T) {
+	item := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true}
+	title := item.Title()
+	assert.Equal(t, "secrets.yaml", title, "encrypted item title must equal Name with no badge")
+	assert.False(t, strings.Contains(stripAnsi(title), "[unencrypted]"),
+		"encrypted item must NOT show [unencrypted] badge")
+}
+
+// TestFileItemTitleUnencrypted verifies FileItem.Title() with IsEncrypted=false
+// contains the "[unencrypted]" badge text.
+func TestFileItemTitleUnencrypted(t *testing.T) {
+	item := ui.FileItem{Name: "plaintext.yaml", Path: "/plaintext.yaml", IsEncrypted: false}
+	title := item.Title()
+	assert.True(t, strings.Contains(stripAnsi(title), "[unencrypted]"),
+		"unencrypted item title must contain '[unencrypted]' badge, got: %q", title)
+}
+
+// TestFileListSearchActivation verifies that ActivateSearch sets IsSearchActive to true.
+func TestFileListSearchActivation(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "secrets/prod.yaml", Path: "/prod.yaml", IsEncrypted: true},
+		{Name: "secrets/staging.yaml", Path: "/staging.yaml", IsEncrypted: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	assert.False(t, m.IsSearchActive(), "search must be inactive after construction")
+
+	_ = m.ActivateSearch()
+	assert.True(t, m.IsSearchActive(), "search must be active after ActivateSearch()")
+}
+
+// TestFileListSearchDeactivation verifies that DeactivateSearch sets IsSearchActive to false
+// and restores the full item count.
+func TestFileListSearchDeactivation(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "secrets/prod.yaml", Path: "/prod.yaml", IsEncrypted: true},
+		{Name: "secrets/staging.yaml", Path: "/staging.yaml", IsEncrypted: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	_ = m.ActivateSearch()
+	require.True(t, m.IsSearchActive())
+
+	m.DeactivateSearch()
+	assert.False(t, m.IsSearchActive(), "search must be inactive after DeactivateSearch()")
+	assert.Equal(t, 2, m.ItemCount(), "full item list must be restored after deactivation")
 }

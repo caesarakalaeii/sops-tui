@@ -15,14 +15,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
-	"charm.land/lipgloss/v2"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
-
-// Temporary styles -- replaced by canonical styles from styles.go in Plan 02-03
-var typeHintStyleTemp = lipgloss.NewStyle().Faint(true).Foreground(lipgloss.Color("#6c7086"))
-var badgePlainTemp = lipgloss.NewStyle().Foreground(lipgloss.Color("#f9e2af"))
 
 // TreeNode represents a single node in the YAML key tree.
 // Group nodes (those with Children) can be collapsed or expanded.
@@ -56,62 +51,143 @@ type flatRow struct {
 	depth        int
 	isLast       bool   // last sibling at this level (renders └─ instead of ├─)
 	parentIsLast []bool // for each ancestor, whether it was the last sibling (controls │ vs space)
+	keyPath      string // e.g., "database.password" -- for fuzzy search
 }
 
 // DetailModel is the Bubble Tea component for the YAML tree detail pane.
 // It operates on a flat slice of visible rows computed from the tree structure.
 type DetailModel struct {
-	filename  string
-	nodes     []TreeNode
-	flatRows  []flatRow // recomputed from tree on each expand/collapse
-	cursor    int       // index into flatRows
-	scrollTop int       // first visible row index
-	width     int
-	height    int
-	keys      keys.DetailKeyMap
+	filename     string
+	nodes        []TreeNode
+	flatRows     []flatRow // recomputed from tree on each expand/collapse
+	cursor       int       // index into flatRows
+	scrollTop    int       // first visible row index
+	width        int
+	height       int
+	keys         keys.DetailKeyMap
+	searchActive bool
+	search       SearchModel
+	allFlatRows  []flatRow // full unfiltered flat rows
+	isEncrypted  bool      // per D-03: false shows unencrypted banner
 }
 
 // NewDetailModel creates a DetailModel for the given file.
 // nodes are the top-level tree nodes. Initially all top-level nodes are shown;
 // expanded state per node controls child visibility.
-func NewDetailModel(filename string, nodes []TreeNode, width, height int) DetailModel {
+func NewDetailModel(filename string, nodes []TreeNode, width, height int, isEncrypted bool) DetailModel {
 	m := DetailModel{
-		filename: filename,
-		nodes:    nodes,
-		cursor:   0,
-		width:    width,
-		height:   height,
-		keys:     keys.DefaultDetailKeyMap,
+		filename:    filename,
+		nodes:       nodes,
+		cursor:      0,
+		width:       width,
+		height:      height,
+		keys:        keys.DefaultDetailKeyMap,
+		isEncrypted: isEncrypted,
 	}
-	m.flatRows = flattenNodes(m.nodes, 0, nil)
+	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+	m.allFlatRows = m.flatRows
+	m.search = NewSearchModel(width)
 	return m
 }
 
 // flattenNodes produces a flat list of visible rows from the tree,
 // walking recursively and only including children of expanded nodes.
 // parentIsLast tracks whether each ancestor is the last sibling (for │ connector logic).
-func flattenNodes(nodes []TreeNode, depth int, parentIsLast []bool) []flatRow {
+// parentKeyPath is used to compute dot-joined key paths for fuzzy search.
+func flattenNodes(nodes []TreeNode, depth int, parentIsLast []bool, parentKeyPath string) []flatRow {
 	rows := make([]flatRow, 0, len(nodes))
 	for i := range nodes {
 		isLast := i == len(nodes)-1
 		pil := append(append([]bool(nil), parentIsLast...), isLast) //nolint:gocritic
+
+		// Compute the dot-joined key path for this node
+		path := parentKeyPath
+		if path != "" {
+			path += "."
+		}
+		path += nodes[i].Key
+
 		rows = append(rows, flatRow{
 			node:         &nodes[i],
 			depth:        depth,
 			isLast:       isLast,
 			parentIsLast: parentIsLast,
+			keyPath:      path,
 		})
 		if nodes[i].Expanded && len(nodes[i].Children) > 0 {
-			rows = append(rows, flattenNodes(nodes[i].Children, depth+1, pil)...)
+			rows = append(rows, flattenNodes(nodes[i].Children, depth+1, pil, path)...)
 		}
 	}
 	return rows
+}
+
+// ActivateSearch activates inline fuzzy search mode.
+// Returns the Focus cmd from the textinput.
+func (m *DetailModel) ActivateSearch() tea.Cmd {
+	m.searchActive = true
+	return m.search.SetActive(true)
+}
+
+// DeactivateSearch deactivates search mode and restores the full flat row list.
+func (m *DetailModel) DeactivateSearch() {
+	m.searchActive = false
+	m.search.Reset()
+	m.flatRows = m.allFlatRows
+}
+
+// IsSearchActive returns whether search mode is currently active.
+func (m DetailModel) IsSearchActive() bool {
+	return m.searchActive
+}
+
+// Nodes returns the top-level tree nodes (used by AppModel for leaf count).
+func (m DetailModel) Nodes() []TreeNode {
+	return m.nodes
 }
 
 // Update processes messages for the detail view.
 // Navigation keys are handled via key.Matches against DetailKeyMap.
 // Expand (enter/l/right) and Collapse (h/left) toggle the selected node.
 func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
+	if m.searchActive {
+		switch msg := msg.(type) {
+		case tea.KeyPressMsg:
+			switch msg.String() {
+			case "esc":
+				m.DeactivateSearch()
+				return m, nil
+			case "enter":
+				m.searchActive = false
+				m.search.Reset()
+				return m, nil
+			}
+		}
+		// Route all other messages to search model
+		var cmd tea.Cmd
+		m.search, cmd = m.search.Update(msg)
+		// Apply filter to flatRows by keyPath
+		pattern := m.search.Value()
+		if pattern == "" {
+			m.flatRows = m.allFlatRows
+		} else {
+			keyPaths := make([]string, len(m.allFlatRows))
+			for i, row := range m.allFlatRows {
+				keyPaths[i] = row.keyPath
+			}
+			matches := ApplyFilter(pattern, keyPaths)
+			filtered := make([]flatRow, 0, len(matches))
+			for _, match := range matches {
+				filtered = append(filtered, m.allFlatRows[match.Index])
+			}
+			m.flatRows = filtered
+		}
+		// Clamp cursor
+		if m.cursor >= len(m.flatRows) && len(m.flatRows) > 0 {
+			m.cursor = len(m.flatRows) - 1
+		}
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch {
@@ -166,7 +242,8 @@ func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
 				node := m.flatRows[m.cursor].node
 				if len(node.Children) > 0 && !node.Expanded {
 					node.Expanded = true
-					m.flatRows = flattenNodes(m.nodes, 0, nil)
+					m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+					m.allFlatRows = m.flatRows
 				}
 			}
 			return m, nil
@@ -176,7 +253,8 @@ func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
 				node := m.flatRows[m.cursor].node
 				if len(node.Children) > 0 && node.Expanded {
 					node.Expanded = false
-					m.flatRows = flattenNodes(m.nodes, 0, nil)
+					m.flatRows = flattenNodes(m.nodes, 0, nil, "")
+					m.allFlatRows = m.flatRows
 					// Clamp cursor in case visible rows shrank
 					if m.cursor >= len(m.flatRows) && len(m.flatRows) > 0 {
 						m.cursor = len(m.flatRows) - 1
@@ -201,22 +279,25 @@ func (m *DetailModel) adjustScroll() {
 
 // View renders the YAML tree.
 // If there are no nodes, the empty state is shown per UI-SPEC copywriting contract.
-// Each row is rendered with:
-//   - Indentation: 2 cells per depth level
-//   - Tree connectors: ├─ (non-last) or └─ (last) in TreeConnector style (muted color)
-//   - Parent continuation: │  or spaces based on ancestor isLast state
-//   - Group nodes: [+] (collapsed) or [-] (expanded) in TreeIndicator style (accent color)
-//   - Leaf nodes: key: *** with value in DimText
-//   - Selected row: SelectedRow style applied across full width
+// If isEncrypted is false, an unencrypted banner is prepended before the tree.
+// When search is active, the search bar is appended at the bottom.
 func (m DetailModel) View() string {
 	if len(m.nodes) == 0 {
 		return DimText.Render("No keys found in this file")
 	}
-	if len(m.flatRows) == 0 {
+	if len(m.flatRows) == 0 && !m.searchActive {
 		return DimText.Render("No keys found in this file")
 	}
 
 	var sb strings.Builder
+
+	// Per D-03 and UI-SPEC Unencrypted File Banner Contract:
+	// Prepend banner when file is not yet encrypted.
+	if !m.isEncrypted && len(m.nodes) > 0 {
+		sb.WriteString(WarnLabel.Render("Not yet encrypted \u2014 matches .sops.yaml rules"))
+		sb.WriteByte('\n')
+		sb.WriteByte('\n')
+	}
 
 	// Determine visible range
 	start := m.scrollTop
@@ -242,7 +323,12 @@ func (m DetailModel) View() string {
 		sb.WriteString(line)
 	}
 
-	return sb.String()
+	content := sb.String()
+
+	if m.searchActive {
+		return content + "\n" + m.search.View()
+	}
+	return content
 }
 
 // renderRow builds the rendered string for a single tree row.
@@ -250,6 +336,8 @@ func (m DetailModel) View() string {
 //   - Connectors in TreeConnector style (muted)
 //   - Indicators in TreeIndicator style (accent)
 //   - Values in DimText style (faint)
+//   - Type hints in TypeHintStyle (canonical from styles.go)
+//   - Plain badges in BadgePlain (canonical from styles.go)
 func renderRow(row flatRow, node *TreeNode, _ int) string {
 	var sb strings.Builder
 
@@ -285,14 +373,15 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 		sb.WriteString(node.Key)
 		sb.WriteString(": ")
 		if node.Encrypted {
-			// Encrypted value: show *** with type hint
+			// Encrypted value: show *** with type hint using canonical TypeHintStyle
 			sb.WriteString(DimText.Render("***"))
-			sb.WriteString(typeHintStyleTemp.Render(" (" + node.TypeHint + ")"))
+			sb.WriteString(TypeHintStyle.Render(" (" + node.TypeHint + ")"))
 		} else if node.IsPlain {
 			// Plain (unencrypted) value in a SOPS file: show value with [plain] badge
+			// using canonical BadgePlain style
 			sb.WriteString(node.Value)
 			sb.WriteString("  ")
-			sb.WriteString(badgePlainTemp.Render("[plain]"))
+			sb.WriteString(BadgePlain.Render("[plain]"))
 		} else {
 			// Default fallback: masked value (Phase 1 behavior)
 			sb.WriteString(DimText.Render("***"))
@@ -306,6 +395,7 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 func (m *DetailModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+	m.search.SetWidth(width)
 	m.adjustScroll()
 }
 

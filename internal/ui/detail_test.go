@@ -23,7 +23,7 @@ import (
 func sampleTree() []ui.TreeNode {
 	return []ui.TreeNode{
 		{
-			Key:      "database",
+			Key: "database",
 			Children: []ui.TreeNode{
 				{Key: "host", Value: "***", Depth: 1},
 				{Key: "port", Value: "***", Depth: 1},
@@ -32,7 +32,7 @@ func sampleTree() []ui.TreeNode {
 			Depth:    0,
 		},
 		{
-			Key:      "api",
+			Key: "api",
 			Children: []ui.TreeNode{
 				{Key: "key", Value: "***", Depth: 1},
 				{Key: "secret", Value: "***", Depth: 1},
@@ -70,7 +70,7 @@ func TestDetailRenderTreeConnectors(t *testing.T) {
 		{Key: "alpha", Value: "***", Depth: 0},
 		{Key: "beta", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	view := m.View()
 	// At least one of the tree connectors must appear
 	hasConnector := strings.Contains(view, "├─") ||
@@ -88,7 +88,7 @@ func TestDetailCollapsedNodeShowsPlus(t *testing.T) {
 			Expanded: false,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	view := m.View()
 	assert.True(t, strings.Contains(view, "[+]"),
 		"collapsed node must render '[+]' indicator, got: %q", view)
@@ -103,7 +103,7 @@ func TestDetailExpandedNodeShowsMinus(t *testing.T) {
 			Expanded: true,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	view := m.View()
 	assert.True(t, strings.Contains(view, "[-]"),
 		"expanded node must render '[-]' indicator, got: %q", view)
@@ -114,7 +114,7 @@ func TestDetailLeafNodeRendersStarred(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	view := m.View()
 	assert.True(t, strings.Contains(view, "***"),
 		"leaf node must render masked value '***', got: %q", view)
@@ -133,7 +133,7 @@ func TestDetailIndentation(t *testing.T) {
 			Depth:    0,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	view := m.View()
 	lines := strings.Split(view, "\n")
 	// Find the child line — it should be indented by at least 2 spaces (TreeIndent = 2 cells).
@@ -161,7 +161,7 @@ func TestDetailUpdateExpandOnEnter(t *testing.T) {
 			Expanded: false,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 
 	// Before: collapsed (no "host" leaf visible)
 	before := m.View()
@@ -186,7 +186,7 @@ func TestDetailUpdateCollapseOnH(t *testing.T) {
 			Expanded: true,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 
 	// Before: expanded (key child visible)
 	before := m.View()
@@ -205,7 +205,7 @@ func TestDetailUpdateCollapseOnH(t *testing.T) {
 // TestDetailSelectedIndex verifies SelectedIndex returns current cursor position.
 func TestDetailSelectedIndex(t *testing.T) {
 	nodes := sampleTree()
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	assert.Equal(t, 0, m.SelectedIndex(), "initial cursor should be at index 0")
 }
 
@@ -216,7 +216,7 @@ func TestDetailCursorMovement(t *testing.T) {
 		{Key: "b", Value: "***", Depth: 0},
 		{Key: "c", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	require.Equal(t, 0, m.SelectedIndex(), "starts at 0")
 
 	// Press j to move down
@@ -236,7 +236,7 @@ func TestDetailCursorMovement(t *testing.T) {
 
 // TestDetailEmptyState verifies NewDetailModel with empty nodes renders "No keys found in this file".
 func TestDetailEmptyState(t *testing.T) {
-	m := ui.NewDetailModel("test.yaml", []ui.TreeNode{}, 80, 24)
+	m := ui.NewDetailModel("test.yaml", []ui.TreeNode{}, 80, 24, true)
 	view := m.View()
 	assert.True(t, strings.Contains(view, "No keys found in this file"),
 		"empty state must contain 'No keys found in this file', got: %q", view)
@@ -269,7 +269,7 @@ func TestDetailKeyMapBinding(t *testing.T) {
 	// This verifies that key.Matches works with the binding from keys package
 	// indirectly by checking that our Update function accepts tea.KeyPressMsg.
 	nodes := []ui.TreeNode{{Key: "a", Value: "***"}}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
 	m2, _ := m.Update(msg)
 	// cursor stayed at 0 since only one item (can't go down)
 	assert.GreaterOrEqual(t, m2.SelectedIndex(), 0)
@@ -277,3 +277,75 @@ func TestDetailKeyMapBinding(t *testing.T) {
 
 // Compile-time import check: key package is available.
 var _ = key.NewBinding
+
+// TestDetailUnencryptedBannerShown verifies the unencrypted banner appears when isEncrypted=false.
+func TestDetailUnencryptedBannerShown(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "username", Value: "admin", Depth: 0},
+	}
+	m := ui.NewDetailModel("plain.yaml", nodes, 80, 24, false)
+	view := m.View()
+	assert.True(t, strings.Contains(stripAnsi(view), "Not yet encrypted"),
+		"unencrypted file must show 'Not yet encrypted' banner, got: %q", view)
+}
+
+// TestDetailUnencryptedBannerHidden verifies the unencrypted banner does NOT appear when isEncrypted=true.
+func TestDetailUnencryptedBannerHidden(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Value: "ENC[AES256_GCM,data:abc,type:str]", Encrypted: true, TypeHint: "str"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	view := m.View()
+	assert.False(t, strings.Contains(stripAnsi(view), "Not yet encrypted"),
+		"encrypted file must NOT show 'Not yet encrypted' banner, got: %q", view)
+}
+
+// TestDetailSearchActivation verifies that ActivateSearch sets IsSearchActive to true.
+func TestDetailSearchActivation(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "token", Value: "***", Encrypted: true, TypeHint: "str"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	assert.False(t, m.IsSearchActive(), "search must be inactive after construction")
+
+	_ = m.ActivateSearch()
+	assert.True(t, m.IsSearchActive(), "search must be active after ActivateSearch()")
+}
+
+// TestDetailSearchDeactivation verifies that DeactivateSearch sets IsSearchActive to false.
+func TestDetailSearchDeactivation(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "token", Value: "***", Encrypted: true, TypeHint: "str"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	_ = m.ActivateSearch()
+	require.True(t, m.IsSearchActive())
+
+	m.DeactivateSearch()
+	assert.False(t, m.IsSearchActive(), "search must be inactive after DeactivateSearch()")
+}
+
+// TestDetailRenderRowUsesCanonicalTypeHintStyle verifies renderRow uses TypeHintStyle
+// (not a temp style) by checking that an encrypted leaf renders the type hint.
+func TestDetailRenderRowUsesCanonicalTypeHintStyle(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, TypeHint: "str"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	view := m.View()
+	// The type hint "(str)" must appear in the rendered output
+	assert.True(t, strings.Contains(stripAnsi(view), "(str)"),
+		"encrypted leaf must render type hint '(str)', got: %q", view)
+}
+
+// TestDetailRenderRowUsesCanonicalBadgePlain verifies renderRow uses BadgePlain
+// (not a temp style) by checking that a plain leaf renders the [plain] badge.
+func TestDetailRenderRowUsesCanonicalBadgePlain(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "username", Value: "admin", IsPlain: true},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	view := m.View()
+	assert.True(t, strings.Contains(stripAnsi(view), "[plain]"),
+		"plain leaf must render '[plain]' badge, got: %q", view)
+}

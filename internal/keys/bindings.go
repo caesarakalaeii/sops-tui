@@ -57,12 +57,16 @@ type FileListKeyMap struct {
 	HalfDown key.Binding
 	// Open opens the selected file (navigates to detail view).
 	Open key.Binding
+	// Search activates the inline fuzzy filter.
+	Search key.Binding
+	// Info opens the metadata overlay for the highlighted file.
+	Info key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k FileListKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Open, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Open, k.Search, k.Info, k.Help, k.Quit}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -70,7 +74,7 @@ func (k FileListKeyMap) ShortHelp() []key.Binding {
 func (k FileListKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Open},
+		{k.Open, k.Search, k.Info},
 		{k.Help, k.Quit},
 	}
 }
@@ -107,6 +111,14 @@ var DefaultFileListKeyMap = FileListKeyMap{
 		key.WithKeys("enter", "l"),
 		key.WithHelp("enter/l", "open"),
 	),
+	Search: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	Info: key.NewBinding(
+		key.WithKeys("i"),
+		key.WithHelp("i", "file info"),
+	),
 }
 
 // DetailKeyMap holds keybindings for the YAML tree detail view.
@@ -133,12 +145,16 @@ type DetailKeyMap struct {
 	Collapse key.Binding
 	// Back returns to the file list view.
 	Back key.Binding
+	// Search activates the inline fuzzy filter for key paths.
+	Search key.Binding
+	// Info opens the metadata overlay for the current file.
+	Info key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Expand, k.Collapse, k.Back, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Help, k.Quit}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -146,7 +162,7 @@ func (k DetailKeyMap) ShortHelp() []key.Binding {
 func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Expand, k.Collapse, k.Back},
+		{k.Expand, k.Collapse, k.Back, k.Search, k.Info},
 		{k.Help, k.Quit},
 	}
 }
@@ -190,5 +206,13 @@ var DefaultDetailKeyMap = DetailKeyMap{
 	Back: key.NewBinding(
 		key.WithKeys("esc", "h"),
 		key.WithHelp("esc", "back to file list"),
+	),
+	Search: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	Info: key.NewBinding(
+		key.WithKeys("i"),
+		key.WithHelp("i", "file info"),
 	),
 }
