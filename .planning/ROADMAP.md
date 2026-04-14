@@ -68,7 +68,13 @@ Plans:
   3. User can edit a secret value; before re-encryption a diff view is shown requiring explicit confirmation
   4. User can rotate a secret to a format-aware random value (base64, hex, UUID, bcrypt) with confirmation
   5. Any destructive write operation presents a confirmation prompt that can be cancelled without effect
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — SOPS executor subprocess wrapper, on-demand decrypt/reveal, keybinding and style extensions
+- [ ] 03-02-PLAN.md — Diff confirmation overlay, inline single-key editing with textinput, stateDiff wiring
+- [ ] 03-03-PLAN.md — $EDITOR full-file editing flow, format-aware secret rotation with X key
+
 **UI hint**: yes
 
 ### Phase 4: Clipboard & Git
@@ -104,6 +110,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | - |
 | 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
-| 3. Write Loop | 0/? | Not started | - |
+| 3. Write Loop | 0/3 | Planned | - |
 | 4. Clipboard & Git | 0/? | Not started | - |
 | 5. Power Features | 0/? | Not started | - |
