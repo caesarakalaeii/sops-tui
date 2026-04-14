@@ -157,15 +157,31 @@ func generateUUIDv4() (string, error) {
 }
 
 // generateAlphanumeric generates a random alphanumeric string of the given length.
-// Uses crypto/rand with modular sampling over the charset.
+// Uses crypto/rand with rejection sampling to avoid modular bias (T-03-13).
+//
+// The charset has 62 characters. Bytes >= 248 (i.e., 248..255) are rejected
+// because 256 % 62 = 8, so indices 0..7 would be over-represented by ~25%
+// relative if naive modulo were used. Accepted range is 0..247 (248 values),
+// which divides evenly by 62 (248 / 62 = 4 exact), giving uniform distribution.
 func generateAlphanumeric(length int) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generate alphanumeric: %w", err)
+	result := make([]byte, length)
+	buf := make([]byte, length*2) // oversample to reduce retry probability
+	generated := 0
+	for generated < length {
+		if _, err := rand.Read(buf); err != nil {
+			return "", fmt.Errorf("generate alphanumeric: %w", err)
+		}
+		for _, b := range buf {
+			// Reject bytes in the biased tail: accept only 0..247 (248 values, 248%62==0)
+			if b < 248 {
+				result[generated] = charset[int(b)%len(charset)]
+				generated++
+				if generated == length {
+					break
+				}
+			}
+		}
 	}
-	for i := range b {
-		b[i] = charset[int(b[i])%len(charset)]
-	}
-	return string(b), nil
+	return string(result), nil
 }
