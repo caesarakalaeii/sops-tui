@@ -15,9 +15,14 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
+
+// Temporary styles -- replaced by canonical styles from styles.go in Plan 02-03
+var typeHintStyleTemp = lipgloss.NewStyle().Faint(true).Foreground(lipgloss.Color("#6c7086"))
+var badgePlainTemp = lipgloss.NewStyle().Foreground(lipgloss.Color("#f9e2af"))
 
 // TreeNode represents a single node in the YAML key tree.
 // Group nodes (those with Children) can be collapsed or expanded.
@@ -33,6 +38,14 @@ type TreeNode struct {
 	Expanded bool
 	// Depth is the nesting level (0 = top-level, 1 = first child level, etc.).
 	Depth int
+	// Encrypted indicates this leaf holds a SOPS-encrypted value (displays as "*** (type)").
+	Encrypted bool
+	// TypeHint is the SOPS type code extracted from ENC[...,type:X] (e.g., "str", "int", "bool").
+	// Empty string if not an encrypted leaf.
+	TypeHint string
+	// IsPlain indicates a leaf value that SOPS left unencrypted (via encrypted_regex/unencrypted_regex).
+	// These display their plaintext value with a [plain] badge.
+	IsPlain bool
 }
 
 // flatRow is an internal representation of a single visible row in the tree.
@@ -268,10 +281,22 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 		sb.WriteString(" ")
 		sb.WriteString(node.Key)
 	} else {
-		// Leaf node — key: *** (all values masked in Phase 1)
+		// Leaf node rendering depends on encryption state
 		sb.WriteString(node.Key)
 		sb.WriteString(": ")
-		sb.WriteString(DimText.Render("***"))
+		if node.Encrypted {
+			// Encrypted value: show *** with type hint
+			sb.WriteString(DimText.Render("***"))
+			sb.WriteString(typeHintStyleTemp.Render(" (" + node.TypeHint + ")"))
+		} else if node.IsPlain {
+			// Plain (unencrypted) value in a SOPS file: show value with [plain] badge
+			sb.WriteString(node.Value)
+			sb.WriteString("  ")
+			sb.WriteString(badgePlainTemp.Render("[plain]"))
+		} else {
+			// Default fallback: masked value (Phase 1 behavior)
+			sb.WriteString(DimText.Render("***"))
+		}
 	}
 
 	return sb.String()
