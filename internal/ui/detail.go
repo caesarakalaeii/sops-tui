@@ -16,8 +16,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/lipgloss/v2"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
+	sops "github.com/caesarakalaeii/sops-tui/internal/sops"
 )
 
 // RevealRequestMsg is sent by DetailModel.Update when the user presses r on an
@@ -31,6 +34,25 @@ type RevealRequestMsg struct {
 // no values are currently revealed. AppModel handles it by dispatching sops.DecryptFile.
 type RevealAllRequestMsg struct {
 	FilePath string // absolute path to the SOPS-encrypted file
+}
+
+// EditConfirmMsg is sent by DetailModel.Update when the user presses Enter in edit mode.
+// AppModel handles it by transitioning to stateDiff with a single-entry diff.
+type EditConfirmMsg struct {
+	KeyPath  string // dot-joined key path of the edited node
+	OldValue string // the original decrypted value before editing
+	NewValue string // the new value typed by the user
+}
+
+// EditCancelMsg is sent by DetailModel.Update when the user presses Esc in edit mode.
+// AppModel handles it as a no-op (no state change required).
+type EditCancelMsg struct{}
+
+// EditBlockedMsg is sent by DetailModel.Update when the user presses e on a node
+// that cannot be edited. Reason is empty for "masked leaf" (AppModel flashes
+// "Reveal first with r"). Reason is non-empty for specific blocks (e.g. array-indexed keys).
+type EditBlockedMsg struct {
+	Reason string
 }
 
 // TreeNode represents a single node in the YAML key tree.
@@ -89,6 +111,11 @@ type DetailModel struct {
 	search       SearchModel
 	allFlatRows  []flatRow // full unfiltered flat rows
 	isEncrypted  bool      // per D-03: false shows unencrypted banner
+	// Inline edit mode fields (D-05, stateEdit)
+	editActive  bool            // true while the inline textinput is visible
+	editInput   textinput.Model // the textinput component for editing
+	editKeyPath string          // dot-joined key path of the node being edited
+	editOldVal  string          // original decrypted value before edit (for diff)
 }
 
 // NewDetailModel creates a DetailModel for the given file.
@@ -160,6 +187,11 @@ func (m DetailModel) IsSearchActive() bool {
 	return m.searchActive
 }
 
+// IsEditActive returns whether the inline edit mode is currently active.
+func (m DetailModel) IsEditActive() bool {
+	return m.editActive
+}
+
 // Nodes returns the top-level tree nodes (used by AppModel for leaf count).
 func (m DetailModel) Nodes() []TreeNode {
 	return m.nodes
@@ -169,6 +201,41 @@ func (m DetailModel) Nodes() []TreeNode {
 // Navigation keys are handled via key.Matches against DetailKeyMap.
 // Expand (enter/l/right) and Collapse (h/left) toggle the selected node.
 func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
+	// editActive branch: route all input to the textinput (Pitfall 4: eat j/k nav keys).
+	// Enter confirms, Esc cancels; all other keys go to the textinput.
+	if m.editActive {
+		if kMsg, ok := msg.(tea.KeyPressMsg); ok {
+			switch kMsg.String() {
+			case "enter":
+				newVal := m.editInput.Value()
+				m.editActive = false
+				m.editInput.Blur()
+				oldVal := m.editOldVal
+				keyPath := m.editKeyPath
+				// Clear sensitive fields after capture (T-03-08)
+				m.editOldVal = ""
+				m.editKeyPath = ""
+				return m, func() tea.Msg {
+					return EditConfirmMsg{
+						KeyPath:  keyPath,
+						OldValue: oldVal,
+						NewValue: newVal,
+					}
+				}
+			case "esc":
+				m.editActive = false
+				m.editInput.Blur()
+				m.editOldVal = ""
+				m.editKeyPath = ""
+				return m, func() tea.Msg { return EditCancelMsg{} }
+			}
+		}
+		// Route all other messages to textinput (eats j/k and other nav keys)
+		var cmd tea.Cmd
+		m.editInput, cmd = m.editInput.Update(msg)
+		return m, cmd
+	}
+
 	if m.searchActive {
 		switch msg := msg.(type) {
 		case tea.KeyPressMsg:
@@ -315,6 +382,37 @@ func (m DetailModel) Update(msg tea.Msg) (DetailModel, tea.Cmd) {
 			return m, func() tea.Msg {
 				return RevealAllRequestMsg{FilePath: filename}
 			}
+
+		case key.Matches(msg, m.keys.Edit):
+			// e key: enter inline edit mode on a revealed encrypted leaf (D-05).
+			if len(m.flatRows) > 0 {
+				row := m.flatRows[m.cursor]
+				node := row.node
+				// Guard: block edit on array-indexed keys (Open Question 1 resolution)
+				if sops.IsArrayIndexedKeyPath(row.keyPath) {
+					return m, func() tea.Msg {
+						return EditBlockedMsg{Reason: "Array-indexed keys not editable in Phase 3"}
+					}
+				}
+				if node.Encrypted && node.Revealed {
+					m.editActive = true
+					m.editKeyPath = row.keyPath
+					m.editOldVal = node.DecryptedValue
+					ti := textinput.New()
+					ti.CharLimit = 1000 // T-03-09: prevent memory exhaustion
+					ti.Prompt = ""
+					ti.SetValue(node.DecryptedValue)
+					m.editInput = ti
+					cmd := m.editInput.Focus()
+					return m, cmd
+				} else if node.Encrypted && !node.Revealed {
+					// Masked leaf — return blocked msg for AppModel to flash "Reveal first with r"
+					return m, func() tea.Msg {
+						return EditBlockedMsg{}
+					}
+				}
+			}
+			return m, nil
 		}
 	}
 	return m, nil
@@ -363,11 +461,22 @@ func (m DetailModel) View() string {
 		row := m.flatRows[idx]
 		node := row.node
 
-		line := renderRow(row, node, m.width)
-
-		if idx == m.cursor {
-			// Apply selected row style across full width
-			line = SelectedRow.Width(m.width).Render(line)
+		var line string
+		if idx == m.cursor && m.editActive {
+			// Render key portion normally, replace value with textinput (D-05)
+			keyPart := renderRowKeyOnly(row, node)
+			inputWidth := m.width - lipgloss.Width(keyPart) - 4
+			if inputWidth < 1 {
+				inputWidth = 1
+			}
+			inputView := EditInputStyle.Width(inputWidth).Render(m.editInput.View())
+			line = keyPart + inputView
+		} else {
+			line = renderRow(row, node, m.width)
+			if idx == m.cursor {
+				// Apply selected row style across full width
+				line = SelectedRow.Width(m.width).Render(line)
+			}
 		}
 
 		if idx > start {
@@ -445,6 +554,35 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 			sb.WriteString(DimText.Render("***"))
 		}
 	}
+
+	return sb.String()
+}
+
+// renderRowKeyOnly builds the key portion of a tree row (connectors + key name + ": ")
+// but omits the value. Used in edit mode to render the key column frozen while the
+// value column is replaced by the inline textinput.
+func renderRowKeyOnly(row flatRow, node *TreeNode) string {
+	var sb strings.Builder
+
+	// Parent continuation lines
+	for _, ancestorIsLast := range row.parentIsLast {
+		if ancestorIsLast {
+			sb.WriteString(TreeConnector.Render("   "))
+		} else {
+			sb.WriteString(TreeConnector.Render("│  "))
+		}
+	}
+
+	// Immediate connector for this node
+	if row.isLast {
+		sb.WriteString(TreeConnector.Render("└─ "))
+	} else {
+		sb.WriteString(TreeConnector.Render("├─ "))
+	}
+
+	// Key name + ": " separator (leaf nodes only — edit only activates on leaves)
+	sb.WriteString(node.Key)
+	sb.WriteString(": ")
 
 	return sb.String()
 }

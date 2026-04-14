@@ -349,3 +349,137 @@ func TestDetailRenderRowUsesCanonicalBadgePlain(t *testing.T) {
 	assert.True(t, strings.Contains(stripAnsi(view), "[plain]"),
 		"plain leaf must render '[plain]' badge, got: %q", view)
 }
+
+// TestEditOnRevealedLeaf verifies that pressing e on a Revealed=true leaf activates edit mode.
+func TestEditOnRevealedLeaf(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret123"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	require.False(t, m.IsEditActive(), "edit must not be active initially")
+
+	msg := tea.KeyPressMsg{Code: 'e'}
+	m2, _ := m.Update(msg)
+	assert.True(t, m2.IsEditActive(), "edit must be active after pressing e on revealed leaf")
+}
+
+// TestEditOnMaskedLeaf verifies that pressing e on an encrypted but not-yet-revealed leaf
+// returns an EditBlockedMsg (for AppModel to flash "Reveal first with r").
+func TestEditOnMaskedLeaf(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: false},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+
+	msg := tea.KeyPressMsg{Code: 'e'}
+	m2, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "e on masked leaf must return a cmd")
+	result := cmd()
+	blocked, ok := result.(ui.EditBlockedMsg)
+	require.True(t, ok, "cmd must return EditBlockedMsg, got: %T", result)
+	assert.Empty(t, blocked.Reason, "masked leaf block must have empty Reason (AppModel flashes 'Reveal first with r')")
+	assert.False(t, m2.IsEditActive(), "edit must not be active after blocked edit")
+}
+
+// TestEditOnArrayKeyReturnsBlocked verifies that e on a revealed node with array-indexed keyPath
+// returns EditBlockedMsg with Reason "Array-indexed keys not editable in Phase 3".
+func TestEditOnArrayKeyReturnsBlocked(t *testing.T) {
+	// Build tree where expanded group "items" has child index node
+	// We use a plain keyPath override by setting up a leaf named with bracket notation.
+	// The keyPath is computed from dot-joining, so we simulate by creating a node "items[0]"
+	// under a parent "items" expanded group.
+	nodes := []ui.TreeNode{
+		{
+			Key:      "items",
+			Expanded: true,
+			Children: []ui.TreeNode{
+				{Key: "items[0]", Encrypted: true, Revealed: true, DecryptedValue: "val"},
+			},
+		},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+
+	// Move cursor to the child (index 1 in flat rows after expanding)
+	msgJ := tea.KeyPressMsg{Code: 'j'}
+	m, _ = m.Update(msgJ)
+
+	msg := tea.KeyPressMsg{Code: 'e'}
+	_, cmd := m.Update(msg)
+	require.NotNil(t, cmd, "e on array-indexed key must return a cmd")
+	result := cmd()
+	blocked, ok := result.(ui.EditBlockedMsg)
+	require.True(t, ok, "must return EditBlockedMsg for array-indexed key, got: %T", result)
+	assert.Equal(t, "Array-indexed keys not editable in Phase 3", blocked.Reason,
+		"must set correct block reason")
+}
+
+// TestEditEnterProducesConfirmMsg verifies that pressing Enter while in edit mode
+// returns an EditConfirmMsg with correct KeyPath, OldValue, NewValue.
+func TestEditEnterProducesConfirmMsg(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "original"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+
+	// Activate edit mode
+	msg := tea.KeyPressMsg{Code: 'e'}
+	m, cmd := m.Update(msg)
+	require.True(t, m.IsEditActive(), "edit must be active")
+	_ = cmd // focus cmd
+
+	// The textinput is pre-populated with "original"; press Enter to confirm
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
+	m2, cmd2 := m.Update(enterMsg)
+	require.NotNil(t, cmd2, "Enter in edit mode must return a cmd")
+	result := cmd2()
+	confirm, ok := result.(ui.EditConfirmMsg)
+	require.True(t, ok, "must return EditConfirmMsg, got: %T", result)
+	assert.Equal(t, "password", confirm.KeyPath, "KeyPath must be 'password'")
+	assert.Equal(t, "original", confirm.OldValue, "OldValue must be 'original'")
+	// NewValue is whatever textinput has (pre-populated with "original")
+	assert.Equal(t, "original", confirm.NewValue, "NewValue must be 'original' (unchanged)")
+	assert.False(t, m2.IsEditActive(), "edit must be inactive after Enter")
+}
+
+// TestEditEscCancels verifies that Esc in edit mode returns EditCancelMsg and deactivates edit.
+func TestEditEscCancels(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+
+	// Activate edit mode
+	msg := tea.KeyPressMsg{Code: 'e'}
+	m, _ = m.Update(msg)
+	require.True(t, m.IsEditActive(), "edit must be active")
+
+	// Press Esc
+	escMsg := tea.KeyPressMsg{Code: tea.KeyEsc}
+	m2, cmd := m.Update(escMsg)
+	require.NotNil(t, cmd, "Esc in edit mode must return a cmd")
+	result := cmd()
+	_, ok := result.(ui.EditCancelMsg)
+	assert.True(t, ok, "must return EditCancelMsg, got: %T", result)
+	assert.False(t, m2.IsEditActive(), "edit must be inactive after Esc")
+}
+
+// TestEditInputEatsNavigationKeys verifies that j key in edit mode does not move the cursor.
+func TestEditInputEatsNavigationKeys(t *testing.T) {
+	nodes := []ui.TreeNode{
+		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
+		{Key: "other", Encrypted: true, Revealed: false},
+	}
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	initialCursor := m.SelectedIndex()
+
+	// Activate edit mode
+	msg := tea.KeyPressMsg{Code: 'e'}
+	m, _ = m.Update(msg)
+	require.True(t, m.IsEditActive(), "edit must be active")
+
+	// j key while in edit mode must NOT move cursor
+	msgJ := tea.KeyPressMsg{Code: 'j'}
+	m2, _ := m.Update(msgJ)
+	assert.Equal(t, initialCursor, m2.SelectedIndex(),
+		"j key in edit mode must not move cursor (textinput consumes it)")
+}
