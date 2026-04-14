@@ -215,7 +215,7 @@ var DefaultDetailKeyMap = DetailKeyMap{
 		key.WithHelp("h/←", "collapse"),
 	),
 	Back: key.NewBinding(
-		key.WithKeys("esc", "h"),
+		key.WithKeys("esc"),
 		key.WithHelp("esc", "back to file list"),
 	),
 	Search: key.NewBinding(
