@@ -26,3 +26,6 @@ Thumbs.db
 
 # Planning debug artifacts
 .planning/debug/
+
+# Runtime debug logs
+tea_debug.log
