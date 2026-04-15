@@ -92,7 +92,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Clipboard copy with auto-clear, signal safety, Phase 4 styles and keybindings
 - [x] 04-02-PLAN.md — Git backend (go-git v5), change badges in file list and detail breadcrumb
-- [ ] 04-03-PLAN.md — Git history overlay, cross-file fuzzy search across all files and key paths
+- [x] 04-03-PLAN.md — Git history overlay, cross-file fuzzy search across all files and key paths
 
 **UI hint**: yes
 
