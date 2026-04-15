@@ -21,11 +21,14 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
+	"github.com/atotto/clipboard"
 	yaml "github.com/goccy/go-yaml"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
@@ -113,6 +116,12 @@ type EditorFinishedMsg struct {
 	Err             error
 }
 
+// ClipboardClearMsg is sent by tea.Tick after the clipboard timeout expires.
+// Gen is compared against clipboardGen to prevent stale clears (D-06, Pitfall 2).
+type ClipboardClearMsg struct {
+	Gen int
+}
+
 // ParsedFileForTest is a test helper that builds a parser.ParsedFile from tree nodes.
 // It is exported so external test packages (_test suffix) can drive AppModel into stateDetail.
 func ParsedFileForTest(nodes []ui.TreeNode) parser.ParsedFile {
@@ -145,6 +154,9 @@ type AppModel struct {
 	formatMenuCursor   int
 	// Rotation tracking for flash message
 	rotateFormat ui.SecretFormat
+	// Clipboard fields (D-05, D-06, D-07, D-08)
+	clipboardGen int  // generation counter for clipboard auto-clear (D-06)
+	clipboardHot bool // true when clipboard holds a secret
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -439,6 +451,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = stateFormatMenu
 		return m, nil
 
+	case ClipboardClearMsg:
+		if msg.Gen == m.clipboardGen {
+			clipboard.WriteAll("") //nolint:errcheck
+			m.clipboardHot = false
+			m.status.SetClipboardHot(false)
+		}
+		return m, nil
+
 	case tea.KeyPressMsg:
 		// stateDiff: route all keys to diff model, then check Confirmed/Cancelled.
 		// This runs before global key handling so y/n/Esc are captured by the overlay.
@@ -617,6 +637,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// ctrl+y: copy revealed value to clipboard (D-01, D-02, D-03)
+		if key.Matches(msg, keys.DefaultDetailKeyMap.Copy) {
+			if m.state == stateDetail && !m.detail.IsSearchActive() {
+				node, ok := m.detail.SelectedNode()
+				if !ok {
+					return m, nil
+				}
+				if !node.Revealed {
+					m.status, _ = m.status.Flash("Reveal first with r")
+					return m, nil
+				}
+				return m.copyToClipboard(node.DecryptedValue)
+			}
+		}
+
 		// Esc: priority chain
 		if msg.String() == "esc" {
 			// Priority 1: Close search if active
@@ -743,6 +778,54 @@ func (m AppModel) View() tea.View {
 	v := tea.NewView(full)
 	v.AltScreen = true
 	return v
+}
+
+// IsClipboardHot returns true when the clipboard currently holds a secret.
+// Exported for use in tests to verify clipboard state without inspecting View output.
+func (m AppModel) IsClipboardHot() bool {
+	return m.clipboardHot
+}
+
+// clipboardTimeout returns the clipboard auto-clear duration.
+// Default 30s, overridden by SOPS_TUI_CLIPBOARD_TIMEOUT env var (D-05).
+func clipboardTimeout() time.Duration {
+	if s := os.Getenv("SOPS_TUI_CLIPBOARD_TIMEOUT"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return 30 * time.Second
+}
+
+// ClipboardTimeout is the exported wrapper for clipboardTimeout.
+// Used by tests to verify timeout configuration (D-05).
+var ClipboardTimeout = clipboardTimeout
+
+// copyToClipboard writes value to the system clipboard, increments the generation
+// counter, sets clipboardHot=true, flashes "Copied (clears in 30s)", and schedules
+// a ClipboardClearMsg via tea.Tick (D-01, D-04, D-06).
+func (m AppModel) copyToClipboard(value string) (AppModel, tea.Cmd) {
+	if clipboard.Unsupported {
+		var statusCmd tea.Cmd
+		m.status, statusCmd = m.status.Flash("Clipboard not available (install xclip or wl-clipboard)")
+		return m, statusCmd
+	}
+	if err := clipboard.WriteAll(value); err != nil {
+		var statusCmd tea.Cmd
+		m.status, statusCmd = m.status.Flash("Clipboard error: " + err.Error())
+		return m, statusCmd
+	}
+	m.clipboardGen++
+	gen := m.clipboardGen
+	m.clipboardHot = true
+	m.status.SetClipboardHot(true)
+	var statusCmd tea.Cmd
+	m.status, statusCmd = m.status.Flash("Copied (clears in 30s)")
+	timeout := clipboardTimeout()
+	clearCmd := tea.Tick(timeout, func(_ time.Time) tea.Msg {
+		return ClipboardClearMsg{Gen: gen}
+	})
+	return m, tea.Batch(statusCmd, clearCmd)
 }
 
 // statusBarHeight returns the rendered height of the status bar in terminal rows.
