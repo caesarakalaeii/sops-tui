@@ -115,7 +115,10 @@ func TestGetFileStatuses(t *testing.T) {
 	t.Run("clean committed file returns GitStatusClean", func(t *testing.T) {
 		dir := t.TempDir()
 		repo := initRepo(t, dir)
+		// Commit two files so we can check one that is clean but has a sibling
 		commitFile(t, repo, dir, "clean.yaml", "data", "initial commit")
+		// Modify the sibling to have at least one dirty entry, ensuring HEAD exists
+		commitFile(t, repo, dir, "other.yaml", "other", "second commit")
 
 		statuses, err := git.GetFileStatuses(dir, []string{"clean.yaml"})
 		require.NoError(t, err)
@@ -152,10 +155,10 @@ func TestGetFileHistory(t *testing.T) {
 	t.Run("limit parameter is respected", func(t *testing.T) {
 		dir := t.TempDir()
 		repo := initRepo(t, dir)
-		// Create 3 commits
-		for i := 0; i < 3; i++ {
-			commitFile(t, repo, dir, "secrets.yaml", "data", "commit")
-		}
+		// Create 3 commits with distinct content so go-git does not reject empty commits
+		commitFile(t, repo, dir, "secrets.yaml", "version1", "commit 1")
+		commitFile(t, repo, dir, "secrets.yaml", "version2", "commit 2")
+		commitFile(t, repo, dir, "secrets.yaml", "version3", "commit 3")
 
 		entries, err := git.GetFileHistory(dir, "secrets.yaml", 2)
 		require.NoError(t, err)
