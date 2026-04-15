@@ -24,11 +24,13 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 - [x] Rotate secrets to format-aware random values (base64, hex, UUID, bcrypt, etc.) — Validated in Phase 3: Write Loop
 - [x] Diff view before re-encrypting to prevent accidental edits — Validated in Phase 3: Write Loop
 
+- [x] Clipboard copy with auto-clear after configurable timeout — Validated in Phase 4: Clipboard & Git
+- [x] Git integration — blame/history per secret, detect uncommitted changes — Validated in Phase 4: Clipboard & Git
+- [x] Cross-file fuzzy search across all files and key names — Validated in Phase 4: Clipboard & Git
+
 ### Active
 - [ ] Recipient management — add/remove age keys across files, bulk re-key
 - [ ] Secret health checks — detect weak secrets, duplicates across files, stale values
-- [ ] Clipboard copy with auto-clear after configurable timeout
-- [ ] Git integration — blame/history per secret, detect uncommitted changes
 - [ ] Vim-like keyboard navigation throughout
 
 ### Out of Scope
@@ -84,4 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 3 completion*
+*Last updated: 2026-04-15 after Phase 4 completion*
