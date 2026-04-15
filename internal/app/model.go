@@ -57,13 +57,16 @@ const (
 	stateEdit
 	// stateFormatMenu is the format selection menu for ambiguous rotation (EDT-03).
 	stateFormatMenu
+	// stateHistory is the full-screen git history overlay (D-13, D-14, D-15).
+	stateHistory
 )
 
-// StateDiff, StateEdit, StateFormatMenu are exported for tests to verify the constants exist.
+// StateDiff, StateEdit, StateFormatMenu, StateHistory are exported for tests to verify the constants exist.
 const (
 	StateDiff       = stateDiff
 	StateEdit       = stateEdit
 	StateFormatMenu = stateFormatMenu
+	StateHistory    = stateHistory
 )
 
 // FilesDiscoveredMsg carries the result of SOPS file discovery.
@@ -133,6 +136,18 @@ type GitStatusMsg struct {
 	Err          error
 }
 
+// HistoryRequestMsg is sent when user presses b in detail view.
+type HistoryRequestMsg struct {
+	FilePath string // absolute path
+	RelPath  string // relative path (for go-git FileName filter)
+}
+
+// GitHistoryMsg carries async git history results.
+type GitHistoryMsg struct {
+	Entries []gitpkg.CommitEntry
+	Err     error
+}
+
 // ParsedFileForTest is a test helper that builds a parser.ParsedFile from tree nodes.
 // It is exported so external test packages (_test suffix) can drive AppModel into stateDetail.
 func ParsedFileForTest(nodes []ui.TreeNode) parser.ParsedFile {
@@ -170,6 +185,8 @@ type AppModel struct {
 	clipboardHot bool // true when clipboard holds a secret
 	// Git fields (D-09, D-11)
 	gitRepoRoot string // root directory of the git repo (empty if not a git repo)
+	// Git history overlay fields (D-13, D-14, D-15)
+	history ui.HistoryModel
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -228,6 +245,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.SetSize(m.width, mainH)
 		m.metadata.SetSize(m.width, mainH)
 		m.diff.SetSize(m.width, mainH)
+		m.history.SetSize(m.width, mainH)
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -534,6 +552,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status.SetItemCount(len(items), "items")
 		return m, nil
 
+	case GitHistoryMsg:
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Git history error: " + msg.Err.Error())
+			m.state = m.prevState
+			return m, nil
+		}
+		m.history.SetEntries(msg.Entries)
+		return m, nil
+
 	case tea.KeyPressMsg:
 		// stateDiff: route all keys to diff model, then check Confirmed/Cancelled.
 		// This runs before global key handling so y/n/Esc are captured by the overlay.
@@ -727,6 +754,37 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// b key: toggle git history overlay (D-13, D-14)
+		if key.Matches(msg, keys.DefaultDetailKeyMap.Blame) {
+			if m.state == stateHistory {
+				m.state = m.prevState
+				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
+				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
+				return m, nil
+			}
+			if m.state == stateDetail && !m.detail.IsSearchActive() {
+				if m.gitRepoRoot == "" {
+					m.status, _ = m.status.Flash("No git repository found")
+					return m, nil
+				}
+				mainH := m.height - statusBarHeight(m)
+				if mainH < 0 {
+					mainH = 0
+				}
+				m.history = ui.NewHistoryModel(m.currentFile.Name, m.width, mainH)
+				m.prevState = m.state
+				m.state = stateHistory
+				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "history")
+				// Async fetch git history
+				relPath := m.currentFile.Name
+				repoRoot := m.gitRepoRoot
+				return m, func() tea.Msg {
+					entries, err := gitpkg.GetFileHistory(repoRoot, relPath, 50)
+					return GitHistoryMsg{Entries: entries, Err: err}
+				}
+			}
+		}
+
 		// Esc: priority chain
 		if msg.String() == "esc" {
 			// Priority 1: Close search if active
@@ -752,6 +810,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.state == stateMetadata {
 				m.state = m.prevState
+				return m, nil
+			}
+			if m.state == stateHistory {
+				m.state = m.prevState
+				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
+				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				return m, nil
 			}
 			// Priority 3: Navigate back from detail to file list
@@ -812,6 +876,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, statusCmd
+	case stateHistory:
+		// Handle j/k scrolling in history overlay
+		if kMsg, ok := msg.(tea.KeyPressMsg); ok {
+			if key.Matches(kMsg, keys.DefaultDetailKeyMap.Down) {
+				m.history.ScrollDown()
+			} else if key.Matches(kMsg, keys.DefaultDetailKeyMap.Up) {
+				m.history.ScrollUp()
+			}
+		}
+		return m, statusCmd
 	}
 
 	return m, statusCmd
@@ -843,6 +917,8 @@ func (m AppModel) View() tea.View {
 		content = m.diff.View()
 	case stateFormatMenu:
 		content = renderFormatMenu(m.formatMenuCursor, m.width, mainH)
+	case stateHistory:
+		content = m.history.View()
 	}
 
 	// Pad or constrain main content to fill available height
