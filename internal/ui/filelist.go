@@ -65,17 +65,36 @@ func (i FileItem) Description() string { return i.Path }
 // Implements list.Item.
 func (i FileItem) FilterValue() string { return i.Name }
 
+// CrossFileListItem wraps a cross-file search result for display in the list.
+// It implements list.Item and list.DefaultItem from charm.land/bubbles/v2/list.
+type CrossFileListItem struct {
+	DisplayTitle string // "filename > key.path" or just "filename"
+	Desc         string // absolute path or empty
+	OrigIndex    int    // index into AppModel.crossFileItems
+}
+
+// Title returns the display title. Implements list.DefaultItem.
+func (c CrossFileListItem) Title() string { return c.DisplayTitle }
+
+// Description returns the description line. Implements list.DefaultItem.
+func (c CrossFileListItem) Description() string { return c.Desc }
+
+// FilterValue returns the value used for filtering. Implements list.Item.
+func (c CrossFileListItem) FilterValue() string { return c.DisplayTitle }
+
 // FileListModel wraps charm.land/bubbles/v2/list.Model and provides
 // vim-style navigation (j/k/g/G/ctrl-d/u) via the custom FileListKeyMap.
 // Supports inline fuzzy search via SearchModel.
 type FileListModel struct {
-	list         list.Model
-	keys         keys.FileListKeyMap
-	width        int
-	height       int
-	searchActive bool
-	search       SearchModel
-	allItems     []FileItem // full unfiltered list
+	list            list.Model
+	keys            keys.FileListKeyMap
+	width           int
+	height          int
+	searchActive    bool
+	search          SearchModel
+	allItems        []FileItem // full unfiltered list
+	crossFileMode   bool       // true when searching across files+keys
+	crossFileTitles []string   // the "filename > key.path" strings for fuzzy matching
 }
 
 // NewFileListModel creates a FileListModel with the given items and dimensions.
@@ -115,9 +134,21 @@ func (m *FileListModel) ActivateSearch() tea.Cmd {
 	return m.search.SetActive(true)
 }
 
+// ActivateCrossFileSearch activates cross-file search mode with the given title strings.
+// titles contains "filename > key.path" (or just "filename" for file-level items).
+// Returns the Focus cmd from the textinput.
+func (m *FileListModel) ActivateCrossFileSearch(titles []string) tea.Cmd {
+	m.searchActive = true
+	m.crossFileMode = true
+	m.crossFileTitles = titles
+	return m.search.SetActive(true)
+}
+
 // DeactivateSearch deactivates search mode and restores the full item list.
 func (m *FileListModel) DeactivateSearch() {
 	m.searchActive = false
+	m.crossFileMode = false
+	m.crossFileTitles = nil
 	m.search.Reset()
 	// Restore full item list
 	listItems := make([]list.Item, len(m.allItems))
@@ -130,6 +161,22 @@ func (m *FileListModel) DeactivateSearch() {
 // IsSearchActive returns whether search mode is currently active.
 func (m FileListModel) IsSearchActive() bool {
 	return m.searchActive
+}
+
+// IsCrossFileMode returns whether cross-file search mode is currently active.
+func (m FileListModel) IsCrossFileMode() bool { return m.crossFileMode }
+
+// SelectedCrossFileIndex returns the index into the cross-file items slice
+// for the currently selected search result. Returns -1 if no selection.
+func (m FileListModel) SelectedCrossFileIndex() int {
+	item := m.list.SelectedItem()
+	if item == nil {
+		return -1
+	}
+	if cfi, ok := item.(CrossFileListItem); ok {
+		return cfi.OrigIndex
+	}
+	return -1
 }
 
 // Update processes messages. Navigation keys (g/G/ctrl-d/u) are intercepted
@@ -145,6 +192,11 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 				m.DeactivateSearch()
 				return m, nil
 			case "enter":
+				if m.crossFileMode {
+					// In cross-file mode, Enter is handled by model.go for navigation.
+					// Return without deactivating so model.go can read SelectedCrossFileIndex.
+					return m, nil
+				}
 				m.searchActive = false
 				m.search.Reset()
 				return m, nil
@@ -153,7 +205,32 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 		// Route all other messages to search model
 		var cmd tea.Cmd
 		m.search, cmd = m.search.Update(msg)
-		// Apply filter to item list
+
+		if m.crossFileMode {
+			// Cross-file search: filter against crossFileTitles
+			pattern := m.search.Value()
+			if pattern == "" {
+				listItems := make([]list.Item, len(m.crossFileTitles))
+				for i, t := range m.crossFileTitles {
+					listItems[i] = CrossFileListItem{DisplayTitle: t, Desc: "", OrigIndex: i}
+				}
+				m.list.SetItems(listItems)
+			} else {
+				matches := ApplyFilter(pattern, m.crossFileTitles)
+				filtered := make([]list.Item, 0, len(matches))
+				for _, match := range matches {
+					filtered = append(filtered, CrossFileListItem{
+						DisplayTitle: m.crossFileTitles[match.Index],
+						Desc:         "",
+						OrigIndex:    match.Index,
+					})
+				}
+				m.list.SetItems(filtered)
+			}
+			return m, cmd
+		}
+
+		// Normal file-list search: filter against allItems by name
 		pattern := m.search.Value()
 		if pattern == "" {
 			listItems := make([]list.Item, len(m.allItems))

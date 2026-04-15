@@ -136,6 +136,26 @@ type GitStatusMsg struct {
 	Err          error
 }
 
+// CrossFileSearchItem represents a searchable item combining file name and key path.
+// Used by cross-file search (GIT-03) to enable / from file list to search across all files and keys.
+type CrossFileSearchItem struct {
+	FileName  string           // relative file path, e.g. "secrets/prod.yaml"
+	KeyPath   string           // dot-joined key path, e.g. "database.password" (empty for file-level match)
+	AbsPath   string           // absolute path for navigation
+	Rule      sops.CreationRule
+	IsEnc     bool
+	GitStatus string
+}
+
+// Title returns the display string for search results.
+// File-level items show just the filename. Key-level items show "filename > key.path".
+func (c CrossFileSearchItem) Title() string {
+	if c.KeyPath == "" {
+		return c.FileName
+	}
+	return c.FileName + " > " + c.KeyPath
+}
+
 // HistoryRequestMsg is sent when user presses b in detail view.
 type HistoryRequestMsg struct {
 	FilePath string // absolute path
@@ -187,6 +207,9 @@ type AppModel struct {
 	gitRepoRoot string // root directory of the git repo (empty if not a git repo)
 	// Git history overlay fields (D-13, D-14, D-15)
 	history ui.HistoryModel
+	// Cross-file search fields (GIT-03)
+	crossFileItems     []CrossFileSearchItem // cached cross-file search items (lazily populated)
+	crossFilePopulated bool                  // true after first cross-file search populates the cache
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -254,6 +277,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.files = msg.Files
+		// Invalidate cross-file search cache on new discovery (T-04-09)
+		m.crossFilePopulated = false
+		m.crossFileItems = nil
 		items := make([]ui.FileItem, len(msg.Files))
 		for i, f := range msg.Files {
 			items[i] = ui.FileItem{
@@ -728,7 +754,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// / key: activate search (only when not already active)
 		if msg.String() == "/" {
 			if m.state == stateFileList && !m.fileList.IsSearchActive() {
-				cmd := m.fileList.ActivateSearch()
+				m.populateCrossFileItems()
+				// Build search source from cross-file items
+				titles := make([]string, len(m.crossFileItems))
+				for i, item := range m.crossFileItems {
+					titles[i] = item.Title()
+				}
+				cmd := m.fileList.ActivateCrossFileSearch(titles)
 				m.status.SetBreadcrumb("files", "search")
 				return m, cmd
 			}
@@ -736,6 +768,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd := m.detail.ActivateSearch()
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "search")
 				return m, cmd
+			}
+		}
+
+		// Enter during cross-file search: navigate to matched file's detail view
+		if m.state == stateFileList && m.fileList.IsSearchActive() && m.fileList.IsCrossFileMode() {
+			if msg.String() == "enter" {
+				idx := m.fileList.SelectedCrossFileIndex()
+				if idx >= 0 && idx < len(m.crossFileItems) {
+					item := m.crossFileItems[idx]
+					m.fileList.DeactivateSearch()
+					m.currentFile = sops.DiscoveredFile{
+						Name:        item.FileName,
+						AbsPath:     item.AbsPath,
+						IsEncrypted: item.IsEnc,
+						Rule:        item.Rule,
+						GitStatus:   item.GitStatus,
+					}
+					return m, func() tea.Msg {
+						parsed, err := parser.ParseFile(item.AbsPath, item.Rule, item.IsEnc)
+						return FilesParsedMsg{Parsed: parsed, Err: err}
+					}
+				}
 			}
 		}
 
@@ -1000,6 +1054,62 @@ func (m AppModel) currentFileBreadcrumb() string {
 func statusBarHeight(m AppModel) int {
 	statusBar := m.status.View(m.width)
 	return lipgloss.Height(statusBar)
+}
+
+// populateCrossFileItems lazily populates the cross-file search item cache (GIT-03).
+// It collects file-level items and key-path items for all discovered files.
+// T-04-09: lazy population (only on first / press); cached after first use;
+// invalidated only on new file discovery via FilesDiscoveredMsg.
+func (m *AppModel) populateCrossFileItems() {
+	if m.crossFilePopulated {
+		return
+	}
+	var items []CrossFileSearchItem
+	for _, f := range m.files {
+		// Add file-level item
+		items = append(items, CrossFileSearchItem{
+			FileName:  f.Name,
+			AbsPath:   f.AbsPath,
+			Rule:      f.Rule,
+			IsEnc:     f.IsEncrypted,
+			GitStatus: f.GitStatus,
+		})
+		// Parse key paths without decryption
+		parsed, err := parser.ParseFile(f.AbsPath, f.Rule, f.IsEncrypted)
+		if err != nil {
+			continue
+		}
+		keyPaths := collectKeyPaths(parsed.Nodes, "")
+		for _, kp := range keyPaths {
+			items = append(items, CrossFileSearchItem{
+				FileName:  f.Name,
+				KeyPath:   kp,
+				AbsPath:   f.AbsPath,
+				Rule:      f.Rule,
+				IsEnc:     f.IsEncrypted,
+				GitStatus: f.GitStatus,
+			})
+		}
+	}
+	m.crossFileItems = items
+	m.crossFilePopulated = true
+}
+
+// collectKeyPaths recursively extracts dot-joined key paths from tree nodes.
+func collectKeyPaths(nodes []ui.TreeNode, prefix string) []string {
+	var paths []string
+	for _, n := range nodes {
+		path := prefix
+		if path != "" {
+			path += "."
+		}
+		path += n.Key
+		paths = append(paths, path)
+		if len(n.Children) > 0 {
+			paths = append(paths, collectKeyPaths(n.Children, path)...)
+		}
+	}
+	return paths
 }
 
 // countLeafNodes recursively counts all leaf nodes (nodes with no children).
