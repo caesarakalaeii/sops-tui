@@ -685,6 +685,15 @@ func (m DetailModel) SelectedIndex() int {
 	return m.cursor
 }
 
+// SelectedNode returns the TreeNode at the current cursor position and true.
+// Returns zero value and false if the flat row list is empty or cursor is out of range.
+func (m DetailModel) SelectedNode() (TreeNode, bool) {
+	if len(m.flatRows) == 0 || m.cursor < 0 || m.cursor >= len(m.flatRows) {
+		return TreeNode{}, false
+	}
+	return *m.flatRows[m.cursor].node, true
+}
+
 // ClearAllRevealed walks all nodes recursively and sets Revealed=false, DecryptedValue=""
 // on every node. Called on Esc-to-file-list transition (D-04, T-03-02: prevent memory leak).
 func (m *DetailModel) ClearAllRevealed() {
