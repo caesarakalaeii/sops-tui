@@ -159,12 +159,16 @@ type DetailKeyMap struct {
 	EditFile key.Binding
 	// Rotate generates a format-aware random replacement value for the selected leaf.
 	Rotate key.Binding
+	// Copy copies the selected revealed value to clipboard.
+	Copy key.Binding
+	// Blame opens the git history overlay for the current file.
+	Blame key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -172,8 +176,8 @@ func (k DetailKeyMap) ShortHelp() []key.Binding {
 func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Expand, k.Collapse, k.Back, k.Search, k.Info},
-		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate},
+		{k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Blame},
+		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy},
 		{k.Help, k.Quit},
 	}
 }
@@ -245,5 +249,13 @@ var DefaultDetailKeyMap = DetailKeyMap{
 	Rotate: key.NewBinding(
 		key.WithKeys("X"),
 		key.WithHelp("X", "rotate secret"),
+	),
+	Copy: key.NewBinding(
+		key.WithKeys("ctrl+y"),
+		key.WithHelp("ctrl+y", "copy to clipboard"),
+	),
+	Blame: key.NewBinding(
+		key.WithKeys("b"),
+		key.WithHelp("b", "git history"),
 	),
 }

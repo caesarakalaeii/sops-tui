@@ -41,17 +41,20 @@ type EnvStatus struct {
 	AgeAvailable bool
 	// SopsYamlAvailable is true when a .sops.yaml is found in the current tree.
 	SopsYamlAvailable bool
+	// GitAvailable is true when current directory is inside a git repo.
+	GitAvailable bool
 }
 
 // StatusBarModel holds the state for the persistent bottom status bar.
 // It is a value type — methods that modify state return a new StatusBarModel.
 type StatusBarModel struct {
-	breadcrumb string
-	itemCount  int
-	itemLabel  string // "items" or "keys" depending on active view
-	env        EnvStatus
-	flash      string
-	flashGen   int
+	breadcrumb   string
+	itemCount    int
+	itemLabel    string // "items" or "keys" depending on active view
+	env          EnvStatus
+	flash        string
+	flashGen     int
+	clipboardHot bool // true when clipboard holds a secret
 }
 
 // NewStatusBarModel creates a StatusBarModel with sensible defaults.
@@ -79,6 +82,17 @@ func (m *StatusBarModel) SetBreadcrumb(segments ...string) {
 func (m *StatusBarModel) SetItemCount(count int, label string) {
 	m.itemCount = count
 	m.itemLabel = label
+}
+
+// SetClipboardHot sets whether the clipboard currently holds a secret.
+// When true, a [clip] indicator is rendered in the status bar right section.
+func (m *StatusBarModel) SetClipboardHot(hot bool) {
+	m.clipboardHot = hot
+}
+
+// IsClipboardHot returns true when the clipboard currently holds a secret.
+func (m StatusBarModel) IsClipboardHot() bool {
+	return m.clipboardHot
 }
 
 // Flash sets a flash message and schedules a clear after 2 seconds.
@@ -126,14 +140,19 @@ func (m StatusBarModel) View(width int) string {
 	// Center: item count
 	center := DimText.Render(fmt.Sprintf("%d %s", m.itemCount, m.itemLabel))
 
-	// Right: env indicators
-	right := renderEnvIndicators(m.env)
-
 	// Section separator
 	sep := lipgloss.NewStyle().
 		Foreground(ColorMuted).
 		Padding(0, SpaceSM).
 		Render("|")
+
+	// Right: clipboard indicator (if hot) + env indicators
+	right := renderEnvIndicators(m.env)
+	if m.clipboardHot {
+		clipIndicator := ClipboardHotStyle.Render("[clip]")
+		spacer := lipgloss.NewStyle().Foreground(ColorMuted).Render(" ")
+		right = lipgloss.JoinHorizontal(lipgloss.Top, clipIndicator, spacer, right)
+	}
 
 	// Compose the three sections
 	composed := lipgloss.JoinHorizontal(lipgloss.Top,
@@ -198,6 +217,11 @@ func renderEnvIndicators(env EnvStatus) string {
 	} else {
 		indicators = append(indicators,
 			lipgloss.NewStyle().Foreground(ColorWarning).Render(".sops.yaml:\u26A0"))
+	}
+
+	// git availability indicator
+	if !env.GitAvailable {
+		indicators = append(indicators, GitNoRepoStyle.Render("no git"))
 	}
 
 	sep := lipgloss.NewStyle().Foreground(ColorMuted).Render(" ")

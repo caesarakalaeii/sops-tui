@@ -176,4 +176,21 @@ var (
 
 	// FormatMenuStyle renders format selection menu items (base64/hex/UUID/bcrypt) per 03-UI-SPEC.md.
 	FormatMenuStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
+
+	// Phase 4: Git badge styles (D-09)
+	BadgeModified = lipgloss.NewStyle().Foreground(ColorWarning)
+	BadgeAdded    = lipgloss.NewStyle().Foreground(ColorSuccess)
+	BadgeUntracked = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 4: Clipboard indicator style (D-08)
+	ClipboardHotStyle = lipgloss.NewStyle().Foreground(ColorAccent)
+
+	// Phase 4: Git "no repo" indicator style (D-12)
+	GitNoRepoStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 4: Git history overlay styles (D-15)
+	HistoryHashStyle    = lipgloss.NewStyle().Foreground(ColorAccent)
+	HistoryDateStyle    = lipgloss.NewStyle().Foreground(ColorMuted)
+	HistoryAuthorStyle  = lipgloss.NewStyle().Foreground(ColorFg)
+	HistorySubjectStyle = lipgloss.NewStyle().Foreground(ColorFg)
 )
