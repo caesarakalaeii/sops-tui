@@ -87,7 +87,13 @@ Plans:
   3. Files with uncommitted git changes display a badge ([M], [A], [?]) in the file browser
   4. User can view git blame and commit history for any secret file from within the TUI
   5. User can fuzzy search across all files and key names simultaneously with `/`
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Clipboard copy with auto-clear, signal safety, Phase 4 styles and keybindings
+- [ ] 04-02-PLAN.md — Git backend (go-git v5), change badges in file list and detail breadcrumb
+- [ ] 04-03-PLAN.md — Git history overlay, cross-file fuzzy search across all files and key paths
+
 **UI hint**: yes
 
 ### Phase 5: Power Features
@@ -111,5 +117,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 4/4 | Complete | - |
 | 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
 | 3. Write Loop | 0/3 | Planned | - |
-| 4. Clipboard & Git | 0/? | Not started | - |
+| 4. Clipboard & Git | 0/3 | Planned | - |
 | 5. Power Features | 0/? | Not started | - |
