@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	"github.com/atotto/clipboard"
 	yaml "github.com/goccy/go-yaml"
 
+	gitpkg "github.com/caesarakalaeii/sops-tui/internal/git"
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/parser"
 	"github.com/caesarakalaeii/sops-tui/internal/sops"
@@ -122,6 +124,15 @@ type ClipboardClearMsg struct {
 	Gen int
 }
 
+// GitStatusMsg carries the result of async git status fetch.
+// Statuses maps relative file paths to their git status code.
+// GitAvailable is false when the directory is not a git repo (D-12).
+type GitStatusMsg struct {
+	Statuses     map[string]gitpkg.GitStatus
+	GitAvailable bool
+	Err          error
+}
+
 // ParsedFileForTest is a test helper that builds a parser.ParsedFile from tree nodes.
 // It is exported so external test packages (_test suffix) can drive AppModel into stateDetail.
 func ParsedFileForTest(nodes []ui.TreeNode) parser.ParsedFile {
@@ -157,6 +168,8 @@ type AppModel struct {
 	// Clipboard fields (D-05, D-06, D-07, D-08)
 	clipboardGen int  // generation counter for clipboard auto-clear (D-06)
 	clipboardHot bool // true when clipboard holds a secret
+	// Git fields (D-09, D-11)
+	gitRepoRoot string // root directory of the git repo (empty if not a git repo)
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -167,7 +180,7 @@ func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
 	m := AppModel{
 		state:        stateFileList,
 		fileList:     ui.NewFileListModel([]ui.FileItem{}, 0, 0),
-		detail:       ui.NewDetailModel("", []ui.TreeNode{}, 0, 0, true),
+		detail:       ui.NewDetailModel("", []ui.TreeNode{}, 0, 0, true, ""),
 		help:         ui.NewHelpModel(0, 0),
 		status:       ui.NewStatusBarModel(env),
 		sopsYamlPath: sopsYamlPath,
@@ -238,7 +251,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.fileList = ui.NewFileListModel(items, m.width, mainH)
 		m.status.SetItemCount(len(items), "items")
-		return m, nil
+		// Dispatch async git status fetch (D-11).
+		relPaths := make([]string, len(msg.Files))
+		for i, f := range msg.Files {
+			relPaths[i] = f.Name
+		}
+		sopsDir := filepath.Dir(m.sopsYamlPath)
+		gitCmd := func() tea.Msg {
+			isGit := gitpkg.IsGitRepo(sopsDir)
+			if !isGit {
+				return GitStatusMsg{GitAvailable: false}
+			}
+			statuses, err := gitpkg.GetFileStatuses(sopsDir, relPaths)
+			return GitStatusMsg{Statuses: statuses, GitAvailable: true, Err: err}
+		}
+		return m, gitCmd
 
 	case FilesParsedMsg:
 		if msg.Err != nil {
@@ -256,9 +283,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.width,
 			mainH,
 			m.currentFile.IsEncrypted,
+			m.currentFile.GitStatus,
 		)
 		m.state = stateDetail
-		m.status.SetBreadcrumb("files", m.currentFile.Name)
+		m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 		m.status.SetItemCount(countLeafNodes(msg.Parsed.Nodes), "keys")
 		return m, nil
 
@@ -418,6 +446,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.state = stateDetail
+		// After write operations, refresh git status to reflect any new uncommitted changes (D-11).
+		if msg.Err == nil && m.sopsYamlPath != "" {
+			relPaths := make([]string, len(m.files))
+			for i, f := range m.files {
+				relPaths[i] = f.Name
+			}
+			sopsDir := filepath.Dir(m.sopsYamlPath)
+			return m, func() tea.Msg {
+				statuses, err := gitpkg.GetFileStatuses(sopsDir, relPaths)
+				return GitStatusMsg{Statuses: statuses, GitAvailable: true, Err: err}
+			}
+		}
 		return m, nil
 
 	case ui.RotateReadyMsg:
@@ -457,6 +497,41 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.clipboardHot = false
 			m.status.SetClipboardHot(false)
 		}
+		return m, nil
+
+	case GitStatusMsg:
+		// Update git availability indicator in the status bar (D-12).
+		env := m.status.Env()
+		env.GitAvailable = msg.GitAvailable
+		m.status.SetEnv(env)
+		m.gitRepoRoot = filepath.Dir(m.sopsYamlPath)
+
+		if msg.Err != nil || !msg.GitAvailable {
+			return m, nil
+		}
+		// Propagate git statuses to cached files.
+		for i := range m.files {
+			if gs, ok := msg.Statuses[m.files[i].Name]; ok {
+				m.files[i].GitStatus = string(gs)
+			}
+		}
+		// Rebuild file list items with git badge data.
+		items := make([]ui.FileItem, len(m.files))
+		for i, f := range m.files {
+			items[i] = ui.FileItem{
+				Name:        f.Name,
+				Path:        f.AbsPath,
+				IsEncrypted: f.IsEncrypted,
+				Rule:        f.Rule,
+				GitStatus:   f.GitStatus,
+			}
+		}
+		mainH := m.height - statusBarHeight(m)
+		if mainH < 0 {
+			mainH = 0
+		}
+		m.fileList = ui.NewFileListModel(items, m.width, mainH)
+		m.status.SetItemCount(len(items), "items")
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -574,7 +649,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.status.SetBreadcrumb("files")
 					m.status.SetItemCount(m.fileList.ItemCount(), "items")
 				} else if m.prevState == stateDetail {
-					m.status.SetBreadcrumb("files", m.currentFile.Name)
+					m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 					m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				}
 				return m, nil
@@ -616,7 +691,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.metadata = ui.NewMetadataModel(meta, m.width, mainH)
 					m.prevState = m.state
 					m.state = stateMetadata
-					m.status.SetBreadcrumb("files", m.currentFile.Name, "metadata")
+					m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "metadata")
 					m.status.SetItemCount(0, "")
 				}
 				return m, nil
@@ -632,7 +707,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
 				cmd := m.detail.ActivateSearch()
-				m.status.SetBreadcrumb("files", m.currentFile.Name, "search")
+				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "search")
 				return m, cmd
 			}
 		}
@@ -663,7 +738,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.state == stateDetail && m.detail.IsSearchActive() {
 				m.detail.DeactivateSearch()
-				m.status.SetBreadcrumb("files", m.currentFile.Name)
+				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				return m, nil
 			}
@@ -699,6 +774,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						AbsPath:     item.Path,
 						IsEncrypted: item.IsEncrypted,
 						Rule:        item.Rule,
+						GitStatus:   item.GitStatus,
 					}
 					return m, func() tea.Msg {
 						parsed, err := parser.ParseFile(item.Path, item.Rule, item.IsEncrypted)
@@ -826,6 +902,22 @@ func (m AppModel) copyToClipboard(value string) (AppModel, tea.Cmd) {
 		return ClipboardClearMsg{Gen: gen}
 	})
 	return m, tea.Batch(statusCmd, clearCmd)
+}
+
+// currentFileBreadcrumb returns m.currentFile.Name with a git badge suffix
+// appended when the file has uncommitted changes. Used in SetBreadcrumb calls
+// so the detail view breadcrumb reflects git status (D-09, D-10).
+func (m AppModel) currentFileBreadcrumb() string {
+	name := m.currentFile.Name
+	switch m.currentFile.GitStatus {
+	case "M":
+		name += " [M]"
+	case "A":
+		name += " [A]"
+	case "?":
+		name += " [?]"
+	}
+	return name
 }
 
 // statusBarHeight returns the rendered height of the status bar in terminal rows.

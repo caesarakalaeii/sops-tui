@@ -140,6 +140,7 @@ type DetailModel struct {
 	search       SearchModel
 	allFlatRows  []flatRow // full unfiltered flat rows
 	isEncrypted  bool      // per D-03: false shows unencrypted banner
+	gitStatus    string    // "M", "A", "?", or "" for clean/no-git (D-09)
 	// Inline edit mode fields (D-05, stateEdit)
 	editActive  bool            // true while the inline textinput is visible
 	editInput   textinput.Model // the textinput component for editing
@@ -150,7 +151,8 @@ type DetailModel struct {
 // NewDetailModel creates a DetailModel for the given file.
 // nodes are the top-level tree nodes. Initially all top-level nodes are shown;
 // expanded state per node controls child visibility.
-func NewDetailModel(filename string, nodes []TreeNode, width, height int, isEncrypted bool) DetailModel {
+// gitStatus is "M", "A", "?", or "" for clean/no-git (D-09).
+func NewDetailModel(filename string, nodes []TreeNode, width, height int, isEncrypted bool, gitStatus string) DetailModel {
 	m := DetailModel{
 		filename:    filename,
 		nodes:       nodes,
@@ -159,12 +161,17 @@ func NewDetailModel(filename string, nodes []TreeNode, width, height int, isEncr
 		height:      height,
 		keys:        keys.DefaultDetailKeyMap,
 		isEncrypted: isEncrypted,
+		gitStatus:   gitStatus,
 	}
 	m.flatRows = flattenNodes(m.nodes, 0, nil, "")
 	m.allFlatRows = m.flatRows
 	m.search = NewSearchModel(width)
 	return m
 }
+
+// GitStatus returns the git worktree status code for the file shown in this model.
+// Returns "M", "A", "?", or "" for clean/no-git (D-09).
+func (m DetailModel) GitStatus() string { return m.gitStatus }
 
 // flattenNodes produces a flat list of visible rows from the tree,
 // walking recursively and only including children of expanded nodes.

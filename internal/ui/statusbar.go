@@ -84,6 +84,14 @@ func (m *StatusBarModel) SetItemCount(count int, label string) {
 	m.itemLabel = label
 }
 
+// Env returns the current environment status indicators.
+func (m StatusBarModel) Env() EnvStatus { return m.env }
+
+// SetEnv replaces the environment status indicators used by the right-hand
+// section of the status bar. Called when git availability is determined
+// asynchronously after startup.
+func (m *StatusBarModel) SetEnv(env EnvStatus) { m.env = env }
+
 // SetClipboardHot sets whether the clipboard currently holds a secret.
 // When true, a [clip] indicator is rendered in the status bar right section.
 func (m *StatusBarModel) SetClipboardHot(hot bool) {

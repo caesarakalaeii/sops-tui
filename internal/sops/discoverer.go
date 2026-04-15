@@ -38,6 +38,7 @@ type DiscoveredFile struct {
 	AbsPath     string       // absolute path on disk
 	IsEncrypted bool         // true if file contains top-level "sops:" key
 	Rule        CreationRule // the first matching creation rule
+	GitStatus   string       // "M", "A", "?", or "" for clean/no-git (D-09)
 }
 
 // Discover parses the .sops.yaml at sopsYamlPath, walks the directory tree

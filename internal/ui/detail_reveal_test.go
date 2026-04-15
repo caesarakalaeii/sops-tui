@@ -32,7 +32,7 @@ func TestRevealedNodeRendersValue(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "secret123"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	stripped := stripAnsi(view)
 	assert.True(t, strings.Contains(stripped, "secret123"),
@@ -47,7 +47,7 @@ func TestRevealedNodeRendersLockOpenIcon(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "s3cr3t"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	// Lock-open emoji is \U0001F513 (🔓)
 	assert.True(t, strings.Contains(view, "\U0001F513"),
@@ -59,7 +59,7 @@ func TestMaskedNodeRendersStars(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str", Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	stripped := stripAnsi(view)
 	assert.True(t, strings.Contains(stripped, "***"),
@@ -72,7 +72,7 @@ func TestClearAllRevealed(t *testing.T) {
 		{Key: "a", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "val1"},
 		{Key: "b", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "val2"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Verify initially revealed
 	view1 := m.View()
@@ -94,7 +94,7 @@ func TestClearAllRevealed(t *testing.T) {
 // (Pitfall 2: match by keyPath, not cursor index).
 func TestRevealNodeByKeyPath(t *testing.T) {
 	nodes := encryptedNodes()
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Reveal "database.password" (not at cursor position 0 which is "database")
 	m.RevealNode("database.password", "topsecret")
@@ -113,7 +113,7 @@ func TestMaskNode(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "abc123"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Verify initially revealed
 	view1 := m.View()
@@ -136,7 +136,7 @@ func TestAnyRevealed(t *testing.T) {
 		{Key: "a", Encrypted: true, TypeHint: "str", Revealed: false},
 		{Key: "b", Encrypted: true, TypeHint: "str", Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	assert.False(t, m.AnyRevealed(), "AnyRevealed must be false when no nodes are revealed")
 
@@ -153,7 +153,7 @@ func TestRevealAllNodes(t *testing.T) {
 		{Key: "a", Encrypted: true, TypeHint: "str"},
 		{Key: "b", Encrypted: true, TypeHint: "str"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	values := map[string]string{
 		"a": "value_a",
@@ -172,7 +172,7 @@ func TestRevealRequestMsgReturnedOnR(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str", Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Press r on the encrypted leaf (cursor at 0)
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'r'})
@@ -189,7 +189,7 @@ func TestRevealRequestMsgHasKeyPath(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Encrypted: true, TypeHint: "str", Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'r'})
 	require.NotNil(t, cmd)
@@ -205,7 +205,7 @@ func TestMaskOnRWhenRevealed(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "mysecret"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Verify it's currently revealed
 	view1 := m.View()
@@ -227,7 +227,7 @@ func TestRevealAllRequestMsgOnR_Capital(t *testing.T) {
 		{Key: "a", Encrypted: true, TypeHint: "str", Revealed: false},
 		{Key: "b", Encrypted: true, TypeHint: "str", Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'R'})
 	require.NotNil(t, cmd, "pressing R when no values revealed must return a tea.Cmd")
@@ -244,7 +244,7 @@ func TestMaskAllOnR_CapitalWhenRevealed(t *testing.T) {
 		{Key: "a", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "val_a"},
 		{Key: "b", Encrypted: true, TypeHint: "str", Revealed: true, DecryptedValue: "val_b"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Verify revealed initially
 	view1 := m.View()

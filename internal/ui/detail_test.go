@@ -70,7 +70,7 @@ func TestDetailRenderTreeConnectors(t *testing.T) {
 		{Key: "alpha", Value: "***", Depth: 0},
 		{Key: "beta", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	// At least one of the tree connectors must appear
 	hasConnector := strings.Contains(view, "├─") ||
@@ -88,7 +88,7 @@ func TestDetailCollapsedNodeShowsPlus(t *testing.T) {
 			Expanded: false,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	assert.True(t, strings.Contains(view, "[+]"),
 		"collapsed node must render '[+]' indicator, got: %q", view)
@@ -103,7 +103,7 @@ func TestDetailExpandedNodeShowsMinus(t *testing.T) {
 			Expanded: true,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	assert.True(t, strings.Contains(view, "[-]"),
 		"expanded node must render '[-]' indicator, got: %q", view)
@@ -114,7 +114,7 @@ func TestDetailLeafNodeRendersStarred(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	assert.True(t, strings.Contains(view, "***"),
 		"leaf node must render masked value '***', got: %q", view)
@@ -133,7 +133,7 @@ func TestDetailIndentation(t *testing.T) {
 			Depth:    0,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	lines := strings.Split(view, "\n")
 	// Find the child line — it should be indented by at least 2 spaces (TreeIndent = 2 cells).
@@ -161,7 +161,7 @@ func TestDetailUpdateExpandOnEnter(t *testing.T) {
 			Expanded: false,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 
 	// Before: collapsed (no "host" leaf visible)
 	before := m.View()
@@ -186,7 +186,7 @@ func TestDetailUpdateCollapseOnH(t *testing.T) {
 			Expanded: true,
 		},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 
 	// Before: expanded (key child visible)
 	before := m.View()
@@ -205,7 +205,7 @@ func TestDetailUpdateCollapseOnH(t *testing.T) {
 // TestDetailSelectedIndex verifies SelectedIndex returns current cursor position.
 func TestDetailSelectedIndex(t *testing.T) {
 	nodes := sampleTree()
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	assert.Equal(t, 0, m.SelectedIndex(), "initial cursor should be at index 0")
 }
 
@@ -216,7 +216,7 @@ func TestDetailCursorMovement(t *testing.T) {
 		{Key: "b", Value: "***", Depth: 0},
 		{Key: "c", Value: "***", Depth: 0},
 	}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	require.Equal(t, 0, m.SelectedIndex(), "starts at 0")
 
 	// Press j to move down
@@ -236,7 +236,7 @@ func TestDetailCursorMovement(t *testing.T) {
 
 // TestDetailEmptyState verifies NewDetailModel with empty nodes renders "No keys found in this file".
 func TestDetailEmptyState(t *testing.T) {
-	m := ui.NewDetailModel("test.yaml", []ui.TreeNode{}, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", []ui.TreeNode{}, 80, 24, true, "")
 	view := m.View()
 	assert.True(t, strings.Contains(view, "No keys found in this file"),
 		"empty state must contain 'No keys found in this file', got: %q", view)
@@ -269,7 +269,7 @@ func TestDetailKeyMapBinding(t *testing.T) {
 	// This verifies that key.Matches works with the binding from keys package
 	// indirectly by checking that our Update function accepts tea.KeyPressMsg.
 	nodes := []ui.TreeNode{{Key: "a", Value: "***"}}
-	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("test.yaml", nodes, 80, 24, true, "")
 	m2, _ := m.Update(msg)
 	// cursor stayed at 0 since only one item (can't go down)
 	assert.GreaterOrEqual(t, m2.SelectedIndex(), 0)
@@ -283,7 +283,7 @@ func TestDetailUnencryptedBannerShown(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "username", Value: "admin", Depth: 0},
 	}
-	m := ui.NewDetailModel("plain.yaml", nodes, 80, 24, false)
+	m := ui.NewDetailModel("plain.yaml", nodes, 80, 24, false, "")
 	view := m.View()
 	assert.True(t, strings.Contains(stripAnsi(view), "Not yet encrypted"),
 		"unencrypted file must show 'Not yet encrypted' banner, got: %q", view)
@@ -294,7 +294,7 @@ func TestDetailUnencryptedBannerHidden(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Value: "ENC[AES256_GCM,data:abc,type:str]", Encrypted: true, TypeHint: "str"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	assert.False(t, strings.Contains(stripAnsi(view), "Not yet encrypted"),
 		"encrypted file must NOT show 'Not yet encrypted' banner, got: %q", view)
@@ -305,7 +305,7 @@ func TestDetailSearchActivation(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Value: "***", Encrypted: true, TypeHint: "str"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	assert.False(t, m.IsSearchActive(), "search must be inactive after construction")
 
 	_ = m.ActivateSearch()
@@ -317,7 +317,7 @@ func TestDetailSearchDeactivation(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Value: "***", Encrypted: true, TypeHint: "str"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	_ = m.ActivateSearch()
 	require.True(t, m.IsSearchActive())
 
@@ -331,7 +331,7 @@ func TestDetailRenderRowUsesCanonicalTypeHintStyle(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, TypeHint: "str"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	// The type hint "(str)" must appear in the rendered output
 	assert.True(t, strings.Contains(stripAnsi(view), "(str)"),
@@ -344,7 +344,7 @@ func TestDetailRenderRowUsesCanonicalBadgePlain(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "username", Value: "admin", IsPlain: true},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	view := m.View()
 	assert.True(t, strings.Contains(stripAnsi(view), "[plain]"),
 		"plain leaf must render '[plain]' badge, got: %q", view)
@@ -355,7 +355,7 @@ func TestEditOnRevealedLeaf(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret123"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	require.False(t, m.IsEditActive(), "edit must not be active initially")
 
 	msg := tea.KeyPressMsg{Code: 'e'}
@@ -369,7 +369,7 @@ func TestEditOnMaskedLeaf(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	msg := tea.KeyPressMsg{Code: 'e'}
 	m2, cmd := m.Update(msg)
@@ -397,7 +397,7 @@ func TestEditOnArrayKeyReturnsBlocked(t *testing.T) {
 			},
 		},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Move cursor to the child (index 1 in flat rows after expanding)
 	msgJ := tea.KeyPressMsg{Code: 'j'}
@@ -419,7 +419,7 @@ func TestEditEnterProducesConfirmMsg(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "original"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Activate edit mode
 	msg := tea.KeyPressMsg{Code: 'e'}
@@ -446,7 +446,7 @@ func TestEditEscCancels(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Activate edit mode
 	msg := tea.KeyPressMsg{Code: 'e'}
@@ -469,7 +469,7 @@ func TestEditInputEatsNavigationKeys(t *testing.T) {
 		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
 		{Key: "other", Encrypted: true, Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	initialCursor := m.SelectedIndex()
 
 	// Activate edit mode
@@ -492,7 +492,7 @@ func TestEditFileOnRevealedReturnsEditorRequestMsg(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: true, DecryptedValue: "secret"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	// E key (upper-case E)
 	msg := tea.KeyPressMsg{Code: 'E'}
 	_, cmd := m.Update(msg)
@@ -508,7 +508,7 @@ func TestEditFileOnNoneRevealedReturnsEditBlockedMsg(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "password", Encrypted: true, Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	msg := tea.KeyPressMsg{Code: 'E'}
 	_, cmd := m.Update(msg)
 	require.NotNil(t, cmd, "E key with no revealed nodes must return a cmd")
@@ -528,7 +528,7 @@ func TestRotateKeyOnRevealed(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "token", Encrypted: true, Revealed: true, DecryptedValue: base64Val},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	msg := tea.KeyPressMsg{Code: 'X'}
 	_, cmd := m.Update(msg)
 	require.NotNil(t, cmd, "X key on revealed detectable leaf must return a cmd")
@@ -543,7 +543,7 @@ func TestRotateKeyOnUnknownFormat(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "secret", Encrypted: true, Revealed: true, DecryptedValue: "just a regular string"},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	msg := tea.KeyPressMsg{Code: 'X'}
 	_, cmd := m.Update(msg)
 	require.NotNil(t, cmd, "X key on unknown-format leaf must return a cmd")
@@ -557,7 +557,7 @@ func TestRotateKeyOnMasked(t *testing.T) {
 	nodes := []ui.TreeNode{
 		{Key: "secret", Encrypted: true, Revealed: false},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 	msg := tea.KeyPressMsg{Code: 'X'}
 	_, cmd := m.Update(msg)
 	require.NotNil(t, cmd, "X key on masked leaf must return a cmd")
@@ -578,7 +578,7 @@ func TestRotateKeyOnArrayIndexed(t *testing.T) {
 			},
 		},
 	}
-	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true)
+	m := ui.NewDetailModel("secrets.yaml", nodes, 80, 24, true, "")
 
 	// Move cursor to the child node
 	msgJ := tea.KeyPressMsg{Code: 'j'}

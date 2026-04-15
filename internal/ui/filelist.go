@@ -33,16 +33,28 @@ type FileItem struct {
 	IsEncrypted bool
 	// Rule is the matched .sops.yaml creation rule for this file (used by parser).
 	Rule sops.CreationRule
+	// GitStatus is the git worktree status code: "M", "A", "?", or "" for clean/no-git (D-09).
+	GitStatus string
 }
 
 // Title returns the display name used by the default list delegate.
 // Appends [unencrypted] badge when IsEncrypted is false.
+// Appends git badge [M]/[A]/[?] when the file has uncommitted changes (D-09).
 // Implements list.DefaultItem.
 func (i FileItem) Title() string {
+	base := i.Name
 	if !i.IsEncrypted {
-		return i.Name + " " + BadgeUnencrypted.Render("[unencrypted]")
+		base += " " + BadgeUnencrypted.Render("[unencrypted]")
 	}
-	return i.Name
+	switch i.GitStatus {
+	case "M":
+		base += " " + BadgeModified.Render("[M]")
+	case "A":
+		base += " " + BadgeAdded.Render("[A]")
+	case "?":
+		base += " " + BadgeUntracked.Render("[?]")
+	}
+	return base
 }
 
 // Description returns the absolute path shown as a secondary line.
