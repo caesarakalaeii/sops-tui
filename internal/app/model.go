@@ -33,6 +33,7 @@ import (
 	yaml "github.com/goccy/go-yaml"
 
 	gitpkg "github.com/caesarakalaeii/sops-tui/internal/git"
+	"github.com/caesarakalaeii/sops-tui/internal/health"
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/parser"
 	"github.com/caesarakalaeii/sops-tui/internal/sops"
@@ -59,6 +60,16 @@ const (
 	stateFormatMenu
 	// stateHistory is the full-screen git history overlay (D-13, D-14, D-15).
 	stateHistory
+	// stateHealth is the full-screen health check results overlay (HLT-03).
+	stateHealth
+	// stateRecipientForm is the modal overlay for entering a new age public key (RCP-02).
+	stateRecipientForm
+	// stateRecipientConfirm is the diff overlay showing recipient add/remove before re-encrypt (RCP-02, RCP-03).
+	stateRecipientConfirm
+	// stateRecipientList is the numbered list for selecting a recipient to remove (RCP-02, D-03).
+	stateRecipientList
+	// stateBulkReKeyConfirm is the per-file confirmation during bulk re-key (RCP-03, D-06).
+	stateBulkReKeyConfirm
 )
 
 // StateDiff, StateEdit, StateFormatMenu, StateHistory are exported for tests to verify the constants exist.
@@ -67,6 +78,12 @@ const (
 	StateEdit       = stateEdit
 	StateFormatMenu = stateFormatMenu
 	StateHistory    = stateHistory
+	// Phase 5 exported state constants for tests.
+	StateHealth           = stateHealth
+	StateRecipientForm    = stateRecipientForm
+	StateRecipientConfirm = stateRecipientConfirm
+	StateRecipientList    = stateRecipientList
+	StateBulkReKeyConfirm = stateBulkReKeyConfirm
 )
 
 // FilesDiscoveredMsg carries the result of SOPS file discovery.
@@ -168,10 +185,38 @@ type GitHistoryMsg struct {
 	Err     error
 }
 
+// HealthCheckResultMsg carries completed health scan results (HLT-03).
+type HealthCheckResultMsg struct {
+	Result health.HealthCheckResult
+	Err    error
+}
+
+// ReKeyDoneMsg carries the result of a sops rotate operation for one file (RCP-03).
+type ReKeyDoneMsg struct {
+	FilePath string
+	Err      error
+}
+
+// RecipientDoneMsg carries the result of adding/removing a recipient (RCP-02).
+type RecipientDoneMsg struct {
+	FilePath string
+	Action   string // "added" or "removed"
+	Err      error
+}
+
 // ParsedFileForTest is a test helper that builds a parser.ParsedFile from tree nodes.
 // It is exported so external test packages (_test suffix) can drive AppModel into stateDetail.
 func ParsedFileForTest(nodes []ui.TreeNode) parser.ParsedFile {
 	return parser.ParsedFile{Nodes: nodes}
+}
+
+// bulkReKeyState tracks progress of a sequential bulk re-key operation (RCP-03, D-06).
+type bulkReKeyState struct {
+	queue       []sops.DiscoveredFile
+	currentFile sops.DiscoveredFile
+	completed   int
+	skipped     int
+	total       int
 }
 
 // AppModel is the root Bubble Tea model. It owns a sessionState enum and
@@ -210,6 +255,14 @@ type AppModel struct {
 	// Cross-file search fields (GIT-03)
 	crossFileItems     []CrossFileSearchItem // cached cross-file search items (lazily populated)
 	crossFilePopulated bool                  // true after first cross-file search populates the cache
+	// Phase 5 fields
+	health          ui.HealthModel
+	recipientForm   ui.RecipientFormModel
+	bulkReKey       *bulkReKeyState  // nil when not in bulk re-key mode
+	recipientAction string           // "add", "remove", or "healthcheck" sentinel
+	recipientPubkey string           // pubkey being added/removed (for sops call after confirm)
+	recipientList   []string         // current file's recipients for remove-recipient overlay
+	currentParsed   parser.ParsedFile // parsed data for current detail file (for recipient access)
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -218,12 +271,14 @@ type AppModel struct {
 // The file list is initially empty — discovery runs asynchronously in Init.
 func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
 	m := AppModel{
-		state:        stateFileList,
-		fileList:     ui.NewFileListModel([]ui.FileItem{}, 0, 0),
-		detail:       ui.NewDetailModel("", []ui.TreeNode{}, 0, 0, true, ""),
-		help:         ui.NewHelpModel(0, 0),
-		status:       ui.NewStatusBarModel(env),
-		sopsYamlPath: sopsYamlPath,
+		state:         stateFileList,
+		fileList:      ui.NewFileListModel([]ui.FileItem{}, 0, 0),
+		detail:        ui.NewDetailModel("", []ui.TreeNode{}, 0, 0, true, ""),
+		help:          ui.NewHelpModel(0, 0),
+		status:        ui.NewStatusBarModel(env),
+		sopsYamlPath:  sopsYamlPath,
+		health:        ui.NewHealthModel(0, 0),
+		recipientForm: ui.NewRecipientFormModel(0, 0),
 	}
 	m.status.SetBreadcrumb("files")
 	m.status.SetItemCount(0, "items")
@@ -269,6 +324,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.metadata.SetSize(m.width, mainH)
 		m.diff.SetSize(m.width, mainH)
 		m.history.SetSize(m.width, mainH)
+		m.health.SetSize(m.width, mainH)
+		m.recipientForm.SetSize(m.width, mainH)
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -321,6 +378,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if mainH < 0 {
 			mainH = 0
 		}
+		m.currentParsed = msg.Parsed
 		m.detail = ui.NewDetailModel(
 			m.currentFile.Name,
 			msg.Parsed.Nodes,
@@ -587,12 +645,219 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.history.SetEntries(msg.Entries)
 		return m, nil
 
+	case HealthCheckResultMsg:
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Health scan failed: " + msg.Err.Error())
+			m.state = stateFileList
+			return m, nil
+		}
+		m.health.SetResults(msg.Result)
+		total := len(msg.Result.WeakSecrets) + len(msg.Result.Duplicates) + len(msg.Result.StaleFiles)
+		if total == 0 && len(msg.Result.Errors) == 0 {
+			m.status, _ = m.status.Flash("Health scan done — no issues found")
+		} else {
+			m.status, _ = m.status.Flash(fmt.Sprintf("Health scan done — %d findings", total))
+		}
+		return m, nil
+
+	case ReKeyDoneMsg:
+		if m.bulkReKey != nil {
+			if msg.Err != nil {
+				m.status, _ = m.status.Flash("Re-key failed: " + msg.Err.Error())
+				m.bulkReKey.skipped++
+			} else {
+				m.bulkReKey.completed++
+			}
+			m.advanceBulkReKey()
+			return m, nil
+		}
+		return m, nil
+
+	case RecipientDoneMsg:
+		if msg.Err != nil {
+			m.status, _ = m.status.Flash("Re-key failed: " + msg.Err.Error())
+		} else {
+			m.status, _ = m.status.Flash("Recipient " + msg.Action + ". File re-encrypted.")
+		}
+		// Re-parse the current file to refresh recipients in currentParsed.
+		filePath := m.currentFile.AbsPath
+		rule := m.currentFile.Rule
+		isEnc := m.currentFile.IsEncrypted
+		return m, func() tea.Msg {
+			parsed, err := parser.ParseFile(filePath, rule, isEnc)
+			return FilesParsedMsg{Parsed: parsed, Err: err}
+		}
+
 	case tea.KeyPressMsg:
+		// stateHealth: j/k scroll, H or Esc to close.
+		if m.state == stateHealth {
+			switch msg.String() {
+			case "j", "down":
+				m.health.ScrollDown()
+				return m, nil
+			case "k", "up":
+				m.health.ScrollUp()
+				return m, nil
+			case "H", "esc":
+				m.state = m.prevState
+				m.status.SetBreadcrumb("files")
+				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				return m, nil
+			}
+			return m, nil
+		}
+
+		// stateRecipientForm: delegate to RecipientFormModel, check Confirmed/Cancelled.
+		if m.state == stateRecipientForm {
+			var cmd tea.Cmd
+			m.recipientForm, cmd = m.recipientForm.Update(msg)
+			if m.recipientForm.Confirmed() {
+				// Valid key — show confirmation overlay (D-04).
+				pubkey := m.recipientForm.Value()
+				m.recipientPubkey = pubkey
+				currentRecipients := m.currentParsed.Metadata.AgeRecipients
+				var entries []ui.DiffEntry
+				for _, r := range currentRecipients {
+					entries = append(entries, ui.DiffEntry{KeyPath: "recipient", OldValue: r, NewValue: r})
+				}
+				entries = append(entries, ui.DiffEntry{KeyPath: "new", OldValue: "", NewValue: pubkey})
+				mainH := m.height - statusBarHeight(m)
+				if mainH < 0 {
+					mainH = 0
+				}
+				m.diff = ui.NewDiffModel("Confirm: Add Recipient", entries, m.width, mainH)
+				m.state = stateRecipientConfirm
+				return m, nil
+			}
+			if m.recipientForm.Cancelled() {
+				m.state = m.prevState
+				return m, nil
+			}
+			return m, cmd
+		}
+
+		// stateRecipientList: numbered key selection for remove-recipient (D-03).
+		if m.state == stateRecipientList {
+			switch msg.String() {
+			case "esc":
+				m.state = m.prevState
+				return m, nil
+			default:
+				// Parse number key 1-9; bounds-check against recipient list (T-05-08).
+				if len(msg.String()) == 1 && msg.String()[0] >= '1' && msg.String()[0] <= '9' {
+					idx := int(msg.String()[0] - '1')
+					if idx < len(m.recipientList) {
+						pubkey := m.recipientList[idx]
+						m.recipientPubkey = pubkey
+						m.recipientAction = "remove"
+						var entries []ui.DiffEntry
+						for _, r := range m.recipientList {
+							if r == pubkey {
+								entries = append(entries, ui.DiffEntry{KeyPath: "remove", OldValue: r, NewValue: ""})
+							} else {
+								entries = append(entries, ui.DiffEntry{KeyPath: "keep", OldValue: r, NewValue: r})
+							}
+						}
+						mainH := m.height - statusBarHeight(m)
+						if mainH < 0 {
+							mainH = 0
+						}
+						m.diff = ui.NewDiffModel("Confirm: Remove Recipient", entries, m.width, mainH)
+						m.state = stateRecipientConfirm
+						return m, nil
+					}
+				}
+			}
+			return m, nil
+		}
+
+		// stateRecipientConfirm: reuse DiffModel for add/remove confirmation.
+		if m.state == stateRecipientConfirm {
+			var cmd tea.Cmd
+			m.diff, cmd = m.diff.Update(msg)
+			if m.diff.Confirmed() {
+				filePath := m.currentFile.AbsPath
+				pubkey := m.recipientPubkey
+				action := m.recipientAction
+				m.state = stateDetail
+				if action == "add" {
+					m.status, _ = m.status.Flash("Adding recipient...")
+					return m, func() tea.Msg {
+						ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
+						defer cancel()
+						err := sops.AddRecipient(ctx, filePath, pubkey)
+						return RecipientDoneMsg{FilePath: filePath, Action: "added", Err: err}
+					}
+				} else if action == "remove" {
+					m.status, _ = m.status.Flash("Removing recipient...")
+					return m, func() tea.Msg {
+						ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
+						defer cancel()
+						err := sops.RemoveRecipient(ctx, filePath, pubkey)
+						return RecipientDoneMsg{FilePath: filePath, Action: "removed", Err: err}
+					}
+				}
+				return m, nil
+			}
+			if m.diff.Cancelled() {
+				m.state = m.prevState
+				return m, nil
+			}
+			return m, cmd
+		}
+
+		// stateBulkReKeyConfirm: per-file confirmation during bulk re-key (D-06).
+		if m.state == stateBulkReKeyConfirm {
+			var cmd tea.Cmd
+			m.diff, cmd = m.diff.Update(msg)
+			if m.diff.Confirmed() {
+				filePath := m.bulkReKey.currentFile.AbsPath
+				m.state = stateFileList
+				return m, func() tea.Msg {
+					ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
+					defer cancel()
+					rotateCmd := exec.CommandContext(ctx, "sops", "rotate", "-i", filePath)
+					var stderr strings.Builder
+					rotateCmd.Stderr = &stderr
+					if err := rotateCmd.Run(); err != nil {
+						return ReKeyDoneMsg{FilePath: filePath, Err: fmt.Errorf("sops rotate: %w: %s", err, strings.TrimSpace(stderr.String()))}
+					}
+					return ReKeyDoneMsg{FilePath: filePath}
+				}
+			}
+			if m.diff.Cancelled() {
+				if m.bulkReKey != nil {
+					m.bulkReKey.skipped++
+					m.advanceBulkReKey()
+				}
+				return m, nil
+			}
+			return m, cmd
+		}
+
 		// stateDiff: route all keys to diff model, then check Confirmed/Cancelled.
 		// This runs before global key handling so y/n/Esc are captured by the overlay.
 		if m.state == stateDiff {
 			m.diff, _ = m.diff.Update(msg)
 			if m.diff.Confirmed() {
+				// Health check sentinel: dispatch async scan instead of re-encrypt.
+				if m.recipientAction == "healthcheck" {
+					m.recipientAction = ""
+					mainH := m.height - statusBarHeight(m)
+					if mainH < 0 {
+						mainH = 0
+					}
+					m.health = ui.NewHealthModel(m.width, mainH)
+					m.prevState = stateFileList
+					m.state = stateHealth
+					m.status.SetBreadcrumb("files", "health")
+					m.status, _ = m.status.Flash("Decrypting all files for health scan...")
+					files := m.files
+					gitRoot := m.gitRepoRoot
+					return m, func() tea.Msg {
+						return runHealthCheck(files, gitRoot)
+					}
+				}
 				entries := m.diff.Entries()
 				filePath := m.editFilePath
 				if len(entries) == 1 && m.editorEditedContent == nil {
@@ -839,6 +1104,37 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// a key: open add-recipient form from stateDetail (D-01, RCP-02).
+		if key.Matches(msg, keys.DefaultDetailKeyMap.AddRecipient) {
+			if m.state == stateDetail && !m.detail.IsSearchActive() {
+				mainH := m.height - statusBarHeight(m)
+				if mainH < 0 {
+					mainH = 0
+				}
+				m.recipientForm = ui.NewRecipientFormModel(m.width, mainH)
+				cmd := m.recipientForm.Activate()
+				m.prevState = m.state
+				m.state = stateRecipientForm
+				m.recipientAction = "add"
+				return m, cmd
+			}
+		}
+
+		// d key: open remove-recipient list from stateDetail (D-03, RCP-02).
+		if key.Matches(msg, keys.DefaultDetailKeyMap.RemoveRecipient) {
+			if m.state == stateDetail && !m.detail.IsSearchActive() {
+				recipients := m.currentParsed.Metadata.AgeRecipients
+				if len(recipients) == 0 {
+					m.status, _ = m.status.Flash("No age recipients configured for this file")
+					return m, nil
+				}
+				m.recipientList = recipients
+				m.prevState = m.state
+				m.state = stateRecipientList
+				return m, nil
+			}
+		}
+
 		// Esc: priority chain
 		if msg.String() == "esc" {
 			// Priority 1: Close search if active
@@ -872,6 +1168,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				return m, nil
 			}
+			if m.state == stateHealth {
+				m.state = m.prevState
+				m.status.SetBreadcrumb("files")
+				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				return m, nil
+			}
+			if m.state == stateRecipientForm {
+				m.state = m.prevState
+				return m, nil
+			}
+			if m.state == stateRecipientConfirm {
+				m.state = m.prevState
+				return m, nil
+			}
+			if m.state == stateRecipientList {
+				m.state = m.prevState
+				return m, nil
+			}
+			if m.state == stateBulkReKeyConfirm {
+				if m.bulkReKey != nil {
+					m.bulkReKey.skipped++
+					m.advanceBulkReKey()
+				}
+				return m, nil
+			}
 			// Priority 3: Navigate back from detail to file list
 			// Per D-04 and T-03-02: clear all revealed values before leaving detail view.
 			if m.state == stateDetail {
@@ -879,6 +1200,64 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = stateFileList
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				return m, nil
+			}
+		}
+
+		// K key: bulk re-key selected files (D-05, D-06).
+		if m.state == stateFileList && !m.fileList.IsSearchActive() {
+			if key.Matches(msg, keys.DefaultFileListKeyMap.BulkReKey) {
+				selected := m.fileList.SelectedItems()
+				if len(selected) == 0 {
+					m.status, _ = m.status.Flash("Select files with space first")
+					return m, nil
+				}
+				var queue []sops.DiscoveredFile
+				for _, item := range selected {
+					for _, f := range m.files {
+						if f.AbsPath == item.Path {
+							queue = append(queue, f)
+							break
+						}
+					}
+				}
+				first := queue[0]
+				m.bulkReKey = &bulkReKeyState{
+					queue:       queue[1:],
+					currentFile: first,
+					completed:   0,
+					skipped:     0,
+					total:       len(queue),
+				}
+				m.showBulkReKeyConfirm(first)
+				return m, nil
+			}
+		}
+
+		// H key: health check — show confirmation then run async scan (D-09, HLT-03).
+		if m.state == stateFileList && !m.fileList.IsSearchActive() {
+			if key.Matches(msg, keys.DefaultFileListKeyMap.HealthCheck) {
+				if len(m.files) == 0 {
+					m.status, _ = m.status.Flash("No files to scan")
+					return m, nil
+				}
+				// Use DiffModel as a confirmation gate before decrypting all files (D-09).
+				entries := []ui.DiffEntry{{
+					KeyPath:  "scan",
+					OldValue: "",
+					NewValue: fmt.Sprintf("Decrypt and analyze %d files", len(m.files)),
+				}}
+				mainH := m.height - statusBarHeight(m)
+				if mainH < 0 {
+					mainH = 0
+				}
+				m.diff = ui.NewDiffModel(
+					fmt.Sprintf("Health check requires decrypting all %d files", len(m.files)),
+					entries, m.width, mainH,
+				)
+				m.prevState = m.state
+				m.state = stateDiff
+				m.recipientAction = "healthcheck" // sentinel so stateDiff confirm dispatches health scan
 				return m, nil
 			}
 		}
@@ -973,6 +1352,16 @@ func (m AppModel) View() tea.View {
 		content = renderFormatMenu(m.formatMenuCursor, m.width, mainH)
 	case stateHistory:
 		content = m.history.View()
+	case stateHealth:
+		content = m.health.View()
+	case stateRecipientForm:
+		content = m.recipientForm.View()
+	case stateRecipientConfirm:
+		content = m.diff.View()
+	case stateRecipientList:
+		content = m.renderRecipientList()
+	case stateBulkReKeyConfirm:
+		content = m.diff.View()
 	}
 
 	// Pad or constrain main content to fill available height
@@ -1286,6 +1675,181 @@ func walkMapSlice(ms yaml.MapSlice, prefix string, out map[string]string) {
 			out[path] = fmt.Sprintf("%v", v)
 		}
 	}
+}
+
+// runHealthCheck decrypts all files, performs weak/duplicate/stale analysis, and
+// returns a HealthCheckResultMsg. This runs in a goroutine via tea.Cmd.
+// Per T-05-09: fileValues map is cleared after FindDuplicates to limit plaintext lifetime.
+// Per T-05-10: each file decrypt uses SopsTimeout to bound total scan time.
+func runHealthCheck(files []sops.DiscoveredFile, gitRepoRoot string) HealthCheckResultMsg {
+	result := health.HealthCheckResult{}
+	fileValues := make(map[string]map[string]string)
+
+	// Parse staleness threshold from env (D-10).
+	stalenessThreshold := 90
+	if envDays := os.Getenv("SOPS_TUI_STALE_DAYS"); envDays != "" {
+		if n, err := strconv.Atoi(envDays); err == nil && n > 0 {
+			stalenessThreshold = n
+		}
+	}
+
+	for _, f := range files {
+		ctx, cancel := context.WithTimeout(context.Background(), sops.SopsTimeout)
+		decrypted, err := sops.DecryptFile(ctx, f.AbsPath)
+		cancel()
+		if err != nil {
+			result.Errors = append(result.Errors, f.Name+": "+err.Error())
+			continue
+		}
+
+		// Parse decrypted YAML to extract leaf key-value pairs.
+		var raw map[string]interface{}
+		if err := yaml.Unmarshal(decrypted, &raw); err != nil {
+			result.Errors = append(result.Errors, f.Name+": YAML parse error")
+			continue
+		}
+		kvs := flattenYAML("", raw)
+		fileValues[f.Name] = kvs
+
+		// Weak secret check per leaf.
+		for keyPath, value := range kvs {
+			if weak, reason := health.IsWeakSecret(keyPath, value); weak {
+				result.WeakSecrets = append(result.WeakSecrets, health.WeakSecret{
+					FilePath: f.Name, KeyPath: keyPath, Reason: reason,
+				})
+			}
+		}
+
+		// Staleness check per file (D-10).
+		if gitRepoRoot != "" {
+			relPath, _ := filepath.Rel(gitRepoRoot, f.AbsPath)
+			commitTime, err := gitpkg.GetLastCommitTime(gitRepoRoot, relPath)
+			if err == nil && !commitTime.IsZero() {
+				daysSince := int(time.Since(commitTime).Hours() / 24)
+				if daysSince > stalenessThreshold {
+					result.StaleFiles = append(result.StaleFiles, health.StaleFile{
+						FilePath: f.Name, LastCommitTime: commitTime, DaysSince: daysSince,
+					})
+				}
+			} else if err != nil {
+				// No git history — flag with DaysSince=-1 to signal "no git history".
+				result.StaleFiles = append(result.StaleFiles, health.StaleFile{
+					FilePath: f.Name, DaysSince: -1,
+				})
+			}
+		}
+	}
+
+	// Duplicate check across all files (D-09).
+	result.Duplicates = health.FindDuplicates(fileValues)
+
+	// T-05-09: clear plaintext map after analysis.
+	for k := range fileValues {
+		delete(fileValues, k)
+	}
+
+	return HealthCheckResultMsg{Result: result}
+}
+
+// flattenYAML recursively extracts leaf string values from a YAML map.
+// Returns a map of dot-joined key paths to string values.
+// Skips the "sops" top-level key (metadata block).
+// Per T-05-12: recursion is bounded by file size (sops files are typically small).
+func flattenYAML(prefix string, m map[string]interface{}) map[string]string {
+	result := make(map[string]string)
+	for k, v := range m {
+		if prefix == "" && k == "sops" {
+			continue // skip SOPS metadata block
+		}
+		fullKey := k
+		if prefix != "" {
+			fullKey = prefix + "." + k
+		}
+		switch val := v.(type) {
+		case map[string]interface{}:
+			for ik, iv := range flattenYAML(fullKey, val) {
+				result[ik] = iv
+			}
+		case string:
+			result[fullKey] = val
+		default:
+			result[fullKey] = fmt.Sprintf("%v", val)
+		}
+	}
+	return result
+}
+
+// showBulkReKeyConfirm transitions to stateBulkReKeyConfirm showing the diff overlay
+// for the current file in the bulk re-key queue.
+func (m *AppModel) showBulkReKeyConfirm(file sops.DiscoveredFile) {
+	m.status, _ = m.status.Flash(fmt.Sprintf("Re-keying %d/%d: %s",
+		m.bulkReKey.completed+1, m.bulkReKey.total, file.Name))
+	parsed, _ := parser.ParseFile(file.AbsPath, file.Rule, true)
+	var entries []ui.DiffEntry
+	for _, r := range parsed.Metadata.AgeRecipients {
+		entries = append(entries, ui.DiffEntry{KeyPath: "recipient", OldValue: r, NewValue: r})
+	}
+	mainH := m.height - statusBarHeight(*m)
+	if mainH < 0 {
+		mainH = 0
+	}
+	m.diff = ui.NewDiffModel(fmt.Sprintf("Confirm Re-key: %s", file.Name), entries, m.width, mainH)
+	m.prevState = stateFileList
+	m.state = stateBulkReKeyConfirm
+}
+
+// advanceBulkReKey moves to the next file in the bulk re-key queue, or completes
+// the operation if the queue is empty.
+func (m *AppModel) advanceBulkReKey() {
+	if len(m.bulkReKey.queue) == 0 {
+		completed := m.bulkReKey.completed
+		skipped := m.bulkReKey.skipped
+		m.bulkReKey = nil
+		m.fileList.ClearSelections()
+		m.state = stateFileList
+		if skipped == 0 {
+			m.status, _ = m.status.Flash(fmt.Sprintf("Re-key complete: %d files updated", completed))
+		} else {
+			m.status, _ = m.status.Flash(fmt.Sprintf("Re-key done: %d updated, %d skipped", completed, skipped))
+		}
+		return
+	}
+	next := m.bulkReKey.queue[0]
+	m.bulkReKey.queue = m.bulkReKey.queue[1:]
+	m.bulkReKey.currentFile = next
+	m.showBulkReKeyConfirm(next)
+}
+
+// renderRecipientList renders the numbered remove-recipient list overlay (D-03).
+func (m AppModel) renderRecipientList() string {
+	title := ui.DiffKeyStyle.Render("Remove Recipient")
+	var lines []string
+	for i, r := range m.recipientList {
+		lines = append(lines, ui.RecipientIndexStyle.Render(fmt.Sprintf("[%d]", i+1))+" "+r)
+	}
+	prompt := lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(
+		fmt.Sprintf("Select recipient to remove (1-%d):", len(m.recipientList)),
+	)
+	footer := ui.ConfirmPromptStyle.Render("1-"+fmt.Sprintf("%d", len(m.recipientList))) +
+		" select   " + ui.ConfirmPromptStyle.Render("[esc]") + " cancel"
+	inner := title + "\n\n" + strings.Join(lines, "\n") + "\n\n" + prompt + "\n\n" + footer
+
+	boxWidth := m.width - 2
+	if boxWidth < 1 {
+		boxWidth = 1
+	}
+	boxHeight := m.height - 4
+	if boxHeight < 1 {
+		boxHeight = 1
+	}
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ui.ColorMuted).
+		Background(ui.ColorSurface).
+		Padding(1, ui.SpaceMD).
+		Width(boxWidth).
+		Height(boxHeight).
+		Render(inner)
 }
 
 // renderFormatMenu renders the format selection menu overlay for ambiguous rotation.
