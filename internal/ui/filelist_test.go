@@ -125,3 +125,46 @@ func TestFileListSearchDeactivation(t *testing.T) {
 	assert.False(t, m.IsSearchActive(), "search must be inactive after DeactivateSearch()")
 	assert.Equal(t, 2, m.ItemCount(), "full item list must be restored after deactivation")
 }
+
+// TestFileItemToggleSelected verifies that FileItem.Title() renders [+] when Selected=true
+// and does NOT contain [+] when Selected=false.
+func TestFileItemToggleSelected(t *testing.T) {
+	// Selected=true: Title must contain [+]
+	selected := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true, Selected: true}
+	titleSelected := selected.Title()
+	assert.True(t, strings.Contains(stripAnsi(titleSelected), "[+]"),
+		"selected item title must contain '[+]', got: %q", titleSelected)
+
+	// Selected=false: Title must NOT contain [+]
+	notSelected := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true, Selected: false}
+	titleNotSelected := notSelected.Title()
+	assert.False(t, strings.Contains(stripAnsi(titleNotSelected), "[+]"),
+		"non-selected item title must NOT contain '[+]', got: %q", titleNotSelected)
+}
+
+// TestSelectedItems verifies that SelectedItems returns only items with Selected==true.
+func TestSelectedItems(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "a.yaml", Path: "/a.yaml", IsEncrypted: true, Selected: true},
+		{Name: "b.yaml", Path: "/b.yaml", IsEncrypted: true, Selected: false},
+		{Name: "c.yaml", Path: "/c.yaml", IsEncrypted: true, Selected: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	got := m.SelectedItems()
+	require.Len(t, got, 2, "SelectedItems must return 2 selected items")
+	assert.Equal(t, "a.yaml", got[0].Name)
+	assert.Equal(t, "c.yaml", got[1].Name)
+}
+
+// TestClearSelections verifies that ClearSelections resets all selections to false.
+func TestClearSelections(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "a.yaml", Path: "/a.yaml", IsEncrypted: true, Selected: true},
+		{Name: "b.yaml", Path: "/b.yaml", IsEncrypted: true, Selected: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	require.Len(t, m.SelectedItems(), 2, "should start with 2 selected items")
+
+	m.ClearSelections()
+	assert.Empty(t, m.SelectedItems(), "SelectedItems must be empty after ClearSelections()")
+}

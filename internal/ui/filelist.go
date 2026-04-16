@@ -35,14 +35,20 @@ type FileItem struct {
 	Rule sops.CreationRule
 	// GitStatus is the git worktree status code: "M", "A", "?", or "" for clean/no-git (D-09).
 	GitStatus string
+	// Selected indicates whether this file is selected for bulk operations (D-05).
+	Selected bool
 }
 
 // Title returns the display name used by the default list delegate.
+// Prepends [+] indicator when Selected is true (D-05).
 // Appends [unencrypted] badge when IsEncrypted is false.
 // Appends git badge [M]/[A]/[?] when the file has uncommitted changes (D-09).
 // Implements list.DefaultItem.
 func (i FileItem) Title() string {
 	base := i.Name
+	if i.Selected {
+		base = SelectionIndicatorStyle.Render("[+]") + " " + base
+	}
 	if !i.IsEncrypted {
 		base += " " + BadgeUnencrypted.Render("[unencrypted]")
 	}
@@ -283,6 +289,23 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 			}
 			m.list.Select(idx)
 			return m, nil
+		case key.Matches(msg, m.keys.ToggleSelect):
+			// Toggle selection state on the highlighted item (D-05).
+			if item, ok := m.SelectedItem(); ok {
+				for idx := range m.allItems {
+					if m.allItems[idx].Path == item.Path {
+						m.allItems[idx].Selected = !m.allItems[idx].Selected
+						break
+					}
+				}
+				// Rebuild list items so Title() reflects the new Selected state.
+				listItems := make([]list.Item, len(m.allItems))
+				for idx, it := range m.allItems {
+					listItems[idx] = it
+				}
+				m.list.SetItems(listItems)
+			}
+			return m, nil
 		}
 	}
 
@@ -351,4 +374,29 @@ func (m FileListModel) SelectedFileItem() (FileItem, bool) {
 // ItemCount returns the total number of items in the list.
 func (m FileListModel) ItemCount() int {
 	return len(m.allItems)
+}
+
+// SelectedItems returns all FileItems with Selected == true.
+// Used by AppModel for bulk re-key (D-05).
+func (m FileListModel) SelectedItems() []FileItem {
+	var selected []FileItem
+	for _, item := range m.allItems {
+		if item.Selected {
+			selected = append(selected, item)
+		}
+	}
+	return selected
+}
+
+// ClearSelections resets Selected to false on all items and rebuilds the list.
+// Called after bulk re-key completes (D-05).
+func (m *FileListModel) ClearSelections() {
+	for idx := range m.allItems {
+		m.allItems[idx].Selected = false
+	}
+	listItems := make([]list.Item, len(m.allItems))
+	for idx, it := range m.allItems {
+		listItems[idx] = it
+	}
+	m.list.SetItems(listItems)
 }
