@@ -44,9 +44,11 @@ func NewHealthModel(width, height int) HealthModel {
 }
 
 // SetResults populates the model with health check results and clears the loading state.
+// Resets scroll to 0 to prevent out-of-bounds slice access if the user scrolled during loading.
 func (m *HealthModel) SetResults(results health.HealthCheckResult) {
 	m.results = results
 	m.loading = false
+	m.scroll = 0
 }
 
 // SetSize updates the component dimensions.
