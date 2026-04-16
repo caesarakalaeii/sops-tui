@@ -28,9 +28,10 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 - [x] Git integration — blame/history per secret, detect uncommitted changes — Validated in Phase 4: Clipboard & Git
 - [x] Cross-file fuzzy search across all files and key names — Validated in Phase 4: Clipboard & Git
 
+- [x] Recipient management — add/remove age keys across files, bulk re-key — Validated in Phase 5: Power Features
+- [x] Secret health checks — detect weak secrets, duplicates across files, stale values — Validated in Phase 5: Power Features
+
 ### Active
-- [ ] Recipient management — add/remove age keys across files, bulk re-key
-- [ ] Secret health checks — detect weak secrets, duplicates across files, stale values
 - [ ] Vim-like keyboard navigation throughout
 
 ### Out of Scope
