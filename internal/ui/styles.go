@@ -193,4 +193,16 @@ var (
 	HistoryDateStyle    = lipgloss.NewStyle().Foreground(ColorMuted)
 	HistoryAuthorStyle  = lipgloss.NewStyle().Foreground(ColorFg)
 	HistorySubjectStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// Phase 5: Health check severity styles (HLT-03)
+	HealthWeakStyle  = lipgloss.NewStyle().Foreground(ColorWarning)
+	HealthDupeStyle  = lipgloss.NewStyle().Foreground(ColorError)
+	HealthStaleStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+	HealthOkStyle    = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// Phase 5: Validation error style for RecipientFormModel inline errors (T-05-05)
+	ValidationErrorStyle = lipgloss.NewStyle().Foreground(ColorError)
+
+	// Phase 5: Selection indicator for bulk re-key (D-05)
+	SelectionIndicator = lipgloss.NewStyle().Foreground(ColorAccent)
 )
