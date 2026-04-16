@@ -1784,7 +1784,13 @@ func flattenYAML(prefix string, m map[string]interface{}) map[string]string {
 func (m *AppModel) showBulkReKeyConfirm(file sops.DiscoveredFile) {
 	m.status, _ = m.status.Flash(fmt.Sprintf("Re-keying %d/%d: %s",
 		m.bulkReKey.completed+1, m.bulkReKey.total, file.Name))
-	parsed, _ := parser.ParseFile(file.AbsPath, file.Rule, true)
+	parsed, err := parser.ParseFile(file.AbsPath, file.Rule, true)
+	if err != nil {
+		m.status, _ = m.status.Flash("Re-key: could not read recipients: " + err.Error())
+		m.bulkReKey.skipped++
+		m.advanceBulkReKey()
+		return
+	}
 	var entries []ui.DiffEntry
 	for _, r := range parsed.Metadata.AgeRecipients {
 		entries = append(entries, ui.DiffEntry{KeyPath: "recipient", OldValue: r, NewValue: r})
