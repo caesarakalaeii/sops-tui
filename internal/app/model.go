@@ -1724,18 +1724,19 @@ func runHealthCheck(files []sops.DiscoveredFile, gitRepoRoot string) HealthCheck
 		if gitRepoRoot != "" {
 			relPath, _ := filepath.Rel(gitRepoRoot, f.AbsPath)
 			commitTime, err := gitpkg.GetLastCommitTime(gitRepoRoot, relPath)
-			if err == nil && !commitTime.IsZero() {
-				daysSince := int(time.Since(commitTime).Hours() / 24)
-				if daysSince > stalenessThreshold {
-					result.StaleFiles = append(result.StaleFiles, health.StaleFile{
-						FilePath: f.Name, LastCommitTime: commitTime, DaysSince: daysSince,
-					})
+			if err == nil {
+				if !commitTime.IsZero() {
+					daysSince := int(time.Since(commitTime).Hours() / 24)
+					if daysSince > stalenessThreshold {
+						result.StaleFiles = append(result.StaleFiles, health.StaleFile{
+							FilePath: f.Name, LastCommitTime: commitTime, DaysSince: daysSince,
+						})
+					}
+					// Zero commitTime with nil error means the file has never been committed — skip silently.
 				}
-			} else if err != nil {
-				// No git history — flag with DaysSince=-1 to signal "no git history".
-				result.StaleFiles = append(result.StaleFiles, health.StaleFile{
-					FilePath: f.Name, DaysSince: -1,
-				})
+			} else {
+				// Actual git error (e.g. locked pack file, corrupt object DB) — do not flag as stale.
+				result.Errors = append(result.Errors, f.Name+": git error: "+err.Error())
 			}
 		}
 	}
