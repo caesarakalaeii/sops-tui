@@ -111,7 +111,7 @@ Plans:
 - [x] 05-01-PLAN.md — Health check package, sops executor recipient functions, git staleness, styles and keybindings
 - [x] 05-02-PLAN.md — HealthModel overlay, RecipientFormModel with age key validation
 - [x] 05-03-PLAN.md — AppModel wiring: file selection, bulk re-key, recipient flows, health pipeline
-- [ ] 05-04-PLAN.md — Integration test suite review and human verification of all flows
+- [x] 05-04-PLAN.md — Integration test suite review and human verification of all flows
 
 **UI hint**: yes
 
