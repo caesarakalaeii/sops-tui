@@ -61,12 +61,18 @@ type FileListKeyMap struct {
 	Search key.Binding
 	// Info opens the metadata overlay for the highlighted file.
 	Info key.Binding
+	// ToggleSelect toggles the selection state of the highlighted file (D-05).
+	ToggleSelect key.Binding
+	// BulkReKey triggers bulk re-key on all selected files (D-05).
+	BulkReKey key.Binding
+	// HealthCheck triggers the on-demand secret health check (D-11).
+	HealthCheck key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k FileListKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Open, k.Search, k.Info, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Open, k.Search, k.Info, k.ToggleSelect, k.BulkReKey, k.HealthCheck, k.Help, k.Quit}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -74,7 +80,7 @@ func (k FileListKeyMap) ShortHelp() []key.Binding {
 func (k FileListKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Open, k.Search, k.Info},
+		{k.Open, k.Search, k.Info, k.ToggleSelect, k.BulkReKey, k.HealthCheck},
 		{k.Help, k.Quit},
 	}
 }
@@ -118,6 +124,18 @@ var DefaultFileListKeyMap = FileListKeyMap{
 	Info: key.NewBinding(
 		key.WithKeys("i"),
 		key.WithHelp("i", "file info"),
+	),
+	ToggleSelect: key.NewBinding(
+		key.WithKeys("space"),
+		key.WithHelp("space", "toggle select"),
+	),
+	BulkReKey: key.NewBinding(
+		key.WithKeys("K"),
+		key.WithHelp("K", "bulk re-key selected"),
+	),
+	HealthCheck: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "health check"),
 	),
 }
 
@@ -163,12 +181,16 @@ type DetailKeyMap struct {
 	Copy key.Binding
 	// Blame opens the git history overlay for the current file.
 	Blame key.Binding
+	// AddRecipient opens the add-recipient modal for the current file (RCP-02).
+	AddRecipient key.Binding
+	// RemoveRecipient opens the remove-recipient list for the current file (RCP-02).
+	RemoveRecipient key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame}
+	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame, k.AddRecipient, k.RemoveRecipient}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -177,7 +199,7 @@ func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
 		{k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Blame},
-		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy},
+		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy, k.AddRecipient, k.RemoveRecipient},
 		{k.Help, k.Quit},
 	}
 }
@@ -257,5 +279,13 @@ var DefaultDetailKeyMap = DetailKeyMap{
 	Blame: key.NewBinding(
 		key.WithKeys("b"),
 		key.WithHelp("b", "git history"),
+	),
+	AddRecipient: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "add recipient"),
+	),
+	RemoveRecipient: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "remove recipient"),
 	),
 }

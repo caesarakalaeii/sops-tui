@@ -141,6 +141,58 @@ func SetKey(ctx context.Context, filePath, keyPath, newValue string) error {
 	return nil
 }
 
+// SopsRotateTimeout is the maximum duration for sops rotate operations.
+// Longer than SopsTimeout because rotate decrypts all key-encryption records
+// then re-encrypts all of them — the operation scales with the number of recipients
+// and the size of the file (RESEARCH.md Open Question 1).
+const SopsRotateTimeout = 60 * time.Second
+
+// AddRecipient adds an age public key as a recipient to a SOPS-encrypted file,
+// rotating the key-encryption records so the new recipient can decrypt.
+//
+// Runs: sops rotate -i --add-age <pubkey> <filePath>
+//
+// ctx should have a timeout applied: context.WithTimeout(ctx, SopsRotateTimeout).
+// Age public key validation is delegated to the caller (T-05-01: Plan 02 validates
+// with age.ParseX25519Recipient before calling AddRecipient).
+func AddRecipient(ctx context.Context, filePath, pubkey string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, "sops", "rotate", "-i", "--add-age", pubkey, filePath)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("sops rotate --add-age: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
+// RemoveRecipient removes an age public key from a SOPS-encrypted file's recipient list,
+// rotating the key-encryption records so the removed recipient can no longer decrypt.
+//
+// Runs: sops rotate -i --rm-age <pubkey> <filePath>
+//
+// ctx should have a timeout applied: context.WithTimeout(ctx, SopsRotateTimeout).
+func RemoveRecipient(ctx context.Context, filePath, pubkey string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, "sops", "rotate", "-i", "--rm-age", pubkey, filePath)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("sops rotate --rm-age: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+
+	return nil
+}
+
 // EncryptFile encrypts srcPath using sops and writes the ciphertext to destPath.
 // This is used in the $EDITOR flow (Plan 03) where a temp file is edited in plaintext
 // then re-encrypted to replace the original.

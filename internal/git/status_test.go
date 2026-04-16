@@ -166,6 +166,37 @@ func TestGetFileHistory(t *testing.T) {
 	})
 }
 
+// TestGetLastCommitTime verifies GetLastCommitTime returns correct timestamps.
+func TestGetLastCommitTime(t *testing.T) {
+	t.Run("returns commit timestamp for committed file", func(t *testing.T) {
+		dir := t.TempDir()
+		repo := initRepo(t, dir)
+		commitFile(t, repo, dir, "secrets.yaml", "v1", "initial commit")
+
+		ts, err := git.GetLastCommitTime(dir, "secrets.yaml")
+		require.NoError(t, err)
+		assert.False(t, ts.IsZero(), "commit timestamp must not be zero for a committed file")
+	})
+
+	t.Run("non-git directory returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		ts, err := git.GetLastCommitTime(dir, "secrets.yaml")
+		assert.Error(t, err, "non-git directory must return an error")
+		assert.True(t, ts.IsZero(), "timestamp must be zero on error")
+	})
+
+	t.Run("file with no commits returns zero time", func(t *testing.T) {
+		dir := t.TempDir()
+		repo := initRepo(t, dir)
+		// Commit a different file so the repo has a valid HEAD, but don't commit secrets.yaml
+		commitFile(t, repo, dir, "other.yaml", "data", "initial commit")
+
+		ts, err := git.GetLastCommitTime(dir, "secrets.yaml")
+		require.NoError(t, err)
+		assert.True(t, ts.IsZero(), "timestamp must be zero for a file with no commits")
+	})
+}
+
 // TestRelativeTime exercises the exported relativeTime function.
 func TestRelativeTime(t *testing.T) {
 	t.Run("just now for sub-minute duration", func(t *testing.T) {

@@ -194,3 +194,27 @@ func TestDotPathIndexDoesNotContainDots(t *testing.T) {
 	assert.False(t, strings.Contains(result, "."),
 		"dotPathToIndex output must not contain bare dots, got: %q", result)
 }
+
+// TestSopsRotateTimeoutConstant verifies that SopsRotateTimeout is set to exactly 60 seconds.
+func TestSopsRotateTimeoutConstant(t *testing.T) {
+	assert.Equal(t, 60*time.Second, SopsRotateTimeout, "SopsRotateTimeout must be 60 seconds")
+}
+
+// TestAddRecipientCommandStructure verifies AddRecipient is callable and handles the nil-ctx
+// fallback gracefully. Since sops binary integration tests require actual encrypted files,
+// we validate that calling with a nonexistent path returns a non-nil error (sops will fail).
+func TestAddRecipientCommandStructure(t *testing.T) {
+	err := AddRecipient(nil, "/nonexistent/sops-tui-test-path.yaml", "age1fake") //nolint:staticcheck
+	require.Error(t, err, "AddRecipient on nonexistent file must return an error")
+	errStr := err.Error()
+	assert.NotEmpty(t, errStr, "error message must not be empty")
+}
+
+// TestRemoveRecipientCommandStructure verifies RemoveRecipient is callable and handles the
+// nil-ctx fallback gracefully.
+func TestRemoveRecipientCommandStructure(t *testing.T) {
+	err := RemoveRecipient(nil, "/nonexistent/sops-tui-test-path.yaml", "age1fake") //nolint:staticcheck
+	require.Error(t, err, "RemoveRecipient on nonexistent file must return an error")
+	errStr := err.Error()
+	assert.NotEmpty(t, errStr, "error message must not be empty")
+}

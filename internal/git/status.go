@@ -202,5 +202,37 @@ func relativeTime(t time.Time) string {
 	}
 }
 
+// GetLastCommitTime returns the timestamp of the most recent commit that touched relPath
+// within the repository at repoRoot.
+//
+// relPath should be slash-separated and relative to the repository root (Pitfall 6).
+// Returns time.Time{} (zero value) if the file has never been committed.
+// Returns a non-nil error if repoRoot is not a git repository.
+func GetLastCommitTime(repoRoot, relPath string) (time.Time, error) {
+	repo, err := gogit.PlainOpenWithOptions(repoRoot, &gogit.PlainOpenOptions{DetectDotGit: true})
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// Pitfall 6: go-git expects forward-slash paths in LogOptions.
+	slashPath := filepath.ToSlash(relPath)
+
+	iter, err := repo.Log(&gogit.LogOptions{FileName: &slashPath})
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var commitTime time.Time
+	err = iter.ForEach(func(c *object.Commit) error {
+		commitTime = c.Author.When
+		return storer.ErrStop // stop after first (most recent) commit
+	})
+	if err != nil && err != storer.ErrStop {
+		return time.Time{}, err
+	}
+
+	return commitTime, nil
+}
+
 // RelativeTime exports relativeTime for testing.
 var RelativeTime = relativeTime
