@@ -105,7 +105,15 @@ Plans:
   2. User can add or remove an age key recipient on a file with confirmation before re-key
   3. User can bulk re-key multiple files to a new recipient set with per-file confirmation
   4. User can run a health check that reports weak secrets, duplicate values across files, and stale (unchanged) values
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Health check package, sops executor recipient functions, git staleness, styles and keybindings
+- [ ] 05-02-PLAN.md — HealthModel overlay, RecipientFormModel with age key validation
+- [ ] 05-03-PLAN.md — AppModel wiring: file selection, bulk re-key, recipient flows, health pipeline
+- [ ] 05-04-PLAN.md — Integration test suite review and human verification of all flows
+
+**UI hint**: yes
 
 ## Progress
 
@@ -118,4 +126,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
 | 3. Write Loop | 0/3 | Planned | - |
 | 4. Clipboard & Git | 0/3 | Planned | - |
-| 5. Power Features | 0/? | Not started | - |
+| 5. Power Features | 0/4 | Planned | - |
