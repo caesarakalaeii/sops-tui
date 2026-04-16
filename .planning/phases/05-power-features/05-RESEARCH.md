@@ -118,64 +118,64 @@ go get filippo.io/age@v1.3.1
 Phase 5 Data Flow
 
 File List View
-  │
-  ├─ Space ──► FileItem.Selected = true/false
-  │            Visual indicator: "[✓] secrets/prod.yaml"
-  │
-  ├─ K ───► BulkReKeyRequestMsg
-  │            │
-  │            ▼ (for each selected file, sequential)
-  │         RecipientDiffOverlay (stateBulkReKeyConfirm)
-  │            │ y → sops rotate -i <file>
-  │            │ n → skip file
-  │            ▼
-  │         Flash "Re-keying N/M: file.yaml"
-  │            ▼
-  │         ReKeyDoneMsg → next file
-  │
-  ├─ H ───► HealthCheckRequestMsg
-  │            │
-  │            ▼
-  │         Confirm "Decrypt all N files?" overlay
-  │            │ y →
-  │            ▼
-  │         [async] for each file: sops.DecryptFile
-  │            │
-  │            ▼ HealthCheckResultMsg
-  │         HealthModel overlay (stateHealth)
-  │            Grouped: weak / duplicate / stale
-  │
+  |
+  +- Space --> FileItem.Selected = true/false
+  |            Visual indicator: "[+] secrets/prod.yaml"
+  |
+  +- K ----> BulkReKeyRequestMsg
+  |            |
+  |            v (for each selected file, sequential)
+  |         RecipientDiffOverlay (stateBulkReKeyConfirm)
+  |            | y -> sops rotate -i <file>
+  |            | n -> skip file
+  |            v
+  |         Flash "Re-keying N/M: file.yaml"
+  |            v
+  |         ReKeyDoneMsg -> next file
+  |
+  +- H ----> HealthCheckRequestMsg
+  |            |
+  |            v
+  |         Confirm "Decrypt all N files?" overlay
+  |            | y ->
+  |            v
+  |         [async] for each file: sops.DecryptFile
+  |            |
+  |            v HealthCheckResultMsg
+  |         HealthModel overlay (stateHealth)
+  |            Grouped: weak / duplicate / stale
+  |
 Detail View
-  │
-  ├─ a ───► RecipientFormModel overlay (stateRecipientForm)
-  │            textinput "Enter age public key: age1..."
-  │            Enter → validate age.ParseX25519Recipient()
-  │            │ valid → RecipientDiffOverlay (stateRecipientConfirm)
-  │            │          y → sops rotate -i --add-age <pubkey> <file>
-  │            │          n → cancel
-  │
-  └─ d ───► RecipientListOverlay (stateRecipientConfirm)
+  |
+  +- a ----> RecipientFormModel overlay (stateRecipientForm)
+  |            textinput "Enter age public key: age1..."
+  |            Enter -> validate age.ParseX25519Recipient()
+  |            | valid -> RecipientDiffOverlay (stateRecipientConfirm)
+  |            |          y -> sops rotate -i --add-age <pubkey> <file>
+  |            |          n -> cancel
+  |
+  +- d ----> RecipientListOverlay (stateRecipientConfirm)
                numbered list of current recipients
-               select number → RecipientDiffOverlay
-               y → sops rotate -i --rm-age <pubkey> <file>
-               n → cancel
+               select number -> RecipientDiffOverlay
+               y -> sops rotate -i --rm-age <pubkey> <file>
+               n -> cancel
 ```
 
 ### Recommended Project Structure (additions only)
 ```
 internal/
-├── ui/
-│   ├── health.go          # HealthModel overlay (stateHealth)
-│   ├── health_test.go
-│   ├── recipientform.go   # RecipientFormModel for add-recipient input
-│   └── recipientform_test.go
-├── sops/
-│   └── executor.go        # AddRecipient(), RemoveRecipient() added here
-├── git/
-│   └── status.go          # GetLastCommitTime() added here
-└── health/
-    └── checker.go         # ShannonEntropy(), IsWeakSecret(), IsDuplicate(), IsStale()
-    └── checker_test.go
++-- ui/
+|   +-- health.go          # HealthModel overlay (stateHealth)
+|   +-- health_test.go
+|   +-- recipientform.go   # RecipientFormModel for add-recipient input
+|   +-- recipientform_test.go
++-- sops/
+|   +-- executor.go        # AddRecipient(), RemoveRecipient() added here
++-- git/
+|   +-- status.go          # GetLastCommitTime() added here
++-- health/
+    +-- checker.go         # ShannonEntropy(), IsWeakSecret(), IsDuplicate(), IsStale()
+    +-- checker_test.go
 ```
 
 ### Pattern 1: sops rotate for Recipient Management
@@ -312,7 +312,7 @@ type HealthCheckResultMsg struct {
 | Age public key format validation | Custom regex/length checker | `filippo.io/age.ParseX25519Recipient()` | Bech32 checksum catches transpositions that length checks miss; library is already planned in CLAUDE.md |
 | Git last-commit timestamp | Shell out to `git log --format=%ct` | Add `GetLastCommitTime()` to existing `git/status.go` using go-git v5 | Existing go-git infrastructure; avoids git binary dependency |
 | Shannon entropy | Import a stats library | Implement inline using `math.Log2` | 10-line stdlib implementation; no dep needed |
-| Recipient confirmation UI | New overlay framework | Reuse `DiffModel` pattern from Phase 3 | `DiffModel` already handles old→new display with y/n confirmation; recipient add/remove is structurally identical |
+| Recipient confirmation UI | New overlay framework | Reuse `DiffModel` pattern from Phase 3 | `DiffModel` already handles old->new display with y/n confirmation; recipient add/remove is structurally identical |
 | Single-field modal input | huh/v2 form | `bubbles/v2/textinput` wrapped in `RecipientFormModel` | Existing `SearchModel` is the template; single-field input does not benefit from huh's multi-field form handling |
 
 **Key insight:** Every UI primitive needed in Phase 5 already exists. The work is wiring, not invention.
@@ -355,7 +355,7 @@ type HealthCheckResultMsg struct {
 
 ### Pitfall 7: State Machine Complexity With Three New States
 **What goes wrong:** `stateRecipientForm`, `stateRecipientConfirm`, and `stateHealth` must all handle `prevState` correctly to ensure Esc restores the correct previous view.
-**How to avoid:** Follow the existing `prevState` pattern exactly. `stateRecipientForm` → prevState is `stateDetail`. `stateRecipientConfirm` → prevState is `stateRecipientForm` (or `stateDetail` if coming from remove flow). `stateHealth` → prevState is `stateFileList`. Write tests for each Esc transition.
+**How to avoid:** Follow the existing `prevState` pattern exactly. `stateRecipientForm` -> prevState is `stateDetail`. `stateRecipientConfirm` -> prevState is `stateRecipientForm` (or `stateDetail` if coming from remove flow). `stateHealth` -> prevState is `stateFileList`. Write tests for each Esc transition.
 
 ---
 
@@ -435,11 +435,12 @@ func isWeakSecret(keyPath, value string) bool {
     if shannonEntropy(value) < 3.5 {
         return true
     }
-    // Format-aware: key name hints at type
+    // Format-aware: key name hints at type (D-08)
+    // Uses inline regex patterns (same as internal/ui/rotate.go DetectFormat)
+    // to avoid circular import (ui imports health).
     for _, suffix := range weakKeyNameSuffixes {
         if strings.HasSuffix(keyPath, suffix) {
-            // Reuse existing DetectFormat from rotate.go
-            if ui.DetectFormat(value) == ui.FormatUnknown {
+            if !hasKnownFormat(value) {
                 return true // expected a structured format, got none
             }
         }
@@ -529,22 +530,21 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All open questions have been resolved during planning. Each is marked with its resolution.
 
 1. **sops rotate timeout for large files or many recipients**
-   - What we know: `SopsTimeout = 30s` is used for all operations. `sops rotate` decrypts ALL key-encryption records then re-encrypts all of them — more work than `sops set`.
-   - What's unclear: Whether 30s is sufficient for files with 5+ recipients and 100+ keys.
-   - Recommendation: Use `60 * time.Second` for rotate operations in `AddRecipient()` and `RemoveRecipient()`. Define a `SopsRotateTimeout` constant alongside `SopsTimeout`.
+   - RESOLVED: Plan 01 defines `SopsRotateTimeout = 60 * time.Second` as a dedicated constant in `internal/sops/executor.go`. `AddRecipient()` and `RemoveRecipient()` use this longer timeout. Plan 03's bulk re-key also uses `SopsRotateTimeout` for each per-file `sops rotate -i` call.
 
 2. **Health check when some files can't be decrypted (Claude's Discretion)**
-   - What we know: Duplicate detection requires decrypt-all; some files may fail (missing key).
-   - Recommendation: Skip undecryptable files; collect errors in `HealthCheckResultMsg.Errors []string`; display in health overlay as "N files skipped (decrypt failed)".
+   - RESOLVED: Plan 03's `runHealthCheck` function skips undecryptable files, collects errors in `HealthCheckResultMsg.Result.Errors []string`. Plan 02's `HealthModel` renders these as `HealthSkippedStyle.Render("N file(s) skipped -- could not decrypt")` in the footer.
 
 3. **Staleness threshold configuration mechanism (Claude's Discretion)**
-   - Recommendation: Use `SOPS_TUI_STALE_DAYS` env var (integer days, default 90). Follows the pattern of `SOPS_TUI_CLIPBOARD_TIMEOUT`. Parse in the health check initiator, not in the `git` package.
+   - RESOLVED: Plan 03's `runHealthCheck` reads `SOPS_TUI_STALE_DAYS` environment variable (integer days, default 90). Parsed in the health check initiator function, not in the `git` package. Follows the `SOPS_TUI_CLIPBOARD_TIMEOUT` pattern from Phase 4.
 
 4. **Duplicate scan: show which files share the value (Claude's Discretion)**
-   - Recommendation: Show file+keypath pairs that share the duplicate value (e.g., "secrets/prod.yaml > api.key  AND  secrets/staging.yaml > api.key"). More actionable than just "duplicate detected". Use value SHA-256 hash as the dedup key — never store the plaintext value in the result.
+   - RESOLVED: Plan 01's `FindDuplicates` returns `[]Duplicate` where each `Duplicate` contains `Locations []Location` (file+keypath pairs). Plan 02's `HealthModel` renders these as `"[DUPE]  secrets/prod.yaml > api.key  AND  secrets/staging.yaml > api.key"`. Value SHA-256 hash is used as the dedup key; plaintext values are never stored in the result.
 
 ---
 
@@ -572,22 +572,22 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 | Quick run command | `go test ./internal/health/... ./internal/sops/... ./internal/git/... ./internal/ui/... -run TestHealth\|TestRecipient\|TestGetLastCommit\|TestAddRecipient\|TestRemoveRecipient -v` |
 | Full suite command | `go test ./...` |
 
-### Phase Requirements → Test Map
+### Phase Requirements -> Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
 | RCP-01 | Recipients visible from existing `SopsMetadata.AgeRecipients` | unit | `go test ./internal/parser/... -run TestSopsMetadata` | Yes (parser_test.go) |
-| RCP-02 | `AddRecipient` calls `sops rotate --add-age -i`, returns error on failure | unit | `go test ./internal/sops/... -run TestAddRecipient` | No — Wave 0 |
-| RCP-02 | `RemoveRecipient` calls `sops rotate --rm-age -i`, returns error on failure | unit | `go test ./internal/sops/... -run TestRemoveRecipient` | No — Wave 0 |
-| RCP-02 | Age key validation: valid key passes, invalid key returns error | unit | `go test ./internal/... -run TestValidateAgePublicKey` | No — Wave 0 |
-| RCP-02 | Recipient diff overlay renders add/remove correctly | unit | `go test ./internal/ui/... -run TestRecipientDiff` | No — Wave 0 |
-| RCP-03 | FileItem.Selected toggles on Space press in FileListModel | unit | `go test ./internal/ui/... -run TestFileItemToggle` | No — Wave 0 |
-| RCP-03 | Bulk re-key sequences files, skips unselected | unit | `go test ./internal/app/... -run TestBulkReKey` | No — Wave 0 |
-| HLT-03 | `shannonEntropy` returns correct value for known inputs | unit | `go test ./internal/health/... -run TestShannonEntropy` | No — Wave 0 |
-| HLT-03 | `isWeakSecret` flags short/low-entropy/format-mismatch values | unit | `go test ./internal/health/... -run TestIsWeakSecret` | No — Wave 0 |
-| HLT-03 | Duplicate detection finds matching values across two mock file maps | unit | `go test ./internal/health/... -run TestDuplicateDetection` | No — Wave 0 |
-| HLT-03 | `GetLastCommitTime` returns time.Time for a known test repo | unit | `go test ./internal/git/... -run TestGetLastCommitTime` | No — Wave 0 |
-| HLT-03 | Staleness: `daysSince > threshold` correctly classified | unit | `go test ./internal/health/... -run TestStaleDetection` | No — Wave 0 |
+| RCP-02 | `AddRecipient` calls `sops rotate --add-age -i`, returns error on failure | unit | `go test ./internal/sops/... -run TestAddRecipient` | No -- Wave 0 |
+| RCP-02 | `RemoveRecipient` calls `sops rotate --rm-age -i`, returns error on failure | unit | `go test ./internal/sops/... -run TestRemoveRecipient` | No -- Wave 0 |
+| RCP-02 | Age key validation: valid key passes, invalid key returns error | unit | `go test ./internal/... -run TestValidateAgePublicKey` | No -- Wave 0 |
+| RCP-02 | Recipient diff overlay renders add/remove correctly | unit | `go test ./internal/ui/... -run TestRecipientDiff` | No -- Wave 0 |
+| RCP-03 | FileItem.Selected toggles on Space press in FileListModel | unit | `go test ./internal/ui/... -run TestFileItemToggle` | No -- Wave 0 |
+| RCP-03 | Bulk re-key sequences files, skips unselected | unit | `go test ./internal/app/... -run TestBulkReKey` | No -- Wave 0 |
+| HLT-03 | `shannonEntropy` returns correct value for known inputs | unit | `go test ./internal/health/... -run TestShannonEntropy` | No -- Wave 0 |
+| HLT-03 | `isWeakSecret` flags short/low-entropy/format-mismatch values | unit | `go test ./internal/health/... -run TestIsWeakSecret` | No -- Wave 0 |
+| HLT-03 | Duplicate detection finds matching values across two mock file maps | unit | `go test ./internal/health/... -run TestDuplicateDetection` | No -- Wave 0 |
+| HLT-03 | `GetLastCommitTime` returns time.Time for a known test repo | unit | `go test ./internal/git/... -run TestGetLastCommitTime` | No -- Wave 0 |
+| HLT-03 | Staleness: `daysSince > threshold` correctly classified | unit | `go test ./internal/health/... -run TestStaleDetection` | No -- Wave 0 |
 
 ### Sampling Rate
 - **Per task commit:** `go test ./internal/... -run TestHealth\|TestRecipient\|TestBulkReKey\|TestGetLastCommit -count=1`
@@ -595,13 +595,13 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 - **Phase gate:** Full suite green before `/gsd-verify-work`
 
 ### Wave 0 Gaps
-- [ ] `internal/health/checker_test.go` — covers HLT-03 entropy, weak, duplicate, stale (REQ HLT-03)
-- [ ] `internal/health/checker.go` — package skeleton (empty functions) for test compilation
-- [ ] `internal/sops/executor_test.go` additions — TestAddRecipient, TestRemoveRecipient (REQ RCP-02)
-- [ ] `internal/ui/recipientform_test.go` — TestRecipientFormValidation (REQ RCP-02)
-- [ ] `internal/ui/filelist_test.go` additions — TestFileItemToggle (REQ RCP-03)
-- [ ] `internal/app/model_test.go` additions — TestBulkReKeySequence (REQ RCP-03)
-- [ ] `internal/git/status_test.go` additions — TestGetLastCommitTime (REQ HLT-03)
+- [ ] `internal/health/checker_test.go` -- covers HLT-03 entropy, weak, duplicate, stale (REQ HLT-03)
+- [ ] `internal/health/checker.go` -- package skeleton (empty functions) for test compilation
+- [ ] `internal/sops/executor_test.go` additions -- TestAddRecipient, TestRemoveRecipient (REQ RCP-02)
+- [ ] `internal/ui/recipientform_test.go` -- TestRecipientFormValidation (REQ RCP-02)
+- [ ] `internal/ui/filelist_test.go` additions -- TestFileItemToggle (REQ RCP-03)
+- [ ] `internal/app/model_test.go` additions -- TestBulkReKeySequence (REQ RCP-03)
+- [ ] `internal/git/status_test.go` additions -- TestGetLastCommitTime (REQ HLT-03)
 
 ---
 
@@ -611,7 +611,7 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
-| V2 Authentication | no | n/a — local tool, no user auth |
+| V2 Authentication | no | n/a -- local tool, no user auth |
 | V3 Session Management | no | n/a |
 | V4 Access Control | no | n/a |
 | V5 Input Validation | yes | `age.ParseX25519Recipient()` for public key input; CharLimit on textinput |
@@ -623,7 +623,7 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 |---------|--------|---------------------|
 | Malformed age public key passed to sops rotate | Tampering | `age.ParseX25519Recipient()` client-side validation before subprocess call |
 | Decrypted values held in memory after health check | Information Disclosure | Zero the intermediate plaintext map; store only hashes in HealthCheckResultMsg |
-| Process listing exposes age public key via sops CLI args | Information Disclosure | Public keys are not secret — safe to pass as CLI args. Private keys are never involved as args. |
+| Process listing exposes age public key via sops CLI args | Information Disclosure | Public keys are not secret -- safe to pass as CLI args. Private keys are never involved as args. |
 | Health check decrypt-all without user consent | Information Disclosure | User must confirm "Decrypt all N files?" before scan proceeds (D-09) |
 | sops rotate interrupted mid-write (file corruption) | Tampering | sops uses internal temp-file-rename; handled by sops itself |
 
@@ -632,26 +632,26 @@ The CONTEXT.md mentions "`sops updatekeys` and `sops -r` for re-keying operation
 ## Sources
 
 ### Primary (HIGH confidence)
-- [VERIFIED: `sops rotate --help`] — `sops rotate -i --add-age` and `--rm-age` flags confirmed in sops 3.12.2
-- [VERIFIED: `sops updatekeys --help`] — confirms `updatekeys` is NOT the right command for per-file recipient add/remove
-- [VERIFIED: `go-git v5.17.0` in go.mod + git/status.go] — `GetFileHistory` pattern confirms `GetLastCommitTime` approach
-- [VERIFIED: `charm.land/bubbles/v2@v2.1.0/list/keys.go`] — no `space`, `K`, or `H` bindings in default KeyMap
-- [VERIFIED: `internal/ui/rotate.go`] — `DetectFormat`, `shannonEntropy` approach confirmed as stdlib-only
-- [VERIFIED: `go.mod`] — filippo.io/age NOT present; needs `go get`
+- [VERIFIED: `sops rotate --help`] -- `sops rotate -i --add-age` and `--rm-age` flags confirmed in sops 3.12.2
+- [VERIFIED: `sops updatekeys --help`] -- confirms `updatekeys` is NOT the right command for per-file recipient add/remove
+- [VERIFIED: `go-git v5.17.0` in go.mod + git/status.go] -- `GetFileHistory` pattern confirms `GetLastCommitTime` approach
+- [VERIFIED: `charm.land/bubbles/v2@v2.1.0/list/keys.go`] -- no `space`, `K`, or `H` bindings in default KeyMap
+- [VERIFIED: `internal/ui/rotate.go`] -- `DetectFormat`, `shannonEntropy` approach confirmed as stdlib-only
+- [VERIFIED: `go.mod`] -- filippo.io/age NOT present; needs `go get`
 
 ### Secondary (MEDIUM confidence)
-- [CITED: https://pkg.go.dev/filippo.io/age#ParseX25519Recipient] — API for age key validation; function signature confirmed from documentation
+- [CITED: https://pkg.go.dev/filippo.io/age#ParseX25519Recipient] -- API for age key validation; function signature confirmed from documentation
 
 ### Tertiary (LOW confidence)
-- Shannon entropy threshold of 3.5 bits/char — engineering judgment, not from official guidance
+- Shannon entropy threshold of 3.5 bits/char -- engineering judgment, not from official guidance
 
 ---
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — all libraries verified in go.mod or via pkg.go.dev; sops commands verified on installed binary
-- Architecture: HIGH — all patterns are direct extensions of existing Phases 1-4 code
+- Standard stack: HIGH -- all libraries verified in go.mod or via pkg.go.dev; sops commands verified on installed binary
+- Architecture: HIGH -- all patterns are direct extensions of existing Phases 1-4 code
 - Pitfalls: HIGH for sops/git pitfalls (verified); MEDIUM for entropy threshold (judgment)
 
 **Research date:** 2026-04-16
