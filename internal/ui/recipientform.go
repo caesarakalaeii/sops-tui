@@ -15,6 +15,8 @@
 package ui
 
 import (
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
@@ -92,9 +94,18 @@ func (m RecipientFormModel) Update(msg tea.Msg) (RecipientFormModel, tea.Cmd) {
 	if kMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch kMsg.String() {
 		case "enter":
-			_, err := age.ParseX25519Recipient(m.input.Value())
+			rawInput := strings.TrimSpace(m.input.Value())
+			recipient, err := age.ParseX25519Recipient(rawInput)
 			if err != nil {
 				m.errMsg = "Invalid age key: " + err.Error()
+				return m, nil
+			}
+			// Re-serialize from the parsed recipient to get the canonical form.
+			// This discards any trailing content that the parser may have ignored,
+			// preventing argument injection into the sops subprocess (T-05-05).
+			canonical := recipient.String()
+			if canonical != rawInput {
+				m.errMsg = "Invalid age key: unexpected trailing characters"
 				return m, nil
 			}
 			m.confirmed = true
