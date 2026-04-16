@@ -1828,16 +1828,30 @@ func (m *AppModel) advanceBulkReKey() {
 }
 
 // renderRecipientList renders the numbered remove-recipient list overlay (D-03).
+// Display is capped at 9 recipients because the key handler only accepts keys '1'-'9'.
 func (m AppModel) renderRecipientList() string {
+	const maxDisplay = 9
 	title := ui.DiffKeyStyle.Render("Remove Recipient")
+	display := m.recipientList
+	truncated := false
+	if len(display) > maxDisplay {
+		display = display[:maxDisplay]
+		truncated = true
+	}
 	var lines []string
-	for i, r := range m.recipientList {
+	for i, r := range display {
 		lines = append(lines, ui.RecipientIndexStyle.Render(fmt.Sprintf("[%d]", i+1))+" "+r)
 	}
+	if truncated {
+		lines = append(lines, lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(
+			fmt.Sprintf("  (showing first %d of %d recipients)", maxDisplay, len(m.recipientList)),
+		))
+	}
+	displayCount := len(display)
 	prompt := lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(
-		fmt.Sprintf("Select recipient to remove (1-%d):", len(m.recipientList)),
+		fmt.Sprintf("Select recipient to remove (1-%d):", displayCount),
 	)
-	footer := ui.ConfirmPromptStyle.Render("1-"+fmt.Sprintf("%d", len(m.recipientList))) +
+	footer := ui.ConfirmPromptStyle.Render("1-"+fmt.Sprintf("%d", displayCount)) +
 		" select   " + ui.ConfirmPromptStyle.Render("[esc]") + " cancel"
 	inner := title + "\n\n" + strings.Join(lines, "\n") + "\n\n" + prompt + "\n\n" + footer
 
