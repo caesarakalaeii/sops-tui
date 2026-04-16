@@ -75,6 +75,96 @@ func TestFileListItemInterfaces(t *testing.T) {
 	item := ui.FileItem{Name: "test.yaml", Path: "/test.yaml"}
 	// Compile-time check: FileItem must satisfy list.Item (FilterValue), list.DefaultItem (Title, Description)
 	assert.Equal(t, "test.yaml", item.FilterValue())
-	assert.Equal(t, "test.yaml", item.Title())
 	assert.Equal(t, "/test.yaml", item.Description())
+}
+
+// TestFileItemTitleEncrypted verifies FileItem.Title() with IsEncrypted=true
+// does NOT contain "[unencrypted]".
+func TestFileItemTitleEncrypted(t *testing.T) {
+	item := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true}
+	title := item.Title()
+	assert.Equal(t, "secrets.yaml", title, "encrypted item title must equal Name with no badge")
+	assert.False(t, strings.Contains(stripAnsi(title), "[unencrypted]"),
+		"encrypted item must NOT show [unencrypted] badge")
+}
+
+// TestFileItemTitleUnencrypted verifies FileItem.Title() with IsEncrypted=false
+// contains the "[unencrypted]" badge text.
+func TestFileItemTitleUnencrypted(t *testing.T) {
+	item := ui.FileItem{Name: "plaintext.yaml", Path: "/plaintext.yaml", IsEncrypted: false}
+	title := item.Title()
+	assert.True(t, strings.Contains(stripAnsi(title), "[unencrypted]"),
+		"unencrypted item title must contain '[unencrypted]' badge, got: %q", title)
+}
+
+// TestFileListSearchActivation verifies that ActivateSearch sets IsSearchActive to true.
+func TestFileListSearchActivation(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "secrets/prod.yaml", Path: "/prod.yaml", IsEncrypted: true},
+		{Name: "secrets/staging.yaml", Path: "/staging.yaml", IsEncrypted: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	assert.False(t, m.IsSearchActive(), "search must be inactive after construction")
+
+	_ = m.ActivateSearch()
+	assert.True(t, m.IsSearchActive(), "search must be active after ActivateSearch()")
+}
+
+// TestFileListSearchDeactivation verifies that DeactivateSearch sets IsSearchActive to false
+// and restores the full item count.
+func TestFileListSearchDeactivation(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "secrets/prod.yaml", Path: "/prod.yaml", IsEncrypted: true},
+		{Name: "secrets/staging.yaml", Path: "/staging.yaml", IsEncrypted: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	_ = m.ActivateSearch()
+	require.True(t, m.IsSearchActive())
+
+	m.DeactivateSearch()
+	assert.False(t, m.IsSearchActive(), "search must be inactive after DeactivateSearch()")
+	assert.Equal(t, 2, m.ItemCount(), "full item list must be restored after deactivation")
+}
+
+// TestFileItemToggleSelected verifies that FileItem.Title() renders [+] when Selected=true
+// and does NOT contain [+] when Selected=false.
+func TestFileItemToggleSelected(t *testing.T) {
+	// Selected=true: Title must contain [+]
+	selected := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true, Selected: true}
+	titleSelected := selected.Title()
+	assert.True(t, strings.Contains(stripAnsi(titleSelected), "[+]"),
+		"selected item title must contain '[+]', got: %q", titleSelected)
+
+	// Selected=false: Title must NOT contain [+]
+	notSelected := ui.FileItem{Name: "secrets.yaml", Path: "/secrets.yaml", IsEncrypted: true, Selected: false}
+	titleNotSelected := notSelected.Title()
+	assert.False(t, strings.Contains(stripAnsi(titleNotSelected), "[+]"),
+		"non-selected item title must NOT contain '[+]', got: %q", titleNotSelected)
+}
+
+// TestSelectedItems verifies that SelectedItems returns only items with Selected==true.
+func TestSelectedItems(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "a.yaml", Path: "/a.yaml", IsEncrypted: true, Selected: true},
+		{Name: "b.yaml", Path: "/b.yaml", IsEncrypted: true, Selected: false},
+		{Name: "c.yaml", Path: "/c.yaml", IsEncrypted: true, Selected: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	got := m.SelectedItems()
+	require.Len(t, got, 2, "SelectedItems must return 2 selected items")
+	assert.Equal(t, "a.yaml", got[0].Name)
+	assert.Equal(t, "c.yaml", got[1].Name)
+}
+
+// TestClearSelections verifies that ClearSelections resets all selections to false.
+func TestClearSelections(t *testing.T) {
+	items := []ui.FileItem{
+		{Name: "a.yaml", Path: "/a.yaml", IsEncrypted: true, Selected: true},
+		{Name: "b.yaml", Path: "/b.yaml", IsEncrypted: true, Selected: true},
+	}
+	m := ui.NewFileListModel(items, 80, 24)
+	require.Len(t, m.SelectedItems(), 2, "should start with 2 selected items")
+
+	m.ClearSelections()
+	assert.Empty(t, m.SelectedItems(), "SelectedItems must be empty after ClearSelections()")
 }

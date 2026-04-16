@@ -10,11 +10,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/atotto/clipboard"
 
 	"github.com/caesarakalaeii/sops-tui/internal/app"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
@@ -42,6 +46,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Belt: defer clear clipboard on normal exit (D-07)
+	defer clipboard.WriteAll("") //nolint:errcheck
+
+	// Suspenders: signal handler for SIGINT/SIGTERM (D-07)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		clipboard.WriteAll("") //nolint:errcheck
+		os.Exit(0)
+	}()
+
 	// Step 5: Build env status from validation results for the status bar
 	env := ui.EnvStatus{
 		SopsAvailable:     !hasResultWithMessage(results, "sops binary not found"),
@@ -50,7 +66,8 @@ func main() {
 	}
 
 	// Step 6: Create and run the root TUI program (View().AltScreen = true in AppModel)
-	model := app.NewAppModel(env)
+	sopsYamlPath, _ := validator.FindSopsYaml(opts.StartDir)
+	model := app.NewAppModel(env, sopsYamlPath)
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running sops-tui: %v\n", err)

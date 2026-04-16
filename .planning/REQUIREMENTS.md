@@ -7,10 +7,10 @@
 
 ### Navigation & Discovery
 
-- [ ] **NAV-01**: User can browse all SOPS-encrypted files discovered via `.sops.yaml` path rules
-- [ ] **NAV-02**: User can view key names from encrypted files without decrypting
+- [x] **NAV-01**: User can browse all SOPS-encrypted files discovered via `.sops.yaml` path rules
+- [x] **NAV-02**: User can view key names from encrypted files without decrypting
 - [ ] **NAV-03**: User can navigate with vim keybindings (hjkl, g/G, ctrl-d/u)
-- [ ] **NAV-04**: User can fuzzy search files and keys with `/` (k9s-style)
+- [x] **NAV-04**: User can fuzzy search files and keys with `/` (k9s-style)
 - [ ] **NAV-05**: User can view contextual help panel with `?`
 - [ ] **NAV-06**: User sees persistent status bar (file path, encryption status, operation feedback)
 
@@ -18,8 +18,8 @@
 
 - [ ] **DEC-01**: User can decrypt and reveal individual secret values on demand
 - [ ] **DEC-02**: User can decrypt and reveal all values in a file
-- [ ] **DEC-03**: Secret values are masked by default, revealed on keypress
-- [ ] **DEC-04**: User can view SOPS metadata (version, lastmodified, recipients, MAC status) without decrypting
+- [x] **DEC-03**: Secret values are masked by default, revealed on keypress
+- [x] **DEC-04**: User can view SOPS metadata (version, lastmodified, recipients, MAC status) without decrypting
 
 ### Edit & Rotate
 
@@ -91,11 +91,11 @@
 | NAV-03 | Phase 1 | Pending |
 | NAV-05 | Phase 1 | Pending |
 | NAV-06 | Phase 1 | Pending |
-| NAV-01 | Phase 2 | Pending |
-| NAV-02 | Phase 2 | Pending |
-| NAV-04 | Phase 2 | Pending |
-| DEC-03 | Phase 2 | Pending |
-| DEC-04 | Phase 2 | Pending |
+| NAV-01 | Phase 2 | Complete |
+| NAV-02 | Phase 2 | Complete |
+| NAV-04 | Phase 2 | Complete |
+| DEC-03 | Phase 2 | Complete |
+| DEC-04 | Phase 2 | Complete |
 | DEC-01 | Phase 3 | Pending |
 | DEC-02 | Phase 3 | Pending |
 | EDT-01 | Phase 3 | Pending |

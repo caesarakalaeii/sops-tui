@@ -125,4 +125,89 @@ var (
 	// HelpSectionHeader renders section names (Navigation, Global) in bold in help overlay.
 	HelpSectionHeader = lipgloss.NewStyle().
 				Bold(true)
+
+	// BadgeUnencrypted renders the [unencrypted] badge on file list items (per D-02).
+	BadgeUnencrypted = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ColorError)
+
+	// BadgePlain renders the [plain] badge on unencrypted leaf values (per D-06).
+	BadgePlain = lipgloss.NewStyle().
+			Foreground(ColorWarning)
+
+	// TypeHintStyle renders type hints like (str), (int), (bool) after masked values (per D-04).
+	TypeHintStyle = lipgloss.NewStyle().
+			Faint(true).
+			Foreground(ColorMuted)
+
+	// SearchInputStyle is the background style for the inline search bar (per D-10).
+	SearchInputStyle = lipgloss.NewStyle().
+				Background(ColorSurface).
+				Foreground(ColorFg)
+
+	// SearchMatchStyle highlights matched characters in fuzzy search results (per D-12).
+	SearchMatchStyle = lipgloss.NewStyle().
+				Foreground(ColorAccent)
+
+	// RevealedValueStyle renders revealed secret values (normal weight, no faint) per 03-UI-SPEC.md.
+	// Replaces DimText for rows where Revealed=true.
+	RevealedValueStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// RevealedIconStyle renders the 🔓 suffix after a revealed value per 03-UI-SPEC.md.
+	RevealedIconStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// DiffAddedStyle renders diff "+" lines (new value) in the DiffModel per 03-UI-SPEC.md.
+	DiffAddedStyle = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// DiffRemovedStyle renders diff "−" lines (old value) in the DiffModel per 03-UI-SPEC.md.
+	DiffRemovedStyle = lipgloss.NewStyle().Foreground(ColorError)
+
+	// DiffKeyStyle renders the key path label in the diff header row per 03-UI-SPEC.md.
+	DiffKeyStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorFg)
+
+	// DiffContextStyle renders unchanged context lines in multi-key diffs per 03-UI-SPEC.md.
+	DiffContextStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// EditInputStyle is the background style for the inline textinput during stateEdit per 03-UI-SPEC.md.
+	EditInputStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
+
+	// ConfirmPromptStyle renders the [y/n] prompt label in the diff overlay footer per 03-UI-SPEC.md.
+	ConfirmPromptStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorAccent)
+
+	// FormatMenuStyle renders format selection menu items (base64/hex/UUID/bcrypt) per 03-UI-SPEC.md.
+	FormatMenuStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
+
+	// Phase 4: Git badge styles (D-09)
+	BadgeModified = lipgloss.NewStyle().Foreground(ColorWarning)
+	BadgeAdded    = lipgloss.NewStyle().Foreground(ColorSuccess)
+	BadgeUntracked = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 4: Clipboard indicator style (D-08)
+	ClipboardHotStyle = lipgloss.NewStyle().Foreground(ColorAccent)
+
+	// Phase 4: Git "no repo" indicator style (D-12)
+	GitNoRepoStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 4: Git history overlay styles (D-15)
+	HistoryHashStyle    = lipgloss.NewStyle().Foreground(ColorAccent)
+	HistoryDateStyle    = lipgloss.NewStyle().Foreground(ColorMuted)
+	HistoryAuthorStyle  = lipgloss.NewStyle().Foreground(ColorFg)
+	HistorySubjectStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// Phase 5: Health check severity styles (HLT-03, D-12)
+	HealthWeakStyle          = lipgloss.NewStyle().Foreground(ColorError)
+	HealthDupeStyle          = lipgloss.NewStyle().Foreground(ColorError)
+	HealthStaleStyle         = lipgloss.NewStyle().Foreground(ColorWarning)
+	HealthSectionHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorFg)
+	HealthSkippedStyle       = lipgloss.NewStyle().Foreground(ColorMuted)
+	HealthOkStyle            = lipgloss.NewStyle().Foreground(ColorSuccess)
+
+	// Phase 5: Selection indicator for bulk re-key (D-05)
+	SelectionIndicatorStyle = lipgloss.NewStyle().Foreground(ColorAccent)
+
+	// Phase 5: Recipient form validation error (D-02)
+	ValidationErrorStyle = lipgloss.NewStyle().Foreground(ColorError)
+
+	// Phase 5: Recipient numbered list index (D-03)
+	RecipientIndexStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 )

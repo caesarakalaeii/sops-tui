@@ -13,7 +13,7 @@ sops-tui is built in five phases that progressively unlock capability while mana
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation** - TUI skeleton, SOPS subprocess wrapper, config discovery, security groundwork, startup validation
-- [ ] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation
+- [x] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation (completed 2026-04-14)
 - [ ] **Phase 3: Write Loop** - On-demand decrypt, reveal, edit with diff, format-aware rotation, re-encryption
 - [ ] **Phase 4: Clipboard & Git** - Clipboard with auto-clear and signal safety, git change badges, blame/history, cross-file search
 - [ ] **Phase 5: Power Features** - Recipient management, bulk re-key, secret health checks
@@ -49,7 +49,13 @@ Plans:
   2. Selecting a file shows all key names with values masked by default — no decryption has occurred
   3. User can view SOPS metadata (version, lastmodified, recipients, MAC status) for any file without decrypting it
   4. Pressing `/` opens a fuzzy search that filters across file names and key names in real time
-**Plans**: TBD
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 02-01-PLAN.md — SopsDiscoverer + YamlParser backend services, goccy/go-yaml dependency, TreeNode extension
+- [x] 02-02-PLAN.md — MetadataModel overlay, SearchModel with fuzzy matching, 5 new named styles
+- [x] 02-03-PLAN.md — AppModel wiring: discovery, parsing, metadata overlay, search, keybindings, state machine
+
 **UI hint**: yes
 
 ### Phase 3: Write Loop
@@ -62,7 +68,13 @@ Plans:
   3. User can edit a secret value; before re-encryption a diff view is shown requiring explicit confirmation
   4. User can rotate a secret to a format-aware random value (base64, hex, UUID, bcrypt) with confirmation
   5. Any destructive write operation presents a confirmation prompt that can be cancelled without effect
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [x] 03-01-PLAN.md — SOPS executor subprocess wrapper, on-demand decrypt/reveal, keybinding and style extensions
+- [x] 03-02-PLAN.md — Diff confirmation overlay, inline single-key editing with textinput, stateDiff wiring
+- [x] 03-03-PLAN.md — $EDITOR full-file editing flow, format-aware secret rotation with X key
+
 **UI hint**: yes
 
 ### Phase 4: Clipboard & Git
@@ -75,7 +87,13 @@ Plans:
   3. Files with uncommitted git changes display a badge ([M], [A], [?]) in the file browser
   4. User can view git blame and commit history for any secret file from within the TUI
   5. User can fuzzy search across all files and key names simultaneously with `/`
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Clipboard copy with auto-clear, signal safety, Phase 4 styles and keybindings
+- [x] 04-02-PLAN.md — Git backend (go-git v5), change badges in file list and detail breadcrumb
+- [x] 04-03-PLAN.md — Git history overlay, cross-file fuzzy search across all files and key paths
+
 **UI hint**: yes
 
 ### Phase 5: Power Features
@@ -87,17 +105,25 @@ Plans:
   2. User can add or remove an age key recipient on a file with confirmation before re-key
   3. User can bulk re-key multiple files to a new recipient set with per-file confirmation
   4. User can run a health check that reports weak secrets, duplicate values across files, and stale (unchanged) values
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [x] 05-01-PLAN.md — Health check package, sops executor recipient functions, git staleness, styles and keybindings
+- [x] 05-02-PLAN.md — HealthModel overlay, RecipientFormModel with age key validation
+- [x] 05-03-PLAN.md — AppModel wiring: file selection, bulk re-key, recipient flows, health pipeline
+- [x] 05-04-PLAN.md — Integration test suite review and human verification of all flows
+
+**UI hint**: yes
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/4 | Planned | - |
-| 2. Read Loop | 0/? | Not started | - |
-| 3. Write Loop | 0/? | Not started | - |
-| 4. Clipboard & Git | 0/? | Not started | - |
-| 5. Power Features | 0/? | Not started | - |
+| 1. Foundation | 4/4 | Complete | - |
+| 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
+| 3. Write Loop | 0/3 | Planned | - |
+| 4. Clipboard & Git | 0/3 | Planned | - |
+| 5. Power Features | 0/4 | Planned | - |

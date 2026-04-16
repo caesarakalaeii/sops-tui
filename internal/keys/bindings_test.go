@@ -45,7 +45,6 @@ func TestDetailKeyMap_Navigation(t *testing.T) {
 	km := keys.DefaultDetailKeyMap
 
 	assert.True(t, key.Matches(press("esc"), km.Back), "Back must match 'esc'")
-	assert.True(t, key.Matches(press("h"), km.Back), "Back must match 'h'")
 
 	assert.True(t, key.Matches(press("enter"), km.Expand), "Expand must match 'enter'")
 	assert.True(t, key.Matches(press("l"), km.Expand), "Expand must match 'l'")
@@ -80,4 +79,20 @@ func TestDetailKeyMap_ImplementsHelpKeyMap(t *testing.T) {
 	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
 	full := keys.DefaultDetailKeyMap.FullHelp()
 	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestFileListKeyMap_SearchAndInfoBindings verifies Search and Info bindings on DefaultFileListKeyMap.
+func TestFileListKeyMap_SearchAndInfoBindings(t *testing.T) {
+	km := keys.DefaultFileListKeyMap
+
+	assert.True(t, key.Matches(press("/"), km.Search), "Search must match '/'")
+	assert.True(t, key.Matches(press("i"), km.Info), "Info must match 'i'")
+}
+
+// TestDetailKeyMap_SearchAndInfoBindings verifies Search and Info bindings on DefaultDetailKeyMap.
+func TestDetailKeyMap_SearchAndInfoBindings(t *testing.T) {
+	km := keys.DefaultDetailKeyMap
+
+	assert.True(t, key.Matches(press("/"), km.Search), "Search must match '/'")
+	assert.True(t, key.Matches(press("i"), km.Info), "Info must match 'i'")
 }

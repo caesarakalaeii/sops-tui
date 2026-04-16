@@ -57,12 +57,22 @@ type FileListKeyMap struct {
 	HalfDown key.Binding
 	// Open opens the selected file (navigates to detail view).
 	Open key.Binding
+	// Search activates the inline fuzzy filter.
+	Search key.Binding
+	// Info opens the metadata overlay for the highlighted file.
+	Info key.Binding
+	// ToggleSelect toggles the selection state of the highlighted file (D-05).
+	ToggleSelect key.Binding
+	// BulkReKey triggers bulk re-key on all selected files (D-05).
+	BulkReKey key.Binding
+	// HealthCheck triggers the on-demand secret health check (D-11).
+	HealthCheck key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k FileListKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Open, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Open, k.Search, k.Info, k.ToggleSelect, k.BulkReKey, k.HealthCheck, k.Help, k.Quit}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -70,7 +80,7 @@ func (k FileListKeyMap) ShortHelp() []key.Binding {
 func (k FileListKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Open},
+		{k.Open, k.Search, k.Info, k.ToggleSelect, k.BulkReKey, k.HealthCheck},
 		{k.Help, k.Quit},
 	}
 }
@@ -107,6 +117,26 @@ var DefaultFileListKeyMap = FileListKeyMap{
 		key.WithKeys("enter", "l"),
 		key.WithHelp("enter/l", "open"),
 	),
+	Search: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	Info: key.NewBinding(
+		key.WithKeys("i"),
+		key.WithHelp("i", "file info"),
+	),
+	ToggleSelect: key.NewBinding(
+		key.WithKeys("space"),
+		key.WithHelp("space", "toggle select"),
+	),
+	BulkReKey: key.NewBinding(
+		key.WithKeys("K"),
+		key.WithHelp("K", "bulk re-key selected"),
+	),
+	HealthCheck: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "health check"),
+	),
 }
 
 // DetailKeyMap holds keybindings for the YAML tree detail view.
@@ -133,20 +163,43 @@ type DetailKeyMap struct {
 	Collapse key.Binding
 	// Back returns to the file list view.
 	Back key.Binding
+	// Search activates the inline fuzzy filter for key paths.
+	Search key.Binding
+	// Info opens the metadata overlay for the current file.
+	Info key.Binding
+	// Reveal decrypts and reveals the selected encrypted value inline (r = toggle reveal/mask).
+	Reveal key.Binding
+	// RevealAll decrypts and reveals all values in the current file (R = toggle reveal-all/mask-all).
+	RevealAll key.Binding
+	// Edit enters inline edit mode on the selected revealed value.
+	Edit key.Binding
+	// EditFile suspends the TUI and opens the decrypted file in $EDITOR.
+	EditFile key.Binding
+	// Rotate generates a format-aware random replacement value for the selected leaf.
+	Rotate key.Binding
+	// Copy copies the selected revealed value to clipboard.
+	Copy key.Binding
+	// Blame opens the git history overlay for the current file.
+	Blame key.Binding
+	// AddRecipient opens the add-recipient modal for the current file (RCP-02).
+	AddRecipient key.Binding
+	// RemoveRecipient opens the remove-recipient list for the current file (RCP-02).
+	RemoveRecipient key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Expand, k.Collapse, k.Back, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame, k.AddRecipient, k.RemoveRecipient}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
-// Groups: navigation, tree actions, global. Implements help.KeyMap.
+// Groups: navigation, tree actions, secret actions, global. Implements help.KeyMap.
 func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
-		{k.Expand, k.Collapse, k.Back},
+		{k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Blame},
+		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy, k.AddRecipient, k.RemoveRecipient},
 		{k.Help, k.Quit},
 	}
 }
@@ -188,7 +241,51 @@ var DefaultDetailKeyMap = DetailKeyMap{
 		key.WithHelp("h/←", "collapse"),
 	),
 	Back: key.NewBinding(
-		key.WithKeys("esc", "h"),
+		key.WithKeys("esc"),
 		key.WithHelp("esc", "back to file list"),
+	),
+	Search: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	Info: key.NewBinding(
+		key.WithKeys("i"),
+		key.WithHelp("i", "file info"),
+	),
+	Reveal: key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "reveal/hide value"),
+	),
+	RevealAll: key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("R", "reveal/hide all values"),
+	),
+	Edit: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "edit value"),
+	),
+	EditFile: key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("E", "edit in $EDITOR"),
+	),
+	Rotate: key.NewBinding(
+		key.WithKeys("X"),
+		key.WithHelp("X", "rotate secret"),
+	),
+	Copy: key.NewBinding(
+		key.WithKeys("ctrl+y"),
+		key.WithHelp("ctrl+y", "copy to clipboard"),
+	),
+	Blame: key.NewBinding(
+		key.WithKeys("b"),
+		key.WithHelp("b", "git history"),
+	),
+	AddRecipient: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "add recipient"),
+	),
+	RemoveRecipient: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "remove recipient"),
 	),
 }
