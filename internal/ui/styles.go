@@ -200,6 +200,7 @@ var (
 	HealthStaleStyle         = lipgloss.NewStyle().Foreground(ColorWarning)
 	HealthSectionHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(ColorFg)
 	HealthSkippedStyle       = lipgloss.NewStyle().Foreground(ColorMuted)
+	HealthOkStyle            = lipgloss.NewStyle().Foreground(ColorSuccess)
 
 	// Phase 5: Selection indicator for bulk re-key (D-05)
 	SelectionIndicatorStyle = lipgloss.NewStyle().Foreground(ColorAccent)
