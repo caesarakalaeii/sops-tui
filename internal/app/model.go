@@ -549,7 +549,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.state = stateDetail
 		// After write operations, refresh git status to reflect any new uncommitted changes (D-11).
-		if msg.Err == nil && m.sopsYamlPath != "" {
+		if msg.Err == nil && m.sopsYamlPath != "" && m.gitRepoRoot != "" {
 			relPaths := make([]string, len(m.files))
 			for i, f := range m.files {
 				relPaths[i] = f.Name
