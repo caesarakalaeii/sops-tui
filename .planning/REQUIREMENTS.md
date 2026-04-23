@@ -161,13 +161,32 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | RCP-02 | Phase 5 | Pending |
 | RCP-03 | Phase 5 | Pending |
 | HLT-03 | Phase 5 | Pending |
+| UI-17 | Phase 6 | Pending |
+| UI-18 | Phase 6 | Pending |
+| UI-19 | Phase 6 | Pending |
+| UI-01 | Phase 7 | Pending |
+| UI-02 | Phase 7 | Pending |
+| UI-06 | Phase 7 | Pending |
+| UI-15 | Phase 7 | Pending |
+| UI-04 | Phase 8 | Pending |
+| UI-05 | Phase 8 | Pending |
+| UI-07 | Phase 8 | Pending |
+| UI-08 | Phase 8 | Pending |
+| UI-09 | Phase 9 | Pending |
+| UI-10 | Phase 9 | Pending |
+| UI-11 | Phase 9 | Pending |
+| UI-03 | Phase 10 | Pending |
+| UI-12 | Phase 10 | Pending |
+| UI-13 | Phase 10 | Pending |
+| UI-14 | Phase 10 | Pending |
+| UI-16 | Phase 10 | Pending |
+| UI-20 | Phase 11 | Pending |
+| UI-21 | Phase 11 | Pending |
 
 **Coverage:**
-- v1 requirements: 26 total
-- Mapped to phases: 26
-- Unmapped: 0 ✓
-- v1.1 requirements: 21 total (UI-01 through UI-21) — unmapped pending roadmap
+- v1 requirements: 26 total, mapped: 26, unmapped: 0 ✓
+- v1.1 requirements: 21 total (UI-01 through UI-21), mapped: 21, unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-23 — v1.1 k9s visual parity requirements added*
+*Last updated: 2026-04-23 — v1.1 traceability table populated; UI-01..UI-21 mapped across Phases 6-11*

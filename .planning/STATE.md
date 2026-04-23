@@ -2,69 +2,85 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: k9s-visual-parity
-status: defining_requirements
-stopped_at: Milestone v1.1 started
+status: roadmap_complete
+stopped_at: v1.1 roadmap drafted, awaiting Phase 6 planning
 last_updated: "2026-04-23T00:00:00.000Z"
 last_activity: 2026-04-23
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 15
   completed_plans: 0
   percent: 0
+current_phase: 6
+current_phase_name: layout-groundwork
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-13)
+See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Milestone v1.1 — k9s visual parity
+**Current focus:** Milestone v1.1 — k9s visual parity (Phases 6-11)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Milestone: v1.1 — k9s visual parity
+Phase: 6 — Layout Groundwork (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-23 — Milestone v1.1 started
+Status: Roadmap complete; Phase 6 awaiting `/gsd-plan-phase 6`
+Last activity: 2026-04-23 — v1.1 roadmap drafted with 6 phases (6 through 11) covering UI-01..UI-21
 
-Progress: [░░░░░░░░░░] 0%
+Progress (v1.1 only): [░░░░░░░░░░] 0% (0/6 phases complete, 0/15 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 17
+- Total plans completed (all milestones): 17 (v1.0)
 - Average duration: -
 - Total execution time: 0 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01 | 4 | - | - |
-| 02 | 3 | - | - |
-| 03 | 3 | - | - |
-| 04 | 3 | - | - |
-| 05 | 4 | - | - |
+| Phase | Milestone | Plans | Total | Avg/Plan |
+|-------|-----------|-------|-------|----------|
+| 01 Foundation | v1.0 | 4 | - | - |
+| 02 Read Loop | v1.0 | 3 | - | - |
+| 03 Write Loop | v1.0 | 3 | - | - |
+| 04 Clipboard & Git | v1.0 | 3 | - | - |
+| 05 Power Features | v1.0 | 4 | - | - |
+| 06 Layout Groundwork | v1.1 | 2 (planned) | - | - |
+| 07 Chrome Skeleton | v1.1 | 3 (planned) | - | - |
+| 08 Header Info Panel + Crumb Chips | v1.1 | 3 (planned) | - | - |
+| 09 Keybinding Discoverability | v1.1 | 2 (planned) | - | - |
+| 10 Theming + Accessibility | v1.1 | 3 (planned) | - | - |
+| 11 Regression + Perf Gates | v1.1 | 2 (planned) | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: -
-- Trend: -
+- Last 5 plans: v1.0 Phase 5 (recipient management, health checks) — all completed
+- Trend: transitioning from functional-core milestone to visual-parity milestone
 
 *Updated after each plan completion*
-| Phase 02-read-loop P02 | 22 | 2 tasks | 7 files |
-| Phase 02-read-loop P03 | 19 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+
+**Recent decisions affecting v1.1 work:**
+
+- Roadmap v1.1: Phase 6 (layout arithmetic groundwork + testing harness) is non-skippable and must land before any chrome rendering — prevents 15 SetSize call-sites needing a second audit pass after chrome merges (Pitfall 1)
+- Roadmap v1.1: No new runtime dependencies — every chrome primitive maps to existing `charm.land/lipgloss/v2`, `charm.land/bubbles/v2`, or `goccy/go-yaml`; go.mod stays unchanged
+- Roadmap v1.1: User-facing skin YAML loader deferred to v2 (THM-01/02/03) — v1.1 ships a single k9s-tuned default palette; skin loader and fsnotify hot-reload add fail-closed failure modes (Pitfall 4) not worth the milestone risk
+- Roadmap v1.1: Immediate-mode chrome composition in `AppModel.View()` — rejected k9s's retained-mode observer pattern (`StackPushed`/`StackPopped`, style listeners); hints dispatched via enum switch on `(state, recipientAction, IsSearchActive)`
+- Roadmap v1.1: 6 phases derived from the SUMMARY.md "Implications for Roadmap" section; Phase 10 absorbs what SUMMARY called Phases 9+10 (logo severity + palette + structural skin prep) because the user-facing skin loader is v2; a dedicated Phase 11 handles regression/perf gates and terminal compat sweep
+
+**Carried forward from v1.0:**
 
 - Roadmap: Security groundwork (WithAltScreen, tea.Cmd pattern) locked to Phase 1 — must ship before any secret-display code
 - Roadmap: Clipboard signal handler wired to Phase 4 alongside git (both need OS-level signal awareness)
@@ -77,9 +93,20 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- `/gsd-plan-phase 6` to decompose Phase 6 (Layout Groundwork) into executable plans
+- Phase 7 research pass recommended before planning — `overlayTitle` string-splice pattern needs reference-implementation extraction from `github.com/charmbracelet/soft-serve/pkg/ui/components/header`
+- Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 
 ### Blockers/Concerns
+
+**v1.1-specific:**
+
+- Chrome height arithmetic regression risk — Pitfall 1 from PITFALLS.md; mitigation is Phase 6 landing first with grep-gated CI
+- Color-profile downsampling on 16-color terminals — paired chip bg/fg collapses to single color on `TERM=xterm`; mitigation is Phase 10 profile detection + 16-color fallback palette
+- `overlayTitle` for titled borders — lipgloss v2 has no native border-title API; Phase 7 must extract the `soft-serve` reference pattern before merging
+- Info-panel PII leakage — age fingerprints and file paths appear on screenshots / tmux capture; mitigation is Phase 8's 5-question security review per new field
+
+**Carried forward from v1.0:**
 
 - SOPS stdin editing with `encrypted_regex` — behavior undocumented, may surface during Phase 3 implementation
 - Wayland clipboard limitation (needs xclip/xsel) — must document in README before Phase 4 ships
@@ -88,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T15:15:38.261Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-power-features/05-CONTEXT.md
+Last session: 2026-04-23T00:00:00.000Z
+Stopped at: v1.1 roadmap complete, Phase 6 ready for planning
+Resume file: .planning/ROADMAP.md (Milestone v1.1 section)

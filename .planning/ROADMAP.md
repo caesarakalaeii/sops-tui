@@ -2,7 +2,7 @@
 
 ## Overview
 
-sops-tui is built in five phases that progressively unlock capability while managing security risk. Phase 1 establishes the skeleton and security groundwork with zero exposure to secret values. Phase 2 adds the read-only file browser. Phase 3 unlocks decryption, editing, and rotation (the security-critical write loop). Phase 4 adds clipboard handling with signal safety and git integration. Phase 5 delivers recipient management and health checks — the highest-risk multi-file operations. Every phase ships something independently useful.
+sops-tui ships in two milestones. **Milestone v1.0 (Phases 1-5)** delivered the functional core: file discovery, read/write loops, clipboard, git integration, recipient management, and secret health checks. **Milestone v1.1 (Phases 6-11)** reshapes the UI shell to match k9s visual conventions — persistent keybinding menu, ASCII logo with status coupling, header info panel, titled bordered content, colored breadcrumb chips, and a k9s-tuned palette with 16-color fallback and colorblind-safe redundant encoding. v1.1 is a pure UI-shell refactor on top of the stable v1.0 functional core; no v1.0 functionality regresses.
 
 ## Phases
 
@@ -12,11 +12,22 @@ sops-tui is built in five phases that progressively unlock capability while mana
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - TUI skeleton, SOPS subprocess wrapper, config discovery, security groundwork, startup validation
+### Milestone v1.0 — Functional Core
+
+- [x] **Phase 1: Foundation** - TUI skeleton, SOPS subprocess wrapper, config discovery, security groundwork, startup validation
 - [x] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation (completed 2026-04-14)
-- [ ] **Phase 3: Write Loop** - On-demand decrypt, reveal, edit with diff, format-aware rotation, re-encryption
-- [ ] **Phase 4: Clipboard & Git** - Clipboard with auto-clear and signal safety, git change badges, blame/history, cross-file search
-- [ ] **Phase 5: Power Features** - Recipient management, bulk re-key, secret health checks
+- [x] **Phase 3: Write Loop** - On-demand decrypt, reveal, edit with diff, format-aware rotation, re-encryption
+- [x] **Phase 4: Clipboard & Git** - Clipboard with auto-clear and signal safety, git change badges, blame/history, cross-file search
+- [x] **Phase 5: Power Features** - Recipient management, bulk re-key, secret health checks
+
+### Milestone v1.1 — k9s Visual Parity
+
+- [ ] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
+- [ ] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
+- [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
+- [ ] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained
+- [ ] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival
+- [ ] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep
 
 ## Phase Details
 
@@ -115,15 +126,134 @@ Plans:
 
 **UI hint**: yes
 
+---
+
+## Milestone v1.1 — k9s Visual Parity
+
+**Goal:** Reshape the sops-tui UI shell so it looks and behaves like k9s — persistent keybinding menu, ASCII logo, header info panel, titled bordered content, colored breadcrumb chips — while keeping every v1.0 functional loop intact. Pure chrome rework; no framework swap; no behavioural changes to the read / write / clipboard / git / health / recipients loops.
+
+**Scope boundary:** Six phases (6 through 11). Phase 6 (layout groundwork + testing harness) is non-skippable and **must land before any chrome rendering** per Pitfall 1 in research/PITFALLS.md — adding chrome without migrating the 15 existing `m.height - statusBarHeight(m)` call-sites first produces invisible "content painted under header" bugs visible only at large terminal sizes. All v1.0 functional tests (v1.0 Phases 1-5) must continue to pass through every v1.1 phase.
+
+### Explicitly Out of Scope for v1.1
+
+The following k9s-inspired features are **not** v1.1 scope and must not re-emerge during phase planning. Most are enumerated as anti-features in `research/FEATURES.md` Category 9 and in `research/SUMMARY.md` under "Explicitly NOT v1.1":
+
+- **Polling goroutines** (`clusterUpdater` / env re-check every 15s) — no external data source that mutates outside the TUI
+- **`:` command bar** with destructive actions — breaks the "diff-before-re-encrypt" safety net
+- **Log forwarding / streaming** — secrets don't produce logs
+- **Image vulnerability scanner** — we aren't a package scanner
+- **Port-forward manager** — K8s-specific, no analogue
+- **Alias file hot-reload** — fsnotify complexity for no v1.1 user value
+- **Dialog severity popups** — existing `internal/ui/errorbox.go` is sufficient
+- **Context switcher** — one `.sops.yaml` per directory, already handled at startup
+- **Read-only global mode indicator** — per-file git badges already cover the concept
+- **Namespace selector** — no analogue in SOPS
+- **GitHub update phone-home** — trust violation for a secrets tool
+- **Splash screen / big logo on startup** — nostalgic; zero user value
+- **Mouse interactions** — project is keyboard-only by core value
+- **`:` command tab-completion / number-key view switching / `[`/`]` history** — v1.2+
+- **Animated logo / pulsing / gradients** — adds ticker goroutine, breaks teatest snapshots
+- **User skin YAML loader** (THM-01) — deferred to v2; v1.1 ships a single well-tuned default palette only
+- **Builtin skins dracula/gruvbox/monokai embedded in binary** (THM-02) — deferred to v2
+- **Live skin reload via fsnotify** (THM-03) — deferred to v2
+- **Live `:skin <name>` runtime switcher** — depends on `:` command bar (v1.2)
+- **Responsive narrow-terminal column hiding** — Phase 10 covers "ugly but survives"; richer responsive behaviour deferred to first bug report
+
+If any of these resurface during `/gsd-plan-phase`, reject in plan review.
+
+### Phase 6: Layout Groundwork
+**Goal**: Height arithmetic is centralised behind a single helper and a regression-proof test harness is in place, so that every downstream chrome phase can size its children correctly without re-auditing 15 SetSize call-sites
+**Depends on**: Phase 5 (v1.0 functional core complete)
+**Requirements**: UI-17, UI-18, UI-19
+**Success Criteria** (what must be TRUE):
+  1. A single `bodyDims(m) (w, h int)` helper in `internal/app/model.go` returns the content region after subtracting chrome + crumbs + status-bar heights; every existing `m.height - statusBarHeight(m)` call-site is migrated to it
+  2. A CI grep-gate fails the build if `m.height - statusBarHeight` arithmetic appears anywhere outside the `bodyDims` helper
+  3. Test harness exposes an ANSI-stripped golden-file comparison helper; color presence can be asserted separately from structural layout
+  4. Resize behaviour at 40×12, 80×24, 120×40, and 200×60 is verified by teatest snapshots — no content is painted under the status bar at any size
+  5. Phase ships zero visible change to end users; it is pure refactor + test infrastructure
+**Plans:** 2 plans
+**UI hint**: yes
+
+### Phase 7: Chrome Skeleton
+**Goal**: Users see a persistent ASCII logo and multi-column keybinding menu in the header, and every primary view is wrapped in a titled bordered region — the first visible "it looks like k9s" step
+**Depends on**: Phase 6
+**Requirements**: UI-01, UI-02, UI-06, UI-15
+**Success Criteria** (what must be TRUE):
+  1. A persistent multi-column keybinding menu is rendered on every view; no `?` press is required to discover the core hotkeys
+  2. A 6-row ASCII logo (~26 columns wide) is anchored to the top-right of the header on every view
+  3. Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) renders inside a titled bordered region whose title encodes the view name and, where relevant, an item count
+  4. Only `lipgloss.NormalBorder()` appears in chrome rendering code; persistent chrome is ASCII-only (emoji-free); a CI grep-gate prevents regressions
+  5. `AppModel.View()` composes `[header][crumbs-placeholder][titled body][status bar]` and `BenchmarkAppView` stays ≤ 50 µs/op at 200×60 without any `lipgloss.NewStyle()` calls inside `View()`
+**Plans:** 3 plans
+**UI hint**: yes
+
+### Phase 8: Header Info Panel + Crumb Chips
+**Goal**: Users see the context they're working in (`.sops.yaml` path, age key fingerprint, recipient count, git state, file count) in a top-left info panel, and the breadcrumb moves to a dedicated row of colored chip pills above the body
+**Depends on**: Phase 7
+**Requirements**: UI-04, UI-05, UI-07, UI-08
+**Success Criteria** (what must be TRUE):
+  1. A 5-row info panel renders in the top-left of the header showing: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
+  2. Info-panel values are de-PII'd before render: age fingerprint ≤10 chars with visible ellipsis, all paths are repo-relative (never `$HOME`-absolute), no copy bindings ever target chrome content
+  3. Breadcrumb segments render as colored chip pills (`<files>`, `<prod.yaml>`); the active (last) segment uses the accent color; the legacy ` > ` text separator is gone
+  4. The breadcrumb row sits between the header and the titled body; the status bar at the bottom contains only right-aligned env indicators + clipboard state
+  5. Info-panel fields are cached on `AppModel` and refreshed on events (file discovery, recipient change, git status change), not stat'd on every frame
+**Plans:** 3 plans
+**UI hint**: yes
+
+### Phase 9: Keybinding Discoverability
+**Goal**: Every interactive sub-model exposes its hotkeys through a single `Hints()` interface derived from its existing keymap, and the persistent menu re-hydrates per view — so the always-visible hints never diverge from the keys that actually work
+**Depends on**: Phase 7 (menu exists), Phase 8 (remaining sub-models have their chrome integration done)
+**Requirements**: UI-09, UI-10, UI-11
+**Success Criteria** (what must be TRUE):
+  1. Every interactive sub-model (FileList, Detail, Help, Diff, Health, History, RecipientForm, Metadata) exposes a `Hints() []keys.MenuHint` method derived from its existing `key.Binding.ShortHelp()` — the keymap is the single source of truth
+  2. The persistent menu re-hydrates from the active sub-model's `Hints()` on every `View()` call; modal states (diff, recipient confirm, bulk re-key) show their modal keybindings, not the underlying file-list ones
+  3. Menu hint dispatch is a pure function of `(state, recipientAction, IsSearchActive)` — golden-file teatest covers every `(state, action)` tuple that shares a sub-model
+  4. The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys remain discoverable in the persistent menu without opening it
+  5. Changing a `key.Binding` value automatically updates the rendered menu — no second "also update the menu text" edit is ever required
+**Plans:** 2 plans
+**UI hint**: yes
+
+### Phase 10: Theming + Accessibility
+**Goal**: The logo communicates aggregate app severity, the default palette matches k9s conventions, and the UI survives 16-color terminals, colorblindness, and widths from 40 to 200 columns
+**Depends on**: Phase 8 (chrome data paths exist), Phase 9 (menu driven by hints)
+**Requirements**: UI-03, UI-12, UI-13, UI-14, UI-16
+**Success Criteria** (what must be TRUE):
+  1. The logo recolours to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and aggregate health; flash call-sites in `model.go` upgrade to typed `FlashInfo`/`FlashWarn`/`FlashErr` severity
+  2. Default palette is tuned to k9s conventions (accent shifted toward hot-pink/purple) while keeping the explicit-color / AdaptiveColor-ban rule from v1.0
+  3. On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible; teatest runs across Ascii / ANSI / ANSI256 / TrueColor profiles
+  4. Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (`[I]` / `[W]` / `[E]` prefixes, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
+  5. Rendering at 40×12 through 200×60 never corrupts the layout; narrow-terminal rendering may be visually dense but must not truncate critical data or overflow the viewport (middle-segment crumb ellipsis kicks in when needed)
+**Plans:** 3 plans
+**UI hint**: yes
+
+### Phase 11: Regression + Perf Gates
+**Goal**: v1.1 is release-ready — no v1.0 feature has regressed, render performance meets the target, and the chrome survives the terminal emulators that matter
+**Depends on**: Phase 10
+**Requirements**: UI-20, UI-21
+**Success Criteria** (what must be TRUE):
+  1. All v1.0 functional integration tests (file discovery, reveal, edit, diff, rotate, clipboard, git, recipient management, health) pass unchanged after chrome lands — no v1.0 feature regresses
+  2. `BenchmarkAppView` stays ≤ 50 µs/op at 200×60 with the full chrome rendered; `pprof` shows no `lipgloss.NewStyle()` calls inside `View()` — all styles are declared as package vars
+  3. Chrome renders correctly on the supported terminal matrix (Alacritty, Ghostty, macOS Terminal, iTerm2, Windows Terminal, WSL2, VSCode integrated terminal, tmux-nested); screenshot record captured per combo
+  4. Alt-screen cleanup is explicit: paint fill frame on enter, blank frame on exit; no residual chrome survives in the user's shell prompt area after TUI exit
+  5. The full 15-item "Looks Done But Isn't" checklist from `research/PITFALLS.md` is signed off
+**Plans:** 2 plans
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | - |
-| 2. Read Loop | 3/3 | Complete   | 2026-04-14 |
-| 3. Write Loop | 0/3 | Planned | - |
-| 4. Clipboard & Git | 0/3 | Planned | - |
-| 5. Power Features | 0/4 | Planned | - |
+| 2. Read Loop | 3/3 | Complete | 2026-04-14 |
+| 3. Write Loop | 3/3 | Complete | - |
+| 4. Clipboard & Git | 3/3 | Complete | - |
+| 5. Power Features | 4/4 | Complete | - |
+| 6. Layout Groundwork | 0/2 | Planned | - |
+| 7. Chrome Skeleton | 0/3 | Planned | - |
+| 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
+| 9. Keybinding Discoverability | 0/2 | Planned | - |
+| 10. Theming + Accessibility | 0/3 | Planned | - |
+| 11. Regression + Perf Gates | 0/2 | Planned | - |
