@@ -52,6 +52,49 @@
 - [ ] **HLT-02**: User sees startup error with instructions if age key file is missing
 - [ ] **HLT-03**: User can run secret health checks (weak secrets, duplicates, staleness)
 
+## v1.1 Requirements — k9s Visual Parity
+
+Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding menu, ASCII logo, header info panel, titled bordered content, colored breadcrumb chips, k9s-tuned palette. v1.0 functional loops must not regress.
+
+### Header Region
+
+- [ ] **UI-01**: User sees a persistent multi-column keybinding menu in the header on every view — no `?` press required to discover hotkeys
+- [ ] **UI-02**: User sees a 6-row ASCII logo anchored to the top-right of the header, ~26 columns wide
+- [ ] **UI-03**: Logo recolors to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and health aggregate
+- [ ] **UI-04**: User sees a header info panel (top-left) with five rows: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
+- [ ] **UI-05**: Info-panel fields are truncated and de-PII'd before render: age fingerprint ≤10 chars with ellipsis, paths are repo-relative, no copy bindings ever target chrome content
+
+### Content Framing
+
+- [ ] **UI-06**: Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) is wrapped in a titled bordered region; title encodes the view name and when relevant an item count
+- [ ] **UI-07**: Breadcrumb segments render as colored chip pills replacing the legacy ` > ` text separator; the active (last) segment uses the accent color
+- [ ] **UI-08**: Bottom status bar shrinks to only right-aligned env indicators + clipboard state; the breadcrumb moves to a dedicated crumb row above the titled body
+
+### Keybinding Discoverability
+
+- [ ] **UI-09**: Every interactive sub-model exposes a `Hints() []keys.MenuHint` method derived from its existing `key.Binding.ShortHelp()` definitions — single source of truth is the keymap
+- [ ] **UI-10**: The persistent menu re-hydrates from the active sub-model's `Hints()` on every `View()` call; modal states (diff, recipient confirm, bulk re-key) show their modal keybindings, not the underlying file-list ones
+- [ ] **UI-11**: The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys are discoverable without opening it
+
+### Theming & Accessibility
+
+- [ ] **UI-12**: Default palette is tuned to k9s conventions (accent shifts toward hot-pink/purple typical of k9s skins) while keeping the AdaptiveColor ban from v1.0
+- [ ] **UI-13**: On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible
+- [ ] **UI-14**: Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (prefix like `[I]` / `[W]` / `[E]`, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
+- [ ] **UI-15**: Persistent chrome content is ASCII-only; `lipgloss.NormalBorder()` is the only border style used in chrome (grep-gated in CI to prevent regressions to fancy borders or emoji)
+- [ ] **UI-16**: The app survives rendering at 40×12 through 200×60 without layout corruption; narrow-terminal rendering may be ugly but must not truncate critical data or overflow the viewport
+
+### Layout Safety (groundwork)
+
+- [ ] **UI-17**: A `bodyDims(m) (w, h int)` helper is the single source of truth for body size arithmetic, subtracting chrome + crumbs + status-bar heights; all existing `m.height - statusBarHeight(m)` call-sites migrate to it before any chrome renders
+- [ ] **UI-18**: A CI grep-gate prevents reintroduction of the raw `m.height - statusBarHeight(m)` pattern outside the helper
+- [ ] **UI-19**: A teatest harness helper strips ANSI escape sequences for structural golden comparison and asserts color presence separately so goldens stay stable across lipgloss bumps
+
+### Regression & Performance
+
+- [ ] **UI-20**: All v1.0 functional flows (file discovery, reveal, edit, diff, rotate, clipboard, git, recipient management, health) keep passing their integration tests after the chrome lands; no v1.0 feature regresses
+- [ ] **UI-21**: `BenchmarkAppView` stays ≤50 µs/op at 200×60 with chrome rendered; no `lipgloss.NewStyle()` calls appear inside `View()` (styles declared as package vars)
+
 ## v2 Requirements
 
 ### Encryption Backend Expansion
@@ -59,6 +102,12 @@
 - **ENC-01**: Support GPG/PGP encrypted files alongside age
 - **ENC-02**: Support cloud KMS (AWS KMS, GCP KMS, Azure Key Vault) as key sources
 - **ENC-03**: Support HashiCorp Vault transit engine as SOPS backend
+
+### Theming (deferred from v1.1)
+
+- **THM-01**: Load user skin from `~/.config/sops-tui/skin.yaml` using a k9s-compatible YAML schema subset (so an existing k9s dracula/gruvbox skin drops in); fail-open with flash warning on invalid hex values
+- **THM-02**: Ship 2–3 builtin skins (dracula, gruvbox-dark, monokai) embedded in the binary via `embed.FS`
+- **THM-03**: Live skin reload on file change via fsnotify
 
 ### Advanced Editing
 
@@ -117,7 +166,8 @@
 - v1 requirements: 26 total
 - Mapped to phases: 26
 - Unmapped: 0 ✓
+- v1.1 requirements: 21 total (UI-01 through UI-21) — unmapped pending roadmap
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after roadmap creation*
+*Last updated: 2026-04-23 — v1.1 k9s visual parity requirements added*
