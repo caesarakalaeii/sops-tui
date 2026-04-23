@@ -34,6 +34,20 @@ Developers can manage all their SOPS-encrypted secrets from a single terminal in
 ### Active
 - [ ] Vim-like keyboard navigation throughout
 
+## Current Milestone: v1.1 — k9s visual parity
+
+**Goal:** Reshape the sops-tui UI so it actually looks and behaves like k9s, not a bottom-status-bar-only app with help hidden behind `?`.
+
+**Target features:**
+- Persistent keybinding menu (top-right) — always-visible multi-column hotkey table modelled after k9s `internal/ui/menu.go`
+- ASCII logo (top-right corner) — 6-line sops-tui logo with info/warn/error color states, modelled after k9s `LogoSmall`
+- Header info panel (top-left) — context info analogous to k9s `ClusterInfo`: `.sops.yaml` path, age key fingerprint, recipient count, git repo state, file count
+- Titled bordered content regions — each view framed with a title (Files / Keys / Health / Recipients / Diff / History)
+- Colored breadcrumb chips — replace text ` > ` separators with k9s `<segment>` pill style; active crumb highlighted
+- Theme / skin pass — palette tuned to k9s defaults; `?` help overlay retained as complete reference, day-to-day keybindings visible without opening it
+
+**Scope boundary:** Pure UI shell rework. v1.0 functional loops (read / write / clipboard / git / health / recipients) must not regress. No framework swap — stay on Bubble Tea v2.
+
 ### Out of Scope
 
 - GUI / web interface — this is a terminal tool only
@@ -87,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 after Phase 4 completion*
+*Last updated: 2026-04-23 — milestone v1.1 (k9s visual parity) started*
