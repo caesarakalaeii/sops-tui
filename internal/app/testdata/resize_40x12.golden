@@ -1,0 +1,12 @@
+No SOPS files found
+
+No .sops.yaml discovered in this directory or parents.
+Run sops-tui in a repository with a .sops.yaml configuration.
+
+
+
+
+
+
+sops-tui > files  |  0 items  |  sops:✓
+age:✓ .sops.yaml:✓ no git
