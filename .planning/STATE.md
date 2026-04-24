@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: — Functional Core
+milestone: v1.1
+milestone_name: — k9s Visual Parity
 status: executing
-stopped_at: Phase 06 Plan 01 complete (f3352e9, 782b7e9, c3ee565)
-last_updated: "2026-04-24T07:17:31.603Z"
+stopped_at: Phase 06 Plan 02 complete (79ec449, e05165d) — Phase 6 DONE
+last_updated: "2026-04-24T09:30:00.000Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 19
-  completed_plans: 18
-  percent: 95
+  completed_phases: 1
+  total_plans: 15
+  completed_plans: 2
+  percent: 13
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 06 (layout-groundwork) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
+Phase: 07 (chrome-skeleton) — READY TO PLAN
+Plan: (next — run `/gsd-plan-phase 7`)
+Status: Phase 6 complete; ready for Phase 7 research/planning
 Last activity: 2026-04-24
 
-Progress (v1.1 only): [░░░░░░░░░░] 0% (0/6 phases complete, 0/15 plans complete)
+Progress (v1.1 only): [██░░░░░░░░] 13% (1/6 phases complete, 2/15 plans complete)
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress (v1.1 only): [░░░░░░░░░░] 0% (0/6 phases complete, 
 
 *Updated after each plan completion*
 | Phase 06 P01 | 8m | 3 tasks | 7 files |
+| Phase 06 P02 | 8m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -92,10 +93,16 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase ?]: Phase 06 Plan 01: landed layout helpers + LIVE UI-18 grep-gate + testutil harness + v1.0 BenchmarkAppView baseline, zero call-site migrations (Plan 2 migrates atomically)
 - [Phase ?]: Phase 06 Plan 01: pointer-variant outlier line number 1799 corrected to 1828 in plan2MigrationAllowlist after Task 1's 29-line helper insertion shifted model.go tail — Plan 2 must use 1828
 - [Phase ?]: Phase 06 Plan 01: RequireGoldenColors factored around internal missingColors helper because Go subtests cannot catch propagated failure and testing.TB is sealed — public signature preserved, testability restored
+- [Phase 06 Plan 02]: 17-site migration to bodyDims + plan2MigrationAllowlist deletion landed as one atomic commit (79ec449) per D-14; resize goldens + resize_test.go + .gitattributes a second commit (e05165d). Full suite green.
+- [Phase 06 Plan 02]: UI-17 (bodyDims single source of truth) and UI-18 (grep-gate without allowlist crutch) CLOSED. UI-19 (golden harness) closed by Plan 01 and exercised by Plan 02's four TestResize_<WxH> tests.
+- [Phase 06 Plan 02]: View() outlier collapsed — the plan authorised keeping `statusBarH := lipgloss.Height(statusBar)` if downstream code referenced it; inspection confirmed no other View code reads `statusBarH`, so the local was removed entirely (3 lines out, 1 in).
+- [Phase 06 Plan 02]: Resize goldens show `No SOPS files found` empty-state at all four sizes (NewAppModel with "" sopsYamlPath) — no host paths, no timestamps, no env leakage. Deterministic and review-safe.
+- [Phase 06 Plan 02]: Manual UAT per D-15 (cycle through all sub-views at 40x12 and 200x60) deferred to `/gsd-verify-work` — beyond executor scope (requires real terminal). Automated resize coverage is the empty-state path at four sizes.
 
 ### Pending Todos
 
-- `/gsd-plan-phase 6` to decompose Phase 6 (Layout Groundwork) into executable plans
+- Manual UAT per Phase 06 D-15 — cycle through file list / detail / help / diff / metadata / history / health / recipient form at 40x12 AND 200x60 in a real terminal to confirm no content paints under the status bar at any non-empty sub-view state (deferred from executor; belongs to `/gsd-verify-work`)
+- `/gsd-plan-phase 7` to decompose Phase 7 (Chrome Skeleton) into executable plans
 - Phase 7 research pass recommended before planning — `overlayTitle` string-splice pattern needs reference-implementation extraction from `github.com/charmbracelet/soft-serve/pkg/ui/components/header`
 - Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 
@@ -117,6 +124,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-24T07:17:31.600Z
-Stopped at: Phase 06 Plan 01 complete (f3352e9, 782b7e9, c3ee565)
-Resume file: .planning/phases/06-layout-groundwork/06-02-PLAN.md
+Last session: 2026-04-24T09:30:00.000Z
+Stopped at: Phase 06 Plan 02 complete (79ec449, e05165d) — Phase 6 DONE
+Resume file: `/gsd-plan-phase 7` (next phase: Chrome Skeleton)

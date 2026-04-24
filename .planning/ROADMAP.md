@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### Milestone v1.1 — k9s Visual Parity
 
-- [ ] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
+- [x] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
 - [ ] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [ ] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained
@@ -171,7 +171,12 @@ If any of these resurface during `/gsd-plan-phase`, reject in plan review.
   3. Test harness exposes an ANSI-stripped golden-file comparison helper; color presence can be asserted separately from structural layout
   4. Resize behaviour at 40×12, 80×24, 120×40, and 200×60 is verified by teatest snapshots — no content is painted under the status bar at any size
   5. Phase ships zero visible change to end users; it is pure refactor + test infrastructure
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
+
+Plans:
+- [x] 06-01-PLAN.md — bodyDims/chromeHeight/crumbsHeight helpers, LIVE TestBodyDimsMigration grep-gate, internal/testutil golden harness, BenchmarkAppView v1.0 baseline
+- [x] 06-02-PLAN.md — 17-site atomic migration to bodyDims, plan2MigrationAllowlist deletion, four resize goldens (40x12/80x24/120x40/200x60), .gitattributes
+
 **UI hint**: yes
 
 ### Phase 7: Chrome Skeleton
@@ -251,7 +256,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Write Loop | 3/3 | Complete | - |
 | 4. Clipboard & Git | 3/3 | Complete | - |
 | 5. Power Features | 4/4 | Complete | - |
-| 6. Layout Groundwork | 1/2 | In Progress | - |
+| 6. Layout Groundwork | 2/2 | Complete | 2026-04-24 |
 | 7. Chrome Skeleton | 0/3 | Planned | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
