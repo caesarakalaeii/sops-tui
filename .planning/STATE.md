@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-04-24T07:02:35.201Z"
-last_activity: 2026-04-24 -- Phase 06 planning complete
+stopped_at: Phase 06 Plan 01 complete (f3352e9, 782b7e9, c3ee565)
+last_updated: "2026-04-24T07:17:31.603Z"
+last_activity: 2026-04-24
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Milestone v1.1 — k9s visual parity (Phases 6-11)
+**Current focus:** Phase 06 — layout-groundwork
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 6 — Layout Groundwork (not started)
-Plan: —
+Phase: 06 (layout-groundwork) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-24 -- Phase 06 planning complete
+Last activity: 2026-04-24
 
 Progress (v1.1 only): [░░░░░░░░░░] 0% (0/6 phases complete, 0/15 plans complete)
 
@@ -63,6 +63,7 @@ Progress (v1.1 only): [░░░░░░░░░░] 0% (0/6 phases complete, 
 - Trend: transitioning from functional-core milestone to visual-parity milestone
 
 *Updated after each plan completion*
+| Phase 06 P01 | 8m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 02-read-loop]: Metadata overlay opened synchronously (parser.ParseFile inline on i keypress) to keep state machine simple
 - [Phase 02-read-loop]: Esc priority chain: search deactivation > overlay close > navigate back (matches k9s behavior)
 - [Phase 02-read-loop]: ItemCount() returns len(allItems) not len(list.Items()) so status bar count is stable during search
+- [Phase ?]: Phase 06 Plan 01: landed layout helpers + LIVE UI-18 grep-gate + testutil harness + v1.0 BenchmarkAppView baseline, zero call-site migrations (Plan 2 migrates atomically)
+- [Phase ?]: Phase 06 Plan 01: pointer-variant outlier line number 1799 corrected to 1828 in plan2MigrationAllowlist after Task 1's 29-line helper insertion shifted model.go tail — Plan 2 must use 1828
+- [Phase ?]: Phase 06 Plan 01: RequireGoldenColors factored around internal missingColors helper because Go subtests cannot catch propagated failure and testing.TB is sealed — public signature preserved, testability restored
 
 ### Pending Todos
 
@@ -113,6 +117,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-23T21:39:18.954Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-layout-groundwork/06-CONTEXT.md
+Last session: 2026-04-24T07:17:31.600Z
+Stopped at: Phase 06 Plan 01 complete (f3352e9, 782b7e9, c3ee565)
+Resume file: .planning/phases/06-layout-groundwork/06-02-PLAN.md

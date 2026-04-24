@@ -87,8 +87,8 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 ### Layout Safety (groundwork)
 
 - [ ] **UI-17**: A `bodyDims(m) (w, h int)` helper is the single source of truth for body size arithmetic, subtracting chrome + crumbs + status-bar heights; all existing `m.height - statusBarHeight(m)` call-sites migrate to it before any chrome renders
-- [ ] **UI-18**: A CI grep-gate prevents reintroduction of the raw `m.height - statusBarHeight(m)` pattern outside the helper
-- [ ] **UI-19**: A teatest harness helper strips ANSI escape sequences for structural golden comparison and asserts color presence separately so goldens stay stable across lipgloss bumps
+- [x] **UI-18**: A CI grep-gate prevents reintroduction of the raw `m.height - statusBarHeight(m)` pattern outside the helper
+- [x] **UI-19**: A teatest harness helper strips ANSI escape sequences for structural golden comparison and asserts color presence separately so goldens stay stable across lipgloss bumps
 
 ### Regression & Performance
 
@@ -162,8 +162,8 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | RCP-03 | Phase 5 | Pending |
 | HLT-03 | Phase 5 | Pending |
 | UI-17 | Phase 6 | Pending |
-| UI-18 | Phase 6 | Pending |
-| UI-19 | Phase 6 | Pending |
+| UI-18 | Phase 6 | Complete (Plan 01) |
+| UI-19 | Phase 6 | Complete (Plan 01) |
 | UI-01 | Phase 7 | Pending |
 | UI-02 | Phase 7 | Pending |
 | UI-06 | Phase 7 | Pending |

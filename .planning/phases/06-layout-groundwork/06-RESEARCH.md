@@ -883,29 +883,24 @@ All recommended code appears in `## Architecture Patterns` §1–§4 above. Summ
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All five questions defer to Claude's discretion per CONTEXT.md §"Claude's Discretion" / D-09 / D-12. Concrete dispositions below.
 
 1. **Should `.golden` files get a `.gitattributes` entry to prevent whitespace mangling?**
-   - What we know: The project has no `.gitattributes` today.
-   - What's unclear: Whether any developer's global `core.autocrlf=true` would rewrite goldens on Windows checkout.
-   - Recommendation: Add `*.golden text eol=lf -whitespace` to a new `.gitattributes` in the repo root in Plan 2. One-line change; insulates against editor auto-format.
+   - RESOLVED: Yes — Plan 2 adds `.gitattributes` at repo root with `*.golden text eol=lf -whitespace`. One-line change; insulates against Windows CRLF rewriting and editor auto-format.
 
 2. **Where does `BenchmarkAppView` live — `bench_test.go`, `model_test.go`, or `layout_test.go`?**
-   - What we know: Go convention is any `_test.go` file in the package.
-   - What's unclear: Project convention for benchmarks.
-   - Recommendation: A new `bench_test.go` keeps benchmarks discoverable separately from unit tests. Claude's discretion per D-12.
+   - RESOLVED: New file `internal/app/bench_test.go`. Keeps benchmarks discoverable separately from unit tests. (Claude's discretion per D-12.)
 
 3. **Does Plan 2's atomic migration include a commit-message trailer listing all 17 migrated sites?**
-   - What we know: D-14 says "one commit, mechanical rewrite."
-   - What's unclear: Whether the reviewer wants the commit message to enumerate or a separate `PLAN.md` link.
-   - Recommendation: Leave to plan-phase to decide; the commit body should at least reference `PLAN 2` and the file:line inventory in this RESEARCH.md.
+   - RESOLVED: Commit body references `PLAN 2` and points to the call-site inventory in `06-RESEARCH.md` §"Call-Site Inventory" rather than enumerating inline. D-14 "one commit" is preserved.
 
 4. **Does the grep-gate test need to run on `go generate` output or only committed files?**
-   - What we know: No `go:generate` directives exist in the repo (confirmed: grep `"go:generate"` earlier returned nothing for this project scope).
-   - Recommendation: Scan committed files only. If `go:generate` is added in a future milestone, add the output directory to the walk skip list.
+   - RESOLVED: Committed files only. No `go:generate` directives exist in the repo today. If added later, the offending directory can be added to the walk skip list at that time.
 
 5. **Should `RequireGoldenStructure` emit a unified diff (`diff -u` style) on mismatch, or a raw side-by-side?**
-   - Pure discretion (D-09). The provided example uses labelled sections (`--- want --- / --- got ---`). Unified diff via `diffmatchpatch` would add a dep — rejected. Sticking with labelled sections is simplest.
+   - RESOLVED: Labelled sections (`--- want --- / --- got ---`). No external diff library — avoids adding `diffmatchpatch` dep (D-09).
 
 ---
 

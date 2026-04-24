@@ -251,7 +251,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Write Loop | 3/3 | Complete | - |
 | 4. Clipboard & Git | 3/3 | Complete | - |
 | 5. Power Features | 4/4 | Complete | - |
-| 6. Layout Groundwork | 0/2 | Planned | - |
+| 6. Layout Groundwork | 1/2 | In Progress | - |
 | 7. Chrome Skeleton | 0/3 | Planned | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
