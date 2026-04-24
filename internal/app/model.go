@@ -1445,6 +1445,35 @@ func statusBarHeight(m AppModel) int {
 	return lipgloss.Height(statusBar)
 }
 
+// bodyDims returns the width and height available for the body region —
+// the content area after subtracting the chrome (Phase 7), crumb row (Phase 8),
+// and status bar. Clamped to >= 0 so bubbles/v2/list does not receive a negative
+// height on terminals shorter than the chrome.
+func bodyDims(m AppModel) (w, h int) {
+	w = m.width
+	h = m.height - statusBarHeight(m) - chromeHeight(m) - crumbsHeight(m)
+	if h < 0 {
+		h = 0
+	}
+	return w, h
+}
+
+// chromeHeight returns the rendered height of the header chrome in terminal rows.
+// Phase 6: stub returning 0 (no chrome rendered yet).
+// Phase 7: flipped to the real rendered height of the logo + menu + info panel.
+func chromeHeight(m AppModel) int {
+	_ = m
+	return 0
+}
+
+// crumbsHeight returns the rendered height of the breadcrumb chip row.
+// Phase 6: stub returning 0 (breadcrumb still lives in the status bar).
+// Phase 8: flipped to the real rendered height of the chip pill row.
+func crumbsHeight(m AppModel) int {
+	_ = m
+	return 0
+}
+
 // populateCrossFileItems lazily populates the cross-file search item cache (GIT-03).
 // It collects file-level items and key-path items for all discovered files.
 // T-04-09: lazy population (only on first / press); cached after first use;
