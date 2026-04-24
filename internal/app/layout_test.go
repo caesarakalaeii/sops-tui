@@ -61,24 +61,9 @@ func TestCrumbsHeightReturnsZero(t *testing.T) {
 		"Phase 6: crumbsHeight is a stub returning 0 until Phase 8")
 }
 
-// plan2MigrationAllowlist enumerates the 17 known unmigrated call-sites as
-// of Phase 6 Plan 1. Plan 2 migrates all 17 sites AND deletes this variable
-// plus the corresponding filter branch below in one atomic commit.
-// See .planning/phases/06-layout-groundwork/06-02-PLAN.md Task 1 Step F.
-//
-// Source: 06-RESEARCH.md "Call-Site Inventory" (15 SetSize sites + 2 outliers).
-// Note: the outlier previously documented at line 1799 now lives at 1828
-// post-Plan-1 because Task 1's helper block shifted everything in the tail
-// of model.go by 29 lines. Line 1333 remains unchanged (it sits before the
-// insertion point) and uses the `statusBarH` local — it does not match the
-// banned regex today but is listed here for Plan 2's reference.
-var plan2MigrationAllowlist = map[string][]int{
-	"internal/app/model.go": {316, 349, 377, 485, 502, 567, 631, 724, 761, 846, 924, 1005, 1089, 1110, 1250, 1333, 1828},
-}
-
 // TestBodyDimsMigration enforces UI-18: the banned subtraction pattern
 // (the expression subtracting the status-bar helper result from the model
-// height) must not appear outside bodyDims or the Plan-2 allowlist.
+// height) must not appear outside bodyDims.
 //
 // SELF-MATCH AVOIDANCE: The banned regex is assembled at runtime from THREE
 // separate string constants below so this file does not contain the full
@@ -86,9 +71,11 @@ var plan2MigrationAllowlist = map[string][]int{
 // Any paraphrased references in comments use wording like "the banned
 // subtraction pattern" or "UI-18 banned expression".
 //
-// LIVE FROM PLAN 1: This test runs under default go test and passes because
-// the 17 legitimate pre-migration occurrences are allowlisted. Plan 2's
-// atomic migration commit deletes plan2MigrationAllowlist and this filter.
+// LIVE UNDER DEFAULT go test: Plan 2 migrated all 17 pre-migration sites to
+// bodyDims(m) and deleted the temporary Plan-2 migration allowlist plus its
+// filter branch atomically with that migration. The only legitimate
+// occurrence of the banned pattern now lives inside bodyDims itself, carved
+// out via the brace-depth range lookup below.
 func TestBodyDimsMigration(t *testing.T) {
 	// Assembled from three pieces: regex prefix, operator, helper name.
 	// Never appears as one contiguous literal anywhere in this file.
@@ -131,20 +118,6 @@ func TestBodyDimsMigration(t *testing.T) {
 				lineNo >= helperStart && lineNo <= helperEnd {
 				continue
 			}
-			// Plan-2 allowlist: the 17 enumerated pre-migration sites.
-			// Deleted by Plan 2 atomically with the migration.
-			if allowed, ok := plan2MigrationAllowlist[rel]; ok {
-				hit := false
-				for _, al := range allowed {
-					if al == lineNo {
-						hit = true
-						break
-					}
-				}
-				if hit {
-					continue
-				}
-			}
 			violations = append(violations, rel+":"+strconv.Itoa(lineNo)+"  "+strings.TrimSpace(line))
 		}
 		return nil
@@ -153,7 +126,7 @@ func TestBodyDimsMigration(t *testing.T) {
 		t.Fatalf("walk failed: %v", err)
 	}
 	if len(violations) > 0 {
-		t.Fatalf("UI-18 violation: banned subtraction pattern found outside bodyDims and outside the Plan-2 allowlist:\n  %s\n\n"+
+		t.Fatalf("UI-18 violation: banned subtraction pattern found outside bodyDims:\n  %s\n\n"+
 			"Use bodyDims(m) instead; see UI-17 and UI-18.",
 			strings.Join(violations, "\n  "))
 	}

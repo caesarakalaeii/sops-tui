@@ -313,19 +313,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
+		w, h := bodyDims(m)
 		// Propagate to all children that need dimensions
-		m.fileList.SetSize(m.width, mainH)
-		m.detail.SetSize(m.width, mainH)
-		m.help.SetSize(m.width, mainH)
-		m.metadata.SetSize(m.width, mainH)
-		m.diff.SetSize(m.width, mainH)
-		m.history.SetSize(m.width, mainH)
-		m.health.SetSize(m.width, mainH)
-		m.recipientForm.SetSize(m.width, mainH)
+		m.fileList.SetSize(w, h)
+		m.detail.SetSize(w, h)
+		m.help.SetSize(w, h)
+		m.metadata.SetSize(w, h)
+		m.diff.SetSize(w, h)
+		m.history.SetSize(w, h)
+		m.health.SetSize(w, h)
+		m.recipientForm.SetSize(w, h)
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -346,11 +343,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Rule:        f.Rule,
 			}
 		}
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
-		m.fileList = ui.NewFileListModel(items, m.width, mainH)
+		w, h := bodyDims(m)
+		m.fileList = ui.NewFileListModel(items, w, h)
 		m.status.SetItemCount(len(items), "items")
 		// Dispatch async git status fetch (D-11).
 		relPaths := make([]string, len(msg.Files))
@@ -374,16 +368,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = stateFileList
 			return m, nil
 		}
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
+		w, h := bodyDims(m)
 		m.currentParsed = msg.Parsed
 		m.detail = ui.NewDetailModel(
 			m.currentFile.Name,
 			msg.Parsed.Nodes,
-			m.width,
-			mainH,
+			w,
+			h,
 			m.currentFile.IsEncrypted,
 			m.currentFile.GitStatus,
 		)
@@ -482,11 +473,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Show multi-key diff overlay
 		title := fmt.Sprintf("Changes: %d keys modified", len(diffs))
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
-		m.diff = ui.NewDiffModel(title, diffs, m.width, mainH)
+		w, h := bodyDims(m)
+		m.diff = ui.NewDiffModel(title, diffs, w, h)
 		m.editFilePath = m.currentFile.AbsPath
 		m.editorEditedContent = edited // store for EncryptFile on confirm (T-03-12: cleared after use)
 		m.prevState = m.state
@@ -499,14 +487,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status, _ = m.status.Flash("No changes")
 			return m, nil
 		}
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
+		w, h := bodyDims(m)
 		m.diff = ui.NewDiffModel(
 			"Changes: "+msg.KeyPath,
 			[]ui.DiffEntry{{KeyPath: msg.KeyPath, OldValue: msg.OldValue, NewValue: msg.NewValue}},
-			m.width, mainH,
+			w, h,
 		)
 		m.editFilePath = m.currentFile.AbsPath
 		m.prevState = m.state
@@ -564,14 +549,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ui.RotateReadyMsg:
 		// X key on revealed leaf with detectable format — show single-entry diff overlay.
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
+		w, h := bodyDims(m)
 		m.diff = ui.NewDiffModel(
 			"Changes: "+msg.KeyPath,
 			[]ui.DiffEntry{{KeyPath: msg.KeyPath, OldValue: msg.OldValue, NewValue: msg.NewValue}},
-			m.width, mainH,
+			w, h,
 		)
 		m.editFilePath = m.currentFile.AbsPath
 		m.rotateFormat = msg.Format
@@ -628,11 +610,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				GitStatus:   f.GitStatus,
 			}
 		}
-		mainH := m.height - statusBarHeight(m)
-		if mainH < 0 {
-			mainH = 0
-		}
-		m.fileList = ui.NewFileListModel(items, m.width, mainH)
+		w, h := bodyDims(m)
+		m.fileList = ui.NewFileListModel(items, w, h)
 		m.status.SetItemCount(len(items), "items")
 		return m, nil
 
@@ -721,11 +700,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					entries = append(entries, ui.DiffEntry{KeyPath: "recipient", OldValue: r, NewValue: r})
 				}
 				entries = append(entries, ui.DiffEntry{KeyPath: "new", OldValue: "", NewValue: pubkey})
-				mainH := m.height - statusBarHeight(m)
-				if mainH < 0 {
-					mainH = 0
-				}
-				m.diff = ui.NewDiffModel("Confirm: Add Recipient", entries, m.width, mainH)
+				w, h := bodyDims(m)
+				m.diff = ui.NewDiffModel("Confirm: Add Recipient", entries, w, h)
 				m.state = stateRecipientConfirm
 				return m, nil
 			}
@@ -758,11 +734,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 								entries = append(entries, ui.DiffEntry{KeyPath: "keep", OldValue: r, NewValue: r})
 							}
 						}
-						mainH := m.height - statusBarHeight(m)
-						if mainH < 0 {
-							mainH = 0
-						}
-						m.diff = ui.NewDiffModel("Confirm: Remove Recipient", entries, m.width, mainH)
+						w, h := bodyDims(m)
+						m.diff = ui.NewDiffModel("Confirm: Remove Recipient", entries, w, h)
 						m.state = stateRecipientConfirm
 						return m, nil
 					}
@@ -843,11 +816,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Health check sentinel: dispatch async scan instead of re-encrypt.
 				if m.recipientAction == "healthcheck" {
 					m.recipientAction = ""
-					mainH := m.height - statusBarHeight(m)
-					if mainH < 0 {
-						mainH = 0
-					}
-					m.health = ui.NewHealthModel(m.width, mainH)
+					w, h := bodyDims(m)
+					m.health = ui.NewHealthModel(w, h)
 					m.prevState = stateFileList
 					m.state = stateHealth
 					m.status.SetBreadcrumb("files", "health")
@@ -921,14 +891,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.status, _ = m.status.Flash("Generation failed: " + err.Error())
 					return m, nil
 				}
-				mainH := m.height - statusBarHeight(m)
-				if mainH < 0 {
-					mainH = 0
-				}
+				w, h := bodyDims(m)
 				m.diff = ui.NewDiffModel(
 					"Changes: "+m.formatMenuKeyPath,
 					[]ui.DiffEntry{{KeyPath: m.formatMenuKeyPath, OldValue: m.formatMenuOldValue, NewValue: newVal}},
-					m.width, mainH,
+					w, h,
 				)
 				m.editFilePath = m.currentFile.AbsPath
 				m.rotateFormat = selected
@@ -1002,11 +969,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						EncryptedRegex:   parsed.Metadata.EncryptedRegex,
 						UnencryptedRegex: parsed.Metadata.UnencryptedRegex,
 					}
-					mainH := m.height - statusBarHeight(m)
-					if mainH < 0 {
-						mainH = 0
-					}
-					m.metadata = ui.NewMetadataModel(meta, m.width, mainH)
+					w, h := bodyDims(m)
+					m.metadata = ui.NewMetadataModel(meta, w, h)
 					m.prevState = m.state
 					m.state = stateMetadata
 					m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "metadata")
@@ -1086,11 +1050,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.status, _ = m.status.Flash("No git repository found")
 					return m, nil
 				}
-				mainH := m.height - statusBarHeight(m)
-				if mainH < 0 {
-					mainH = 0
-				}
-				m.history = ui.NewHistoryModel(m.currentFile.Name, m.width, mainH)
+				w, h := bodyDims(m)
+				m.history = ui.NewHistoryModel(m.currentFile.Name, w, h)
 				m.prevState = m.state
 				m.state = stateHistory
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "history")
@@ -1107,11 +1068,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// a key: open add-recipient form from stateDetail (D-01, RCP-02).
 		if key.Matches(msg, keys.DefaultDetailKeyMap.AddRecipient) {
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
-				mainH := m.height - statusBarHeight(m)
-				if mainH < 0 {
-					mainH = 0
-				}
-				m.recipientForm = ui.NewRecipientFormModel(m.width, mainH)
+				w, h := bodyDims(m)
+				m.recipientForm = ui.NewRecipientFormModel(w, h)
 				cmd := m.recipientForm.Activate()
 				m.prevState = m.state
 				m.state = stateRecipientForm
@@ -1247,13 +1205,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					OldValue: "",
 					NewValue: fmt.Sprintf("Decrypt and analyze %d files", len(m.files)),
 				}}
-				mainH := m.height - statusBarHeight(m)
-				if mainH < 0 {
-					mainH = 0
-				}
+				w, h := bodyDims(m)
 				m.diff = ui.NewDiffModel(
 					fmt.Sprintf("Health check requires decrypting all %d files", len(m.files)),
-					entries, m.width, mainH,
+					entries, w, h,
 				)
 				m.prevState = m.state
 				m.state = stateDiff
@@ -1329,11 +1284,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m AppModel) View() tea.View {
 	// Render main content based on active state
 	statusBar := m.status.View(m.width)
-	statusBarH := lipgloss.Height(statusBar)
-	mainH := m.height - statusBarH
-	if mainH < 0 {
-		mainH = 0
-	}
+	_, mainH := bodyDims(m)
 
 	var content string
 	switch m.state {
@@ -1825,11 +1776,8 @@ func (m *AppModel) showBulkReKeyConfirm(file sops.DiscoveredFile) {
 	for _, r := range parsed.Metadata.AgeRecipients {
 		entries = append(entries, ui.DiffEntry{KeyPath: "recipient", OldValue: r, NewValue: r})
 	}
-	mainH := m.height - statusBarHeight(*m)
-	if mainH < 0 {
-		mainH = 0
-	}
-	m.diff = ui.NewDiffModel(fmt.Sprintf("Confirm Re-key: %s", file.Name), entries, m.width, mainH)
+	w, h := bodyDims(*m)
+	m.diff = ui.NewDiffModel(fmt.Sprintf("Confirm Re-key: %s", file.Name), entries, w, h)
 	m.prevState = stateFileList
 	m.state = stateBulkReKeyConfirm
 }
@@ -1888,6 +1836,8 @@ func (m AppModel) renderRecipientList() string {
 	if boxWidth < 1 {
 		boxWidth = 1
 	}
+	// TODO(phase-7): replace magic -4 with a named modal-frame constant or
+	// bodyDims usage once modal chrome lands.
 	boxHeight := m.height - 4
 	if boxHeight < 1 {
 		boxHeight = 1
