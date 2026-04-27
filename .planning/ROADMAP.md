@@ -210,7 +210,14 @@ Plans:
   3. `HelpModel.View()`, `MetadataModel.View()`, `DiffModel.View()`, `HealthModel.View()`, `HistoryModel.View()`, `RecipientFormModel.View()` return inner content only — no inner `RoundedBorder`/`Background`/`Padding` envelope; `WrapTitled` is the sole border source for these 6 states; `m.width` arithmetic is corrected so inner content area is `m.width − 4` (chrome border + Padding(0,1)) not `m.width − 6`; refreshed goldens at 120×40 and 200×60 show single-border framing
   4. At terminal widths below `infoPanelWidth + logoWidth + minMenuCol`, `RenderChrome` drops the info-panel slot and renders menu+logo only (or a one-line `press ? for help` fallback below `logoWidth + 8`); `RenderMenu` uses manual `JoinHorizontal` of two pre-rendered columns instead of `lipgloss/v2/table` so cell-wrapping never engages; `internal/app/testdata/resize_40x12.golden` and `resize_80x24.golden` show ≤ 6 chrome rows with the body region intact and reachable
   5. `internal/ui/menu_test.go` allowlist contains only the runes `\n ─ │ ┌ ┐ └ ┘ ↑ ↓ ← →` (no `╭╮╰╯`); the quit-hint visibility decision for `stateRecipientConfirm` and `stateBulkReKeyConfirm` is recorded as inline doc comments on `keys.RecipientConfirmHints`, `keys.BulkReKeyConfirmHints`, and the dispatcher arms in `AppModel.menuHints()` with a UI-SPEC cross-reference; `chrome_test.go` `TestChromeASCIIOnly` allowlist is the single source of truth (extracted into a shared test helper if option B from WR-04 is taken)
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 07.1-01-PLAN.md — Restore SC5 governance (revert ROADMAP+test gate, [APPROVED] DISCUSSION-LOG entry, 07-03-SUMMARY closure pointer)
+- [ ] 07.1-02-PLAN.md — Align menu_test.go allowlist with chrome_test.go canonical + document quit-hint suppression in hints.go + model.go + 07-UI-SPEC.md
+- [ ] 07.1-03-PLAN.md — Strip nested RoundedBorder envelope from 6 sub-models, lift surviving NewStyle calls, refresh 120x40+200x60 goldens
+- [ ] 07.1-04-PLAN.md — Rewrite TestViewNoNewStyle as BFS reachability walker, lift 3 model.go NewStyle calls, add sub-model AST walker in internal/ui
+- [ ] 07.1-05-PLAN.md — Narrow-terminal chrome clamp (RenderChrome 3-tier fallback + RenderMenu manual columns), 4 new chrome composition tests, refresh 40x12+80x24 goldens, update 07-VERIFICATION.md frontmatter
 
 **UI hint**: yes
 
@@ -280,7 +287,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 5. Power Features | 4/4 | Complete | - |
 | 6. Layout Groundwork | 2/2 | Complete | 2026-04-24 |
 | 7. Chrome Skeleton | 1/3 | Executing | - |
-| 7.1. Chrome Gap Closure (INSERTED) | 0/? | Inserted (planning) | - |
+| 7.1. Chrome Gap Closure (INSERTED) | 0/5 | Planned | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
 | 10. Theming + Accessibility | 0/3 | Planned | - |

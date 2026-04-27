@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7 complete (chrome skeleton — logo + menu + titled borders + hint dispatcher + grep-gates landed)
-last_updated: "2026-04-27T12:41:50Z"
-last_activity: 2026-04-27 -- Phase 07 Plan 03 complete (chromeHeight flipped, AppModel.View() rewritten with chrome composition, Hints() on 8 sub-models, 4 grep-gates + 5ms bench-budget, 4 resize goldens refreshed, 28 new tests)
+stopped_at: Phase 7 complete (chrome skeleton — logo + menu + titled borders + hint dispatcher + 4 grep-gates + 5ms bench-budget all green)
+last_updated: "2026-04-27T14:03:08.950Z"
+last_activity: 2026-04-27 -- Phase 7.1 planning complete
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 22
+  total_plans: 27
   completed_plans: 22
-  percent: 100
+  percent: 81
 ---
 
 # Project State
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 Milestone: v1.1 — k9s visual parity
 Phase: 07 (chrome-skeleton) — COMPLETE; Phase 8 next
 Plan: 3 of 3 (Plans 01 + 02 + 03 complete)
-Status: Phase 07 complete; ready for `/gsd-verify-work` smoke + Phase 08 planning
-Last activity: 2026-04-27 -- Phase 07 Plan 03 complete (chromeHeight flipped, AppModel.View() rewritten with chrome composition, Hints() on 8 sub-models, 4 grep-gates + 5ms bench-budget, 4 resize goldens refreshed, 28 new tests)
+Status: Ready to execute
+Last activity: 2026-04-27 -- Phase 7.1 planning complete
 
 Progress (v1.1 only): [███████░░░] 33% (2/6 phases complete, 5/15 plans complete)
 
