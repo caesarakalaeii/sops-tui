@@ -24,6 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
 - [x] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
+- [ ] **Phase 7.1: Chrome Gap Closure (INSERTED)** - Restore SC5 governance (revert unauthorized ROADMAP/test-gate amendments; defer perf to Phase 11), strip nested sub-model RoundedBorder boxes, clamp narrow-terminal chrome overflow, extend View() AST walker into helpers, align menu test allowlist
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [ ] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained
 - [ ] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival
@@ -198,6 +199,21 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 7.1: Chrome Gap Closure (INSERTED)
+**Goal**: Close the Phase 7 verification gaps — restore the locked SC5 governance contract (revert the unauthorized 100×-loosened test-gate and the unauthorized SC5 wording amendment, defer perf to Phase 11 SC2 with the original 50 µs target preserved), strip the nested `RoundedBorder` boxes from the 6 sub-model `View()` methods so `WrapTitled` is the single border source, clamp narrow-terminal chrome so the body remains reachable at 40×12 and 80×24, extend the `TestViewNoNewStyle` AST walker so it reaches helpers and sub-models reachable from `View()`, and align the menu test allowlist with the chrome contract
+**Depends on**: Phase 7
+**Inserted because**: Phase 7 verification (`07-VERIFICATION.md`, status `gaps_found` 4/5) and code review (`07-REVIEW.md`, 5 WARNINGs / 7 INFO) surfaced one BLOCKER (SC5 budget breached + unauthorized ROADMAP/test-gate amendments) plus quality concerns that the verifier flagged as candidates for either a Phase 7.1 hotfix or Phase 8 cleanup. Closing them in 7.1 before Phase 8 starts keeps the chrome contract honest and prevents the Phase 8 info-panel work from inheriting double-border + width-math drift.
+**Requirements**: UI-15 (chrome-contract integrity — currently SATISFIED but degraded by amendment), UI-16 (narrow-terminal layout — partial coverage; full survival stays in Phase 10), UI-21 (deferred to Phase 11 SC2 with original 50 µs target restored)
+**Success Criteria** (what must be TRUE):
+  1. ROADMAP SC5 wording is restored to the locked `BenchmarkAppView ≤ 50 µs/op at 200×60` text; `internal/app/chrome_test.go` has `budgetNs = 50_000` with `TestBenchmarkAppView_UnderBudget` calling `t.Skip("deferred to Phase 11 SC2 — D-18 caching fallback")`; `.planning/phases/07-chrome-skeleton/07-DISCUSSION-LOG.md` carries an `[APPROVED] 2026-04-27` entry recording the deferral decision and the Phase 11 owner
+  2. Helpers reachable from `AppModel.View()` are scanned by `TestViewNoNewStyle` (BFS over same-package call edges rooted at `View`); `lipgloss.NewStyle()` calls in `renderRecipientList` (model.go:1935, 1940), `renderFormatMenu` (model.go:1981), and the 12 sub-model `View()` call-sites (`help.go:82,98`, `health.go:128,178`, `recipientform.go:132,163`, `metadata.go:83-85,158,174`, `diff.go:177`, `history.go:86,134`) are gone — replaced by package vars declared in `internal/ui/styles.go`
+  3. `HelpModel.View()`, `MetadataModel.View()`, `DiffModel.View()`, `HealthModel.View()`, `HistoryModel.View()`, `RecipientFormModel.View()` return inner content only — no inner `RoundedBorder`/`Background`/`Padding` envelope; `WrapTitled` is the sole border source for these 6 states; `m.width` arithmetic is corrected so inner content area is `m.width − 4` (chrome border + Padding(0,1)) not `m.width − 6`; refreshed goldens at 120×40 and 200×60 show single-border framing
+  4. At terminal widths below `infoPanelWidth + logoWidth + minMenuCol`, `RenderChrome` drops the info-panel slot and renders menu+logo only (or a one-line `press ? for help` fallback below `logoWidth + 8`); `RenderMenu` uses manual `JoinHorizontal` of two pre-rendered columns instead of `lipgloss/v2/table` so cell-wrapping never engages; `internal/app/testdata/resize_40x12.golden` and `resize_80x24.golden` show ≤ 6 chrome rows with the body region intact and reachable
+  5. `internal/ui/menu_test.go` allowlist contains only the runes `\n ─ │ ┌ ┐ └ ┘ ↑ ↓ ← →` (no `╭╮╰╯`); the quit-hint visibility decision for `stateRecipientConfirm` and `stateBulkReKeyConfirm` is recorded as inline doc comments on `keys.RecipientConfirmHints`, `keys.BulkReKeyConfirmHints`, and the dispatcher arms in `AppModel.menuHints()` with a UI-SPEC cross-reference; `chrome_test.go` `TestChromeASCIIOnly` allowlist is the single source of truth (extracted into a shared test helper if option B from WR-04 is taken)
+**Plans:** TBD
+
+**UI hint**: yes
+
 ### Phase 8: Header Info Panel + Crumb Chips
 **Goal**: Users see the context they're working in (`.sops.yaml` path, age key fingerprint, recipient count, git state, file count) in a top-left info panel, and the breadcrumb moves to a dedicated row of colored chip pills above the body
 **Depends on**: Phase 7
@@ -253,7 +269,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 9 -> 10 -> 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -264,6 +280,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Power Features | 4/4 | Complete | - |
 | 6. Layout Groundwork | 2/2 | Complete | 2026-04-24 |
 | 7. Chrome Skeleton | 1/3 | Executing | - |
+| 7.1. Chrome Gap Closure (INSERTED) | 0/? | Inserted (planning) | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
 | 10. Theming + Accessibility | 0/3 | Planned | - |
