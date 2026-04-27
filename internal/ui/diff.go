@@ -17,6 +17,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
 // DiffEntry holds a single key's old and new value for display in the diff overlay.
@@ -180,4 +182,20 @@ func (m DiffModel) View() string {
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)
+}
+
+// Hints returns the 6-hint persistent menu set for DiffModel per D-09.
+// Covers the confirm/cancel/scroll axes. The modal states
+// stateRecipientConfirm and stateBulkReKeyConfirm use inline hint sets
+// on AppModel (keys.RecipientConfirmHints / BulkReKeyConfirmHints) since
+// they share the diff body but change the y/n semantics.
+func (m DiffModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "y", Description: "confirm re-encrypt", Visible: true},
+		{Mnemonic: "n", Description: "cancel", Visible: true},
+		{Mnemonic: "Esc", Description: "cancel", Visible: true},
+		{Mnemonic: "j", Description: "scroll down", Visible: true},
+		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
 }

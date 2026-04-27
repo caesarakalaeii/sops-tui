@@ -6,10 +6,14 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Compile-time interface compliance: DetailModel implements keys.Hinter.
+var _ keys.Hinter = ui.DetailModel{}
 
 // sampleTree builds a representative tree for tests:
 //
@@ -592,4 +596,28 @@ func TestRotateKeyOnArrayIndexed(t *testing.T) {
 	require.True(t, ok, "must return EditBlockedMsg for array-indexed key, got: %T", result)
 	assert.Equal(t, "Array-indexed keys not editable in Phase 3", blocked.Reason,
 		"must set correct block reason")
+}
+
+// TestDetailHints verifies DetailModel.Hints() returns 13 entries (matching
+// DetailKeyMap.ShortHelp()) with exactly one (Blame, "b") marked Visible=false
+// per D-09 12-slot curation.
+func TestDetailHints(t *testing.T) {
+	m := ui.NewDetailModel("test.yaml", sampleTree(), 80, 24, true, "")
+	hints := m.Hints()
+	require.Equal(t, 13, len(hints),
+		"Detail must expose 13 hints from ShortHelp() before curation")
+
+	visible := 0
+	invisibleMnemonics := []string{}
+	for _, h := range hints {
+		if h.Visible {
+			visible++
+		} else {
+			invisibleMnemonics = append(invisibleMnemonics, h.Mnemonic)
+		}
+	}
+	require.Equal(t, 12, visible,
+		"Detail must curate to exactly 12 visible hints to fit the menu cap")
+	require.Equal(t, []string{"b"}, invisibleMnemonics,
+		"the only invisible hint must be Blame (b) per D-06")
 }

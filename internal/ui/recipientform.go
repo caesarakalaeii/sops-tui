@@ -21,6 +21,8 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
 	"filippo.io/age"
+
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
 // RecipientFormModel is a full-screen modal overlay for entering an age public key.
@@ -166,4 +168,12 @@ func (m RecipientFormModel) View() string {
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)
+}
+
+// Hints returns the 2-hint persistent menu set for RecipientFormModel per D-09.
+func (m RecipientFormModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "Enter", Description: "confirm", Visible: true},
+		{Mnemonic: "Esc", Description: "cancel", Visible: true},
+	}
 }

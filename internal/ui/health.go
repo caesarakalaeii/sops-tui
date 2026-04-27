@@ -19,6 +19,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/caesarakalaeii/sops-tui/internal/health"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
 // HealthModel renders a full-screen overlay showing secret health check results.
@@ -182,4 +183,23 @@ func (m HealthModel) View() string {
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)
+}
+
+// FindingCount returns the total number of health findings — the sum of
+// weak secrets, duplicates, and stale files. Errors are scan-infrastructure
+// issues (not findings) and are excluded. Consumed by AppModel.titleForState()
+// to render "Health (N findings)" per D-15.
+func (m HealthModel) FindingCount() int {
+	return len(m.results.WeakSecrets) + len(m.results.Duplicates) + len(m.results.StaleFiles)
+}
+
+// Hints returns the 5-hint persistent menu set for HealthModel per D-09.
+func (m HealthModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "j", Description: "scroll down", Visible: true},
+		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "H", Description: "close health", Visible: true},
+		{Mnemonic: "Esc", Description: "close health", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
 }

@@ -104,3 +104,15 @@ func (m HelpModel) View(fromState ViewState) string {
 		Height(boxHeight).
 		Render(inner)
 }
+
+// Hints returns the 3-hint persistent menu set for HelpModel per D-09.
+// The full help reference is the view itself (UI-11 retains the ?
+// overlay as the complete reference); the persistent menu just shows
+// how to close and quit.
+func (m HelpModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "Esc", Description: "close help", Visible: true},
+		{Mnemonic: "?", Description: "close help", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
+}

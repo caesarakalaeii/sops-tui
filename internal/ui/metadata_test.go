@@ -4,10 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Compile-time interface compliance: MetadataModel implements keys.Hinter.
+var _ keys.Hinter = ui.MetadataModel{}
 
 // TestNewMetadataModel verifies the model is created with accessible MetadataContent fields.
 func TestNewMetadataModel(t *testing.T) {
@@ -227,4 +231,23 @@ func TestMetadataRoundedBorderExists(t *testing.T) {
 	// RoundedBorder uses rounded corner characters: ╭ or ╰
 	hasRoundedCorner := strings.ContainsAny(output, "╭╰╮╯")
 	assert.True(t, hasRoundedCorner, "View() must contain rounded border characters (╭, ╰, ╮, ╯)")
+}
+
+// TestMetadataHints verifies MetadataModel.Hints() returns the 5-hint set per D-09:
+// j/k for scroll, i/Esc for close, q for quit.
+func TestMetadataHints(t *testing.T) {
+	m := ui.NewMetadataModel(ui.MetadataContent{}, 80, 24)
+	hints := m.Hints()
+	require.Equal(t, 5, len(hints), "Metadata must expose 5 hints")
+
+	assert.Equal(t, "j", hints[0].Mnemonic)
+	assert.Equal(t, "scroll down", hints[0].Description)
+	assert.Equal(t, "k", hints[1].Mnemonic)
+	assert.Equal(t, "i", hints[2].Mnemonic)
+	assert.Equal(t, "close metadata", hints[2].Description)
+	assert.Equal(t, "Esc", hints[3].Mnemonic)
+	assert.Equal(t, "q", hints[4].Mnemonic)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
 }

@@ -811,3 +811,20 @@ func revealAllByPath(nodes []TreeNode, parentPath string, values map[string]stri
 		}
 	}
 }
+
+// Hints returns the persistent-menu hint set for DetailModel per D-09.
+// DetailKeyMap.ShortHelp() returns 13 bindings, one over the 12-slot cap;
+// we mark Blame (b) as Visible=false per D-06 so git history remains
+// discoverable in the ? full-screen overlay while the 12 most-used keys
+// stay visible in the persistent menu.
+func (m DetailModel) Hints() []keys.MenuHint {
+	hints := keys.HintsFromBindings(m.keys.ShortHelp())
+	// Mnemonic for Blame is "b" per bindings.go:281-282.
+	for i := range hints {
+		if hints[i].Mnemonic == "b" {
+			hints[i].Visible = false
+			break
+		}
+	}
+	return hints
+}

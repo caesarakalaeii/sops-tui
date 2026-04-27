@@ -5,10 +5,14 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Compile-time interface compliance: DiffModel implements keys.Hinter.
+var _ keys.Hinter = ui.DiffModel{}
 
 // TestDiffModelViewSingleEntry verifies that View() renders old/new value lines,
 // title, and the confirmation footer for a single-entry diff.
@@ -129,4 +133,23 @@ func TestDiffModelEntriesReturnsAll(t *testing.T) {
 	require.Len(t, got, 2, "Entries() must return all entries")
 	assert.Equal(t, "key1", got[0].KeyPath)
 	assert.Equal(t, "key2", got[1].KeyPath)
+}
+
+// TestDiffHints verifies DiffModel.Hints() returns the 6-hint set per D-09:
+// y/n/Esc/j/k/q covering confirm + cancel + scroll + quit axes.
+func TestDiffHints(t *testing.T) {
+	m := ui.NewDiffModel("Changes: key", []ui.DiffEntry{}, 80, 24)
+	hints := m.Hints()
+	require.Equal(t, 6, len(hints), "Diff must expose 6 hints")
+
+	assert.Equal(t, "y", hints[0].Mnemonic)
+	assert.Equal(t, "confirm re-encrypt", hints[0].Description)
+	assert.Equal(t, "n", hints[1].Mnemonic)
+	assert.Equal(t, "Esc", hints[2].Mnemonic)
+	assert.Equal(t, "j", hints[3].Mnemonic)
+	assert.Equal(t, "k", hints[4].Mnemonic)
+	assert.Equal(t, "q", hints[5].Mnemonic)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
 }

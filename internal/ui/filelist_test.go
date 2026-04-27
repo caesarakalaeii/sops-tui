@@ -4,10 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Compile-time interface compliance: FileListModel implements keys.Hinter.
+var _ keys.Hinter = ui.FileListModel{}
 
 // TestFileListNewModelItemCount verifies that NewFileListModel with items returns a model
 // where ItemCount() matches the input length.
@@ -167,4 +171,29 @@ func TestClearSelections(t *testing.T) {
 
 	m.ClearSelections()
 	assert.Empty(t, m.SelectedItems(), "SelectedItems must be empty after ClearSelections()")
+}
+
+// TestFileListHints verifies that FileListModel.Hints() returns 12 entries —
+// the 10 ShortHelp() bindings plus the appended g/G navigation micro-keys
+// per D-09.
+func TestFileListHints(t *testing.T) {
+	m := ui.NewFileListModel([]ui.FileItem{}, 80, 24)
+	hints := m.Hints()
+	require.Equal(t, 12, len(hints),
+		"FileList must expose 12 hints (10 ShortHelp + g/G append)")
+
+	// First hint follows DefaultFileListKeyMap.ShortHelp() — Up first.
+	assert.Equal(t, "k/↑", hints[0].Mnemonic, "first hint must be Up per ShortHelp ordering")
+	assert.Equal(t, "move up", hints[0].Description)
+
+	// Last two hints are the inline append.
+	assert.Equal(t, "g", hints[10].Mnemonic)
+	assert.Equal(t, "G", hints[11].Mnemonic)
+	assert.Equal(t, "go to top", hints[10].Description)
+	assert.Equal(t, "go to bottom", hints[11].Description)
+
+	// All hints default to Visible=true (no curation in FileList).
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
 }

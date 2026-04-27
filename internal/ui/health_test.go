@@ -6,10 +6,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/caesarakalaeii/sops-tui/internal/health"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
+
+// Compile-time interface compliance: HealthModel implements keys.Hinter.
+var _ keys.Hinter = ui.HealthModel{}
 
 // TestHealthModel runs all HealthModel rendering tests.
 func TestHealthModel(t *testing.T) {
@@ -130,4 +135,45 @@ func TestHealthModel(t *testing.T) {
 		view := m.View()
 		assert.NotEmpty(t, view)
 	})
+}
+
+// TestHealthHints verifies HealthModel.Hints() returns the 5-hint set per D-09.
+func TestHealthHints(t *testing.T) {
+	m := ui.NewHealthModel(80, 24)
+	hints := m.Hints()
+	require.Equal(t, 5, len(hints), "Health must expose 5 hints")
+
+	assert.Equal(t, "j", hints[0].Mnemonic)
+	assert.Equal(t, "k", hints[1].Mnemonic)
+	assert.Equal(t, "H", hints[2].Mnemonic)
+	assert.Equal(t, "close health", hints[2].Description)
+	assert.Equal(t, "Esc", hints[3].Mnemonic)
+	assert.Equal(t, "q", hints[4].Mnemonic)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
+}
+
+// TestHealthModelFindingCount verifies FindingCount returns the sum of weak
+// secrets, duplicates, and stale files (errors deliberately excluded — they
+// are scan-infrastructure issues, not findings, per D-15).
+func TestHealthModelFindingCount(t *testing.T) {
+	m := ui.NewHealthModel(80, 24)
+	m.SetResults(health.HealthCheckResult{
+		WeakSecrets: []health.WeakSecret{
+			{FilePath: "a.yaml", KeyPath: "p1", Reason: "short"},
+			{FilePath: "b.yaml", KeyPath: "p2", Reason: "short"},
+		},
+		Duplicates: []health.Duplicate{
+			{ValueHash: "h1", Locations: []health.Location{{FilePath: "a.yaml", KeyPath: "k"}}},
+		},
+		StaleFiles: []health.StaleFile{
+			{FilePath: "x.yaml", LastCommitTime: time.Now(), DaysSince: 100},
+			{FilePath: "y.yaml", LastCommitTime: time.Now(), DaysSince: 200},
+			{FilePath: "z.yaml", LastCommitTime: time.Now(), DaysSince: 300},
+		},
+		Errors: []string{"locked.yaml: decrypt failed"}, // excluded from FindingCount
+	})
+	require.Equal(t, 6, m.FindingCount(),
+		"FindingCount = WeakSecrets(2) + Duplicates(1) + StaleFiles(3); errors excluded")
 }

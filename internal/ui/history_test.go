@@ -6,10 +6,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	gitpkg "github.com/caesarakalaeii/sops-tui/internal/git"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
+
+// Compile-time interface compliance: HistoryModel implements keys.Hinter.
+var _ keys.Hinter = ui.HistoryModel{}
 
 // TestHistoryModel runs all HistoryModel rendering tests.
 func TestHistoryModel(t *testing.T) {
@@ -93,4 +98,37 @@ func TestHistoryModel(t *testing.T) {
 		// Should NOT show the footer or entries while loading
 		assert.False(t, strings.Contains(view, "No commits found"), "loading state should not show empty state")
 	})
+}
+
+// TestHistoryHints verifies HistoryModel.Hints() returns the 5-hint set per D-09.
+func TestHistoryHints(t *testing.T) {
+	m := ui.NewHistoryModel("file.yaml", 80, 24)
+	hints := m.Hints()
+	require.Equal(t, 5, len(hints), "History must expose 5 hints")
+
+	assert.Equal(t, "j", hints[0].Mnemonic)
+	assert.Equal(t, "k", hints[1].Mnemonic)
+	assert.Equal(t, "b", hints[2].Mnemonic)
+	assert.Equal(t, "close history", hints[2].Description)
+	assert.Equal(t, "Esc", hints[3].Mnemonic)
+	assert.Equal(t, "q", hints[4].Mnemonic)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
+}
+
+// TestHistoryModelCommitCount verifies CommitCount returns len(entries).
+func TestHistoryModelCommitCount(t *testing.T) {
+	m := ui.NewHistoryModel("file.yaml", 80, 24)
+	require.Equal(t, 0, m.CommitCount(), "empty model returns zero count")
+
+	entries := []gitpkg.CommitEntry{
+		{ShortHash: "a", RelDate: "1d", Author: "x", Subject: "first"},
+		{ShortHash: "b", RelDate: "2d", Author: "y", Subject: "second"},
+		{ShortHash: "c", RelDate: "3d", Author: "z", Subject: "third"},
+		{ShortHash: "d", RelDate: "4d", Author: "w", Subject: "fourth"},
+	}
+	m.SetEntries(entries)
+	require.Equal(t, 4, m.CommitCount(),
+		"CommitCount must reflect entries count after SetEntries")
 }

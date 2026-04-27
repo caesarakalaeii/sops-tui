@@ -4,9 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// Compile-time interface compliance: HelpModel implements keys.Hinter.
+var _ keys.Hinter = ui.HelpModel{}
 
 // Test 12: View() with ViewFileList context includes file list keybindings.
 func TestHelpViewFileListKeybindings(t *testing.T) {
@@ -54,4 +59,19 @@ func TestHelpViewFooterText(t *testing.T) {
 	view := m.View(ui.ViewFileList)
 	assert.True(t, strings.Contains(view, "Press ? or Esc to close"),
 		"Help view must contain footer 'Press ? or Esc to close', got: %q", view)
+}
+
+// TestHelpHints verifies HelpModel.Hints() returns the 3-hint persistent
+// menu set per D-09: Esc, ?, q.
+func TestHelpHints(t *testing.T) {
+	m := ui.NewHelpModel(80, 24)
+	hints := m.Hints()
+	require.Equal(t, 3, len(hints), "Help must expose 3 hints")
+	assert.Equal(t, "Esc", hints[0].Mnemonic)
+	assert.Equal(t, "close help", hints[0].Description)
+	assert.Equal(t, "?", hints[1].Mnemonic)
+	assert.Equal(t, "q", hints[2].Mnemonic)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
 }

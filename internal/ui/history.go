@@ -16,6 +16,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	gitpkg "github.com/caesarakalaeii/sops-tui/internal/git"
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
 // HistoryModel renders a full-screen overlay showing git commit history for a file.
@@ -138,4 +139,21 @@ func (m HistoryModel) View() string {
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)
+}
+
+// CommitCount returns the number of commit entries currently loaded.
+// Consumed by AppModel.titleForState() to render "History (N)" per D-15.
+func (m HistoryModel) CommitCount() int {
+	return len(m.entries)
+}
+
+// Hints returns the 5-hint persistent menu set for HistoryModel per D-09.
+func (m HistoryModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "j", Description: "scroll down", Visible: true},
+		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "b", Description: "close history", Visible: true},
+		{Mnemonic: "Esc", Description: "close history", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
 }

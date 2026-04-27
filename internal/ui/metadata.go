@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
 // MetadataContent holds SOPS metadata for display in the overlay.
@@ -177,4 +179,15 @@ func (m MetadataModel) View() string {
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)
+}
+
+// Hints returns the 5-hint persistent menu set for MetadataModel per D-09.
+func (m MetadataModel) Hints() []keys.MenuHint {
+	return []keys.MenuHint{
+		{Mnemonic: "j", Description: "scroll down", Visible: true},
+		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "i", Description: "close metadata", Visible: true},
+		{Mnemonic: "Esc", Description: "close metadata", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
 }

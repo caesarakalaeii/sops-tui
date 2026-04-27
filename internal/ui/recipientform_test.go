@@ -8,8 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
+
+// Compile-time interface compliance: RecipientFormModel implements keys.Hinter.
+var _ keys.Hinter = ui.RecipientFormModel{}
 
 // TestRecipientFormModel runs all RecipientFormModel rendering and interaction tests.
 func TestRecipientFormModel(t *testing.T) {
@@ -110,6 +114,22 @@ func TestRecipientFormModel(t *testing.T) {
 		m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 		assert.False(t, m.IsActive(), "IsActive should be false after Esc")
 	})
+}
+
+// TestRecipientFormHints verifies RecipientFormModel.Hints() returns the
+// 2-hint persistent menu set per D-09: Enter/Esc.
+func TestRecipientFormHints(t *testing.T) {
+	m := ui.NewRecipientFormModel(80, 24)
+	hints := m.Hints()
+	require.Equal(t, 2, len(hints), "RecipientForm must expose 2 hints")
+
+	assert.Equal(t, "Enter", hints[0].Mnemonic)
+	assert.Equal(t, "confirm", hints[0].Description)
+	assert.Equal(t, "Esc", hints[1].Mnemonic)
+	assert.Equal(t, "cancel", hints[1].Description)
+	for i, h := range hints {
+		assert.True(t, h.Visible, "hint %d must default Visible=true", i)
+	}
 }
 
 // contains is a helper for case-sensitive substring check used in validation tests.
