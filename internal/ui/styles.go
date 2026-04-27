@@ -210,4 +210,38 @@ var (
 
 	// Phase 5: Recipient numbered list index (D-03)
 	RecipientIndexStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 7: Chrome primitives (D-05, D-12, D-13, D-22)
+	// All declared as package-level vars to satisfy the "no lipgloss.NewStyle()
+	// inside View()" discipline enforced by TestViewNoNewStyle (Plan 3).
+
+	// MenuKeyStyle renders the mnemonic column "[key]" labels in accent color (D-05).
+	MenuKeyStyle = lipgloss.NewStyle().Foreground(ColorAccent)
+
+	// MenuDescStyle renders the description column text in default foreground (D-05).
+	MenuDescStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// MenuCellStyle is the per-cell outer style applied via StyleFunc(row, col).
+	// Currently a no-op; reserved for Phase 10 per-column tweaks (padding, alignment).
+	MenuCellStyle = lipgloss.NewStyle()
+
+	// LogoStyleInfo is the Phase 7 unconditional logo color (D-02).
+	// Phase 10 (UI-03) flips between Info/Warn/Error based on aggregate severity.
+	LogoStyleInfo = lipgloss.NewStyle().Foreground(ColorAccent)
+
+	// LogoStyleWarn is declared in Phase 7 for Phase 10 severity coupling (UI-03).
+	LogoStyleWarn = lipgloss.NewStyle().Foreground(ColorWarning)
+
+	// LogoStyleError is declared in Phase 7 for Phase 10 severity coupling (UI-03).
+	LogoStyleError = lipgloss.NewStyle().Foreground(ColorError)
+
+	// TitledBorderStyle is the uniform titled-border wrapper for every primary view (D-12, D-13).
+	// NormalBorder() (not RoundedBorder) per UI-15 — TestChromeNormalBorderOnly enforces this.
+	TitledBorderStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(ColorMuted).
+				Padding(0, 1)
+
+	// TitleLabelStyle renders the title text inside the border top-line overlay (muted).
+	TitleLabelStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 )
