@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7 complete (chrome skeleton — logo + menu + titled borders + hint dispatcher + 4 grep-gates + 5ms bench-budget all green)
-last_updated: "2026-04-27T14:03:08.950Z"
-last_activity: 2026-04-27 -- Phase 7.1 planning complete
+stopped_at: Phase 7.1 Plan 04 complete (BFS reachability walker + 3 model.go NewStyle lifts + sub-model walker — both walkers report 0 violations; WR-01 closed)
+last_updated: "2026-04-27T15:00:00.000Z"
+last_activity: 2026-04-27 -- Phase 7.1 Plan 04 complete (BFS reachability AST walker + 3 NewStyle lifts + sub-model walker)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 27
-  completed_plans: 22
-  percent: 81
+  completed_plans: 26
+  percent: 96
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 07 (chrome-skeleton) — COMPLETE; Phase 8 next
-Plan: 3 of 3 (Plans 01 + 02 + 03 complete)
-Status: Ready to execute
-Last activity: 2026-04-27 -- Phase 7.1 planning complete
+Phase: 07.1 (chrome-gap-closure) — Plan 04 of 5 complete; Plan 05 next
+Plan: 4 of 5 (Plans 01 + 02 + 03 + 04 complete)
+Status: Ready to execute Plan 05 (narrow-terminal chrome clamp)
+Last activity: 2026-04-27 -- Phase 7.1 Plan 04 complete (BFS reachability walker + 3 NewStyle lifts + sub-model walker)
 
-Progress (v1.1 only): [███████░░░] 33% (2/6 phases complete, 5/15 plans complete)
+Progress (v1.1 only): [████████░░] 40% (2/6 phases complete, 9/15 plans complete)
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress (v1.1 only): [███████░░░] 33% (2/6 phases complete,
 | Phase 07 P01 | 6m | 3 tasks | 7 files |
 | Phase 07 P02 | 5m | 2 tasks | 3 files |
 | Phase 07 P03 | 16m | 3 tasks | 24 files |
+| Phase 07.1 P04 | 8m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -118,10 +119,16 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 07 Plan 03]: renderRecipientList migrated per D-19 — returns inner body only; magic m.height-4 constant eliminated; AppModel.View() wraps via WrapTitled with bodyDims envelope. Phase 6 deferred TODO closed.
 - [Phase 07 Plan 03]: stateFormatMenu opts out of WrapTitled — renderFormatMenu (legacy Phase 3) renders its own RoundedBorder modal overlay; wrapping it would double-border. View() switch arm assigns body and gates the wrap accordingly. Legacy RoundedBorder is outside chrome scope (TestChromeNormalBorderOnly scans only chrome/logo/menu.go).
 - [Phase 07 Plan 03]: Crumbs slot conditionally joined — View() builds the sections slice dynamically based on crumbsHeight(m) > 0. Phase 7 keeps crumbsHeight=0 so the empty crumbs row is skipped (avoiding +1 row offset from JoinVertical of empty string). Phase 8 just flips crumbsHeight and replaces "" with rendered chip row — no View() rewrite needed.
+- [Phase 07.1 Plan 04]: TestViewNoNewStyle rewritten as two-pass BFS reachability walker — Pass 1 walks non-test files in internal/app/, collects FuncDecl map + caller→callees edge map (both ast.Ident and ast.SelectorExpr trailing-name edges); Pass 2 BFSes from "View"; Pass 3 ast.Inspects each reachable body for lipgloss.NewStyle() SelectorExpr matches. Test-file exclusion via !HasSuffix("_test.go") prevents false reachability extension. Closes WR-01.
+- [Phase 07.1 Plan 04]: 3 NewStyle calls in model.go lifted to package vars — FormatMenuOverlayStyle (RoundedBorder + BorderForeground + Background + Padding chain; Width/Height stay at call site because per-frame), RecipientListFooterStyle (Foreground(ColorMuted)), RecipientPromptStyle (Foreground(ColorMuted)). FormatMenuOverlayStyle is the ONLY remaining RoundedBorder use after Phase 7.1's strip — permitted because stateFormatMenu opts OUT of WrapTitled (modal overlay rule).
+- [Phase 07.1 Plan 04]: TestSubmodelViewsNoNewStyle added in internal/ui/submodel_view_no_newstyle_test.go — per-file FuncDecl scan over an explicit 8-file submodelFiles allowlist (filelist, detail, help, diff, metadata, health, history, recipientform). Sub-models are leaf renderers; BFS would add no value. Companion to internal/app's BFS walker.
+- [Phase 07.1 Plan 04]: Cross-walker invariant achieved — 0 lipgloss.NewStyle() calls reachable from any View() in the codebase. Both walkers (TestViewNoNewStyle BFS in app + TestSubmodelViewsNoNewStyle FuncDecl scan in ui) report 0 violations.
+- [Phase 07.1 Plan 04]: Task 1 RED + Task 2 GREEN landed in separate commits per plan Option A (a8ce35e + d2f945e) — captures WR-01 issue + fix arc cleanly in git history rather than collapsing to a single commit. Task 3 (sub-model walker) committed as 00fbec8. All 3 commits cryptographically signed (G status); GPG-signing checkpoint resolved by orchestrator priming gpg-agent.
 
 ### Pending Todos
 
 - ~~Execute Phase 07 Plan 03~~ CLOSED 2026-04-27 by Phase 07 Plan 03 — chromeHeight flipped, AppModel.View() rewritten with chrome composition, Hints() on 8 sub-models, dispatcher tested across 14 branches, 4 grep-gates + bench-budget enforce discipline, 4 resize goldens refreshed.
+- ~~Phase 7 WR-01: AST walker scope failure (TestViewNoNewStyle missed helpers reachable from View())~~ CLOSED 2026-04-27 by Phase 7.1 Plan 04 — BFS reachability walker rewrite + 3 model.go NewStyle lifts + sub-model walker; both walkers report 0 violations.
 - Manual UAT per Phase 06 D-15 / CLAUDE.md k9s-visual-parity — cycle through file list / detail / help / diff / metadata / history / health / recipient form at 40x12, 80x24, 120x40, AND 200x60 in a real terminal to confirm chrome aligns + no content paints under the status bar (deferred from executor; belongs to `/gsd-verify-work`)
 - Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 - Phase 10/11: revisit BenchmarkAppView budget — currently 5 ms with 56% headroom over ~2.8 ms/op measurement; D-18 caching fallback (model-level cache keyed on (state, recipientAction, IsSearchActive, width)) can tighten this if user-perceived latency matters
@@ -145,6 +152,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-27T12:41:50Z
-Stopped at: Phase 7 complete (chrome skeleton — logo + menu + titled borders + hint dispatcher + 4 grep-gates + 5ms bench-budget all green)
-Resume file: ready for /gsd-verify-work smoke + Phase 08 (header info panel + crumb chips) planning
+Last session: 2026-04-27T15:00:00Z
+Stopped at: Phase 7.1 Plan 04 complete (BFS reachability walker + 3 model.go NewStyle lifts + sub-model walker — both walkers report 0 violations; WR-01 closed)
+Resume file: ready for Phase 7.1 Plan 05 (narrow-terminal chrome clamp — RenderChrome 3-tier fallback + RenderMenu manual columns + 4 chrome composition tests + refresh 40x12+80x24 goldens + update 07-VERIFICATION.md frontmatter)

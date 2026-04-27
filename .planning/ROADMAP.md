@@ -213,10 +213,10 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 07.1-01-PLAN.md — Restore SC5 governance (revert ROADMAP+test gate, [APPROVED] DISCUSSION-LOG entry, 07-03-SUMMARY closure pointer)
-- [ ] 07.1-02-PLAN.md — Align menu_test.go allowlist with chrome_test.go canonical + document quit-hint suppression in hints.go + model.go + 07-UI-SPEC.md
-- [ ] 07.1-03-PLAN.md — Strip nested RoundedBorder envelope from 6 sub-models, lift surviving NewStyle calls, refresh 120x40+200x60 goldens
-- [ ] 07.1-04-PLAN.md — Rewrite TestViewNoNewStyle as BFS reachability walker, lift 3 model.go NewStyle calls, add sub-model AST walker in internal/ui
+- [x] 07.1-01-PLAN.md — Restore SC5 governance (revert ROADMAP+test gate, [APPROVED] DISCUSSION-LOG entry, 07-03-SUMMARY closure pointer)
+- [x] 07.1-02-PLAN.md — Align menu_test.go allowlist with chrome_test.go canonical + document quit-hint suppression in hints.go + model.go + 07-UI-SPEC.md
+- [x] 07.1-03-PLAN.md — Strip nested RoundedBorder envelope from 6 sub-models, lift surviving NewStyle calls, refresh 120x40+200x60 goldens
+- [x] 07.1-04-PLAN.md — Rewrite TestViewNoNewStyle as BFS reachability walker, lift 3 model.go NewStyle calls, add sub-model AST walker in internal/ui
 - [ ] 07.1-05-PLAN.md — Narrow-terminal chrome clamp (RenderChrome 3-tier fallback + RenderMenu manual columns), 4 new chrome composition tests, refresh 40x12+80x24 goldens, update 07-VERIFICATION.md frontmatter
 
 **UI hint**: yes
@@ -286,8 +286,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 4. Clipboard & Git | 3/3 | Complete | - |
 | 5. Power Features | 4/4 | Complete | - |
 | 6. Layout Groundwork | 2/2 | Complete | 2026-04-24 |
-| 7. Chrome Skeleton | 1/3 | Executing | - |
-| 7.1. Chrome Gap Closure (INSERTED) | 0/5 | Planned | - |
+| 7. Chrome Skeleton | 3/3 | Complete | 2026-04-27 |
+| 7.1. Chrome Gap Closure (INSERTED) | 4/5 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
 | 10. Theming + Accessibility | 0/3 | Planned | - |
