@@ -1936,12 +1936,12 @@ func (m AppModel) renderRecipientList() string {
 		lines = append(lines, ui.RecipientIndexStyle.Render(fmt.Sprintf("[%d]", i+1))+" "+r)
 	}
 	if truncated {
-		lines = append(lines, lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(
+		lines = append(lines, ui.RecipientListFooterStyle.Render(
 			fmt.Sprintf("  (showing first %d of %d recipients)", maxDisplay, len(m.recipientList)),
 		))
 	}
 	displayCount := len(display)
-	prompt := lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(
+	prompt := ui.RecipientPromptStyle.Render(
 		fmt.Sprintf("Select recipient to remove (1-%d):", displayCount),
 	)
 	footer := ui.ConfirmPromptStyle.Render("1-"+fmt.Sprintf("%d", displayCount)) +
@@ -1982,11 +1982,13 @@ func renderFormatMenu(cursor, width, height int) string {
 		boxHeight = 1
 	}
 
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ui.ColorMuted).
-		Background(ui.ColorSurface).
-		Padding(1, ui.SpaceMD).
+	// Phase 7.1 D-109: deterministic style chain (Border + BorderForeground
+	// + Background + Padding) lifted to ui.FormatMenuOverlayStyle so the
+	// BFS walker (TestViewNoNewStyle in chrome_test.go) reports zero
+	// reachable lipgloss.NewStyle() calls. Width/Height stay at the call
+	// site because they vary per-frame; lipgloss.Style is value-copy so
+	// chaining returns a NEW style without mutating the package var.
+	return ui.FormatMenuOverlayStyle.
 		Width(boxWidth).
 		Height(boxHeight).
 		Render(inner)

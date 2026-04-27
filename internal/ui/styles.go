@@ -281,4 +281,41 @@ var (
 	// could alias GitNoRepoStyle but kept as a separate name to document
 	// intent for Phase 8+).
 	MetadataNoneStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 7.1 D-109: package vars lifted out of internal/app/model.go
+	// helpers reachable from AppModel.View() (renderRecipientList,
+	// renderFormatMenu) so the BFS reachability walker
+	// TestViewNoNewStyle reports zero violations across the View() call
+	// graph. See internal/app/chrome_test.go for the walker.
+
+	// FormatMenuOverlayStyle is the modal RoundedBorder envelope for the
+	// stateFormatMenu overlay (Phase 7.1 D-109 lift from
+	// internal/app/model.go renderFormatMenu helper). Width and Height
+	// are applied at the call site because they vary per-frame; only the
+	// deterministic chain (Border + BorderForeground + Background +
+	// Padding) is the var.
+	//
+	// Note: this is the ONLY remaining RoundedBorder use after Phase 7.1's
+	// strip of the 6 sub-model nested borders. RoundedBorder is permitted
+	// here because stateFormatMenu is a transient overlay modal that
+	// explicitly opts OUT of WrapTitled at model.go (the rule "WrapTitled
+	// is the single border source" applies to primary views, not transient
+	// overlay modals).
+	FormatMenuOverlayStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ColorMuted).
+				Background(ColorSurface).
+				Padding(1, SpaceMD)
+
+	// RecipientListFooterStyle is the muted "(showing first N of M)"
+	// footer in renderRecipientList (Phase 7.1 D-109 lift from model.go
+	// renderRecipientList). Same chain as OverlayMutedFooterStyle but
+	// kept as a separate name so Phase 8+ can diverge them without
+	// touching call sites.
+	RecipientListFooterStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// RecipientPromptStyle is the muted "Select recipient to remove"
+	// prompt in renderRecipientList (Phase 7.1 D-109 lift from model.go
+	// renderRecipientList).
+	RecipientPromptStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 )
