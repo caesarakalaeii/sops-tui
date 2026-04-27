@@ -190,6 +190,12 @@ Plans:
   4. Only `lipgloss.NormalBorder()` appears in chrome rendering code; persistent chrome is ASCII-only (emoji-free); a CI grep-gate prevents regressions
   5. `AppModel.View()` composes `[header][crumbs-placeholder][titled body][status bar]` and `BenchmarkAppView` stays ≤ 50 µs/op at 200×60 without any `lipgloss.NewStyle()` calls inside `View()`
 **Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Primitives: MenuHint/Hinter/HintsFromBindings + 5 inline hint-set vars, 6-row ASCII logo (Candidate A), RenderMenu via lipgloss/v2/table, 8 new style vars in styles.go
+- [ ] 07-02-PLAN.md — Chrome composer: RenderChrome + WrapTitled + overlayTitle string-splice (closes STATE.md overlayTitle research gap), corners/width/truncation/empty-title unit tests
+- [ ] 07-03-PLAN.md — Integration: flip chromeHeight, rewrite View(), Hints() on 8 sub-models + CommitCount/FindingCount accessors, menuHints dispatcher, titleForState, migrate magic -4, 3 grep-gates + bench budget, 4 golden refresh
+
 **UI hint**: yes
 
 ### Phase 8: Header Info Panel + Crumb Chips

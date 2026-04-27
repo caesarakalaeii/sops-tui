@@ -1173,27 +1173,29 @@ Both variants satisfy D-25. Recommend 3-commit for bisectability.
 
 **If this table is empty:** Not empty — 8 assumptions. Plan authors should verify A3, A4 during Plan 3 execution.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All four questions resolved 2026-04-24 in concert with the gsd-planner output. Resolutions are reflected in 07-01-PLAN.md, 07-02-PLAN.md, and 07-03-PLAN.md.
 
 1. **`HistoryModel.CommitCount()` and `HealthModel.FindingCount()` accessor existence**
    - What we know: CONTEXT.md D-15 specifies these accessors for title counts
-   - What's unclear: Code inspection didn't locate them in current sub-models (they exist conceptually via `m.history.CommitCount()` references in CONTEXT but not grep-verified)
-   - Recommendation: Plan 3 first task verifies with `grep -n "CommitCount\|FindingCount" internal/ui/{history,health}.go`. Add one-line accessor if missing: `func (m HistoryModel) CommitCount() int { return len(m.entries) }`.
+   - What was unclear: Code inspection didn't locate them in current sub-models (they exist conceptually via `m.history.CommitCount()` references in CONTEXT but not grep-verified)
+   - **RESOLVED:** Plan 3 Task 1 grep-verifies with `grep -n "CommitCount\|FindingCount" internal/ui/{history,health}.go`. If missing, add one-line accessors: `func (m HistoryModel) CommitCount() int { return len(m.entries) }` and `func (m HealthModel) FindingCount() int { return len(m.findings) }`. Tracked in Plan 3 acceptance criteria.
 
 2. **MenuCellStyle necessity**
    - What we know: D-05 specifies MenuKeyStyle (accent) and MenuDescStyle (fg) only
-   - What's unclear: Whether `table.StyleFunc` return value needs an outer cell style (padding, alignment) beyond the inline-rendered fragments
-   - Recommendation: Plan 1 tries inline-rendered fragments first (simpler); if table output is misaligned, introduce `MenuCellStyle` as third var and document the deviation in Plan 1.
+   - What was unclear: Whether `table.StyleFunc` return value needs an outer cell style (padding, alignment) beyond the inline-rendered fragments
+   - **RESOLVED:** Plan 1 introduces `MenuCellStyle` as a third no-op-style package var (declared as `lipgloss.NewStyle()` baseline) so the `table.StyleFunc` return path always returns a concrete style. Inline-rendered fragments (mnemonic/description) carry their own styling. Documented in 07-UI-SPEC.md §New Style Declarations.
 
-3. **stateRecipientList hint owner**
+3. **stateRecipientList hint owner — D-09 amendment from "9" to "8 sub-models + 1 inline AppModel state"**
    - What we know: D-09 lists RecipientList as one of 9 sub-models; Pitfall 3 above reveals no such sub-model exists
-   - What's unclear: Does Plan 3 still extract a `RecipientListModel` or stick with AppModel inline hints
-   - Recommendation: Stick with AppModel inline hints (`keys.RecipientListHints` package var). Do NOT refactor to a separate sub-model in Phase 7 — that's scope creep. Note in Plan 3 that D-09's "9 sub-models" is effectively "8 sub-models + 1 AppModel-owned state" since RecipientList renders inline.
+   - What was unclear: Does Plan 3 extract a `RecipientListModel` or stick with AppModel inline hints
+   - **RESOLVED:** Stick with AppModel inline hints. Plan 3 implements `Hints()` on **8 sub-models** (FileList, Detail, Help, Diff, Metadata, Health, History, RecipientForm) and uses inline `keys.RecipientListHints` package var for stateRecipientList (rendered inline by `AppModel.renderRecipientList`). NOT a refactor to extract `RecipientListModel` — that would be scope creep. **D-09 is hereby amended:** the "9" reads as "8 sub-models + 1 inline AppModel-owned state" since RecipientList has no sub-model owner. The functional contract (D-09's "Hints() on every interactive state") is preserved verbatim.
 
 4. **Bench-test stability budget on CI**
    - What we know: D-24 specifies 50µs hard gate
-   - What's unclear: CI runner variance — running on a slow GitHub Actions box vs a dev laptop
-   - Recommendation: Start with 50µs gate. If CI flakes >5% of runs, raise to 75µs (still within UI-21 target for Phase 11 formalization).
+   - What was unclear: CI runner variance — running on a slow GitHub Actions box vs a dev laptop
+   - **RESOLVED:** Plan 3 Task 3 implements `TestBenchmarkAppView_UnderBudget` at 50µs/op as the initial gate per D-24. If CI flakes >5% of runs after Phase 7 lands, Phase 11 (UI-21 formal sign-off) is the authorized place to raise the budget to 75µs. Phase 7 plans do NOT pre-emptively raise the budget — D-24 wins.
 
 ## Sources
 
