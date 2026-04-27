@@ -1,24 +1,24 @@
-No SOPS files found
-
-No .sops.yaml discovered in this directory or parents.
-Run sops-tui in a repository with a .sops.yaml configuration.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                      [k/↑]   [K] bulk   ____   ___  ____  ____
+                                      move up re-key    / ___| / _ \|  _ \/ ___|
+                                              selected  \___ \| | | | |_) \___ \
+                                      [j/↓]   [H]        ___) | |_| |  __/ ___) |
+                                      move    health    |____/ \___/|_|   |____/
+                                      down    check                          tui
+                                      [enter/l[?]
+                                      ] open  toggle
+                                              help
+                                      [/]     [q] quit
+                                      search
+                                      [i] file[g] go to
+                                      info    top
+                                      [space] [G] go to
+                                      toggle  bottom
+                                      select
+┌─ Files (0) ──────────────────────────────────────────────────────────────────┐
+│ No SOPS files found                                                          │
+│                                                                              │
+│ No .sops.yaml discovered in this directory or parents.                       │
+│ Run sops-tui in a repository with a .sops.yaml configuration.                │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 sops-tui > files  |  0 items  |  sops:✓ age:✓ .sops.yaml:✓ no git

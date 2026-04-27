@@ -25,16 +25,17 @@ func defaultEnvInternal() ui.EnvStatus {
 }
 
 // TestBodyDims verifies that bodyDims returns the window width and the
-// remaining height after the status bar is subtracted, while the chrome
-// and crumbs stubs return 0 (the Phase 6 invariant).
+// remaining height after the status bar, the live chrome (Phase 7), and
+// the crumbs stub (Phase 8 still 0) are subtracted.
 func TestBodyDims(t *testing.T) {
 	m := NewAppModel(defaultEnvInternal(), "")
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = updated.(AppModel)
 	w, h := bodyDims(m)
 	assert.Equal(t, 80, w, "width must equal m.width")
-	assert.Equal(t, 24-statusBarHeight(m), h,
-		"height must equal model height minus status bar height while chromeHeight and crumbsHeight stubs return 0")
+	expected := 24 - statusBarHeight(m) - chromeHeight(m) - crumbsHeight(m)
+	assert.Equal(t, expected, h,
+		"bodyDims subtracts chrome + crumbs + status bar from model height (chromeHeight is live in Phase 7)")
 }
 
 // TestBodyDimsClampsAtZero verifies bodyDims clamps negative heights to zero.
@@ -45,13 +46,6 @@ func TestBodyDimsClampsAtZero(t *testing.T) {
 	_, h := bodyDims(m)
 	assert.GreaterOrEqual(t, h, 0,
 		"bodyDims must clamp h to >= 0 on short terminals (Pitfall 1)")
-}
-
-// TestChromeHeightReturnsZero — Phase 6 stub invariant. Phase 7 flips this.
-func TestChromeHeightReturnsZero(t *testing.T) {
-	m := NewAppModel(defaultEnvInternal(), "")
-	assert.Equal(t, 0, chromeHeight(m),
-		"Phase 6: chromeHeight is a stub returning 0 until Phase 7")
 }
 
 // TestCrumbsHeightReturnsZero — Phase 6 stub invariant. Phase 8 flips this.

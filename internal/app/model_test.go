@@ -30,16 +30,21 @@ func send(t *testing.T, m tea.Model, msg tea.Msg) tea.Model {
 }
 
 // Test: NewAppModel initializes in stateFileList (the default entry view).
+// Phase 7: View() early-returns empty content when m.width == 0 (Pitfall 5),
+// so tests must propagate a WindowSizeMsg before asserting on View().Content.
 func TestAppModelInitialState(t *testing.T) {
 	m := app.NewAppModel(defaultEnv(), "")
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	// View should not panic and should produce a non-empty View
-	v := m.View()
-	assert.NotEmpty(t, v.Content, "Initial View().Content must not be empty")
+	v := updated.View()
+	assert.NotEmpty(t, v.Content, "Initial View().Content must not be empty after WindowSizeMsg")
 }
 
 // Test: "?" key toggles to stateHelp and back.
 func TestAppModelHelpToggle(t *testing.T) {
 	m := app.NewAppModel(defaultEnv(), "")
+	// Phase 7 Pitfall 5: View() early-returns empty when width=0; size first.
+	m = send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24}).(app.AppModel)
 
 	// Press ? → should enter help state
 	m2 := send(t, m, tea.KeyPressMsg{Code: '?'})
@@ -69,6 +74,8 @@ func TestAppModelQuitKey(t *testing.T) {
 // Test: "esc" from stateDetail returns to stateFileList.
 func TestAppModelEscFromDetail(t *testing.T) {
 	m := app.NewAppModel(defaultEnv(), "")
+	// Phase 7 Pitfall 5: View() early-returns empty when width=0; size first.
+	m = send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24}).(app.AppModel)
 
 	// Simulate entering detail (need an item selected first — use WindowSizeMsg then navigate)
 	// Since the file list is empty, we cannot drill in with enter/l.
@@ -91,6 +98,8 @@ func TestAppModelEscFromDetail(t *testing.T) {
 // Test: "esc" from stateHelp returns to prevState.
 func TestAppModelEscFromHelp(t *testing.T) {
 	m := app.NewAppModel(defaultEnv(), "")
+	// Phase 7 Pitfall 5: View() early-returns empty when width=0; size first.
+	m = send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24}).(app.AppModel)
 
 	// Enter help
 	m2 := send(t, m, tea.KeyPressMsg{Code: '?'})
@@ -156,6 +165,8 @@ func TestAppModelFilesDiscoveredMsgError(t *testing.T) {
 // Test: "/" key activates search in file list.
 func TestAppModelSlashActivatesSearch(t *testing.T) {
 	m := app.NewAppModel(defaultEnv(), "")
+	// Phase 7 Pitfall 5: View() early-returns empty when width=0; size first.
+	m = send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24}).(app.AppModel)
 	// Populate with some files
 	files := []sops.DiscoveredFile{
 		{Name: "secrets/prod.yaml", AbsPath: "/repo/secrets/prod.yaml", IsEncrypted: true},

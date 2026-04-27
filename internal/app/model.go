@@ -1279,47 +1279,81 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, statusCmd
 }
 
-// View composes the terminal frame: main content stacked above status bar.
-// AltScreen is always true per the design decision for a full-screen TUI.
+// View composes the terminal frame: chrome + crumbs-placeholder + titled
+// body + status bar, returned as a tea.View with AltScreen=true.
+//
+// Composition (D-17):
+//  1. Early-return empty tea.View when m.width == 0 || m.height == 0 (Pitfall 5).
+//  2. Derive chrome inputs: hints via menuHints(), title via titleForState().
+//  3. Render sub-model body at bodyDims(m).
+//  4. Wrap body via ui.WrapTitled (NormalBorder + ColorMuted + Padding(0,1)).
+//     stateFormatMenu opts out — it renders its own RoundedBorder overlay.
+//  5. JoinVertical chrome + (optional crumbs) + wrapped + status bar.
+//
+// Pitfall 2 discipline: no lipgloss.NewStyle() inside this body or any
+// helper lambda. Every style is a package var in internal/ui/styles.go.
+// TestViewNoNewStyle (chrome_test.go) AST-walks this body to enforce.
 func (m AppModel) View() tea.View {
-	// Render main content based on active state
-	statusBar := m.status.View(m.width)
-	_, mainH := bodyDims(m)
-
-	var content string
-	switch m.state {
-	case stateFileList:
-		content = m.fileList.View()
-	case stateDetail:
-		content = m.detail.View()
-	case stateHelp:
-		// Contextual: use prevState so the overlay knows which keybindings to show
-		content = m.help.View(ui.ViewState(m.prevState))
-	case stateMetadata:
-		content = m.metadata.View()
-	case stateDiff:
-		content = m.diff.View()
-	case stateFormatMenu:
-		content = renderFormatMenu(m.formatMenuCursor, m.width, mainH)
-	case stateHistory:
-		content = m.history.View()
-	case stateHealth:
-		content = m.health.View()
-	case stateRecipientForm:
-		content = m.recipientForm.View()
-	case stateRecipientConfirm:
-		content = m.diff.View()
-	case stateRecipientList:
-		content = m.renderRecipientList()
-	case stateBulkReKeyConfirm:
-		content = m.diff.View()
+	if m.width == 0 || m.height == 0 {
+		v := tea.NewView("")
+		v.AltScreen = true
+		return v
 	}
 
-	// Pad or constrain main content to fill available height
-	body := lipgloss.NewStyle().Height(mainH).Render(content)
+	hints := m.menuHints()
+	title := m.titleForState()
 
-	// Stack body above status bar
-	full := lipgloss.JoinVertical(lipgloss.Left, body, statusBar)
+	w, h := bodyDims(m)
+
+	var body string
+	switch m.state {
+	case stateFileList:
+		body = m.fileList.View()
+	case stateDetail:
+		body = m.detail.View()
+	case stateHelp:
+		body = m.help.View(ui.ViewState(m.prevState))
+	case stateMetadata:
+		body = m.metadata.View()
+	case stateDiff:
+		body = m.diff.View()
+	case stateFormatMenu:
+		body = renderFormatMenu(m.formatMenuCursor, w, h)
+	case stateHistory:
+		body = m.history.View()
+	case stateHealth:
+		body = m.health.View()
+	case stateRecipientForm:
+		body = m.recipientForm.View()
+	case stateRecipientConfirm:
+		body = m.diff.View()
+	case stateRecipientList:
+		body = m.renderRecipientList()
+	case stateBulkReKeyConfirm:
+		body = m.diff.View()
+	}
+
+	// stateFormatMenu renders its own bordered overlay (legacy Phase 3 modal);
+	// wrapping it in WrapTitled would double-border the content.
+	var wrapped string
+	if m.state == stateFormatMenu {
+		wrapped = body
+	} else {
+		wrapped = ui.WrapTitled(title, body, w, h)
+	}
+
+	chrome := ui.RenderChrome(hints, ui.LogoInfo, m.width)
+	statusBar := m.status.View(m.width)
+
+	// Conditional join: omit the crumbs-placeholder slot in Phase 7 because
+	// JoinVertical of an empty string would still consume one row. Phase 8
+	// flips crumbsHeight and unconditionally appends the chip row here.
+	sections := []string{chrome}
+	if crumbsHeight(m) > 0 {
+		sections = append(sections, "") // Phase 8 will replace with rendered crumbs row.
+	}
+	sections = append(sections, wrapped, statusBar)
+	full := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
 	v := tea.NewView(full)
 	v.AltScreen = true
@@ -1409,12 +1443,90 @@ func bodyDims(m AppModel) (w, h int) {
 	return w, h
 }
 
+// menuHints returns the persistent-menu hint set for the current
+// (state, recipientAction, IsSearchActive) tuple per D-10 / Pitfall 3.
+// Search-active override per D-11 takes precedence over the default
+// stateFileList dispatch. Sub-model Hints() methods are queried directly;
+// stateRecipientList and stateFormatMenu use inline package-var hint
+// sets since neither has an owning sub-model (Pitfall 3 for RecipientList;
+// D-09 for FormatMenu).
+func (m AppModel) menuHints() []keys.MenuHint {
+	if m.state == stateFileList && m.fileList.IsSearchActive() {
+		return keys.FileListSearchHints
+	}
+	switch m.state {
+	case stateFileList:
+		return m.fileList.Hints()
+	case stateDetail:
+		return m.detail.Hints()
+	case stateMetadata:
+		return m.metadata.Hints()
+	case stateDiff:
+		return m.diff.Hints()
+	case stateRecipientConfirm:
+		return keys.RecipientConfirmHints
+	case stateBulkReKeyConfirm:
+		return keys.BulkReKeyConfirmHints
+	case stateHelp:
+		return m.help.Hints()
+	case stateHistory:
+		return m.history.Hints()
+	case stateHealth:
+		return m.health.Hints()
+	case stateRecipientForm:
+		return m.recipientForm.Hints()
+	case stateRecipientList:
+		return keys.RecipientListHints
+	case stateFormatMenu:
+		return keys.FormatMenuHints
+	}
+	return nil
+}
+
+// titleForState returns the title string for the current state per D-15.
+// Count-bearing titles use fmt.Sprintf with the sub-model accessor;
+// contextual views use a subject suffix; static views use the view name only.
+// Health uses the unit-ful "(N findings)" suffix deliberately per user
+// preview selection — do not normalise to bare "(N)".
+func (m AppModel) titleForState() string {
+	switch m.state {
+	case stateFileList:
+		return fmt.Sprintf("Files (%d)", m.fileList.ItemCount())
+	case stateDetail:
+		return "Detail: " + m.currentFile.Name
+	case stateMetadata:
+		return "Metadata"
+	case stateDiff, stateRecipientConfirm, stateBulkReKeyConfirm:
+		return "Diff"
+	case stateHelp:
+		return "Help"
+	case stateHistory:
+		return fmt.Sprintf("History (%d)", m.history.CommitCount())
+	case stateHealth:
+		return fmt.Sprintf("Health (%d findings)", m.health.FindingCount())
+	case stateRecipientList:
+		return fmt.Sprintf("Recipients (%d)", len(m.recipientList))
+	case stateRecipientForm:
+		return "RecipientForm"
+	case stateFormatMenu:
+		return "Format"
+	}
+	return ""
+}
+
 // chromeHeight returns the rendered height of the header chrome in terminal rows.
-// Phase 6: stub returning 0 (no chrome rendered yet).
-// Phase 7: flipped to the real rendered height of the logo + menu + info panel.
+// Phase 7: flipped from the Phase 6 stub. Computes the real height from
+// ui.RenderChrome's output so the info-panel placeholder + menu + logo
+// alignment is driven by the same render path that View() uses.
+//
+// First-frame safety: returns 0 when m.width == 0 so bodyDims doesn't
+// over-subtract before the first WindowSizeMsg arrives.
 func chromeHeight(m AppModel) int {
-	_ = m
-	return 0
+	if m.width == 0 {
+		return 0
+	}
+	chrome := ui.RenderChrome(m.menuHints(), ui.LogoInfo, m.width)
+	return lipgloss.Height(chrome)
 }
 
 // crumbsHeight returns the rendered height of the breadcrumb chip row.
@@ -1832,24 +1944,11 @@ func (m AppModel) renderRecipientList() string {
 		" select   " + ui.ConfirmPromptStyle.Render("[esc]") + " cancel"
 	inner := title + "\n\n" + strings.Join(lines, "\n") + "\n\n" + prompt + "\n\n" + footer
 
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	// TODO(phase-7): replace magic -4 with a named modal-frame constant or
-	// bodyDims usage once modal chrome lands.
-	boxHeight := m.height - 4
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ui.ColorMuted).
-		Background(ui.ColorSurface).
-		Padding(1, ui.SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	// Phase 7 D-19: renderRecipientList returns the inner body only.
+	// AppModel.View() wraps this via ui.WrapTitled("Recipients (N)", body, w, h).
+	// The previous magic-height constant and the lipgloss border call are gone —
+	// border math moves to WrapTitled which uses bodyDims(m) for the envelope.
+	return inner
 }
 
 // renderFormatMenu renders the format selection menu overlay for ambiguous rotation.
