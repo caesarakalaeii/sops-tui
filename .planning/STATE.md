@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7 context gathered
-last_updated: "2026-04-27T11:58:19.360Z"
-last_activity: 2026-04-27 -- Phase 07 execution started
+stopped_at: Phase 7 Plan 01 complete (primitives landed)
+last_updated: "2026-04-27T12:06:27Z"
+last_activity: 2026-04-27 -- Phase 07 Plan 01 complete (MenuHint contract + RenderLogo + RenderMenu primitives)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 22
-  completed_plans: 19
-  percent: 86
+  completed_plans: 20
+  percent: 91
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v1.1 — k9s visual parity
 Phase: 07 (chrome-skeleton) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3 (Plan 01 complete)
 Status: Executing Phase 07
-Last activity: 2026-04-27 -- Phase 07 execution started
+Last activity: 2026-04-27 -- Phase 07 Plan 01 complete (MenuHint contract + RenderLogo + RenderMenu primitives)
 
-Progress (v1.1 only): [██░░░░░░░░] 13% (1/6 phases complete, 2/15 plans complete)
+Progress (v1.1 only): [███░░░░░░░] 20% (1/6 phases complete, 3/15 plans complete)
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress (v1.1 only): [██░░░░░░░░] 13% (1/6 phases complete,
 *Updated after each plan completion*
 | Phase 06 P01 | 8m | 3 tasks | 7 files |
 | Phase 06 P02 | 8m | 2 tasks | 8 files |
+| Phase 07 P01 | 6m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -98,12 +99,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 06 Plan 02]: View() outlier collapsed — the plan authorised keeping `statusBarH := lipgloss.Height(statusBar)` if downstream code referenced it; inspection confirmed no other View code reads `statusBarH`, so the local was removed entirely (3 lines out, 1 in).
 - [Phase 06 Plan 02]: Resize goldens show `No SOPS files found` empty-state at all four sizes (NewAppModel with "" sopsYamlPath) — no host paths, no timestamps, no env leakage. Deterministic and review-safe.
 - [Phase 06 Plan 02]: Manual UAT per D-15 (cycle through all sub-views at 40x12 and 200x60) deferred to `/gsd-verify-work` — beyond executor scope (requires real terminal). Automated resize coverage is the empty-state path at four sizes.
+- [Phase 07 Plan 01]: Three primitives shipped additively with zero AppModel changes — internal/keys/hints.go (MenuHint/Hinter/HintsFromBindings + 5 inline hint-set vars), internal/ui/logo.go (LogoStatus enum + 6-row Candidate A art + RenderLogo), internal/ui/menu.go (RenderMenu via lipgloss/v2/table column-major fill). Eight new package-level style vars appended to internal/ui/styles.go (MenuKeyStyle, MenuDescStyle, MenuCellStyle, LogoStyleInfo/Warn/Error, TitledBorderStyle, TitleLabelStyle).
+- [Phase 07 Plan 01]: lipgloss/v2/table package was NOT promoted to direct require — already covered by lipgloss/v2 v2.0.3; go mod tidy was a no-op. go.mod/go.sum unchanged.
+- [Phase 07 Plan 01]: 24 new tests landed (9 keys + 7 logo + 8 menu) — all green; existing 148-test suite remains byte-identical green at every commit (no AppModel changes means resize goldens unaffected).
+- [Phase 07 Plan 01]: Two minor auto-fixes during Task 2 — removed unused lipgloss import from logo.go (Rule 1 build error) and replaced em-dashes (U+2014) in logo.go doc comments with ASCII hyphens (Rule 2 defensive against Plan 3's future TestChromeASCIIOnly grep-gate). Both fixes within Task 2 scope, committed in 0c2f41a.
+- [Phase 07 Plan 01]: TDD red-phase achieved via build errors (test file referencing undefined symbols) rather than runtime assertion failure — stronger gate because it proves the symbols don't exist at all. Three commits: f031ffd (Task 1 hints), 0c2f41a (Task 2 logo + styles), 8f6f0a2 (Task 3 menu).
 
 ### Pending Todos
 
+- Execute Phase 07 Plan 02 (chrome composer + WrapTitled + overlayTitle research) — Plan 01 primitives ready as building blocks
+- Execute Phase 07 Plan 03 (integration: chromeHeight flip, AppModel.View() rewrite, Hints() on 9 sub-models, dispatcher, grep-gates, bench gate, golden refresh)
 - Manual UAT per Phase 06 D-15 — cycle through file list / detail / help / diff / metadata / history / health / recipient form at 40x12 AND 200x60 in a real terminal to confirm no content paints under the status bar at any non-empty sub-view state (deferred from executor; belongs to `/gsd-verify-work`)
-- `/gsd-plan-phase 7` to decompose Phase 7 (Chrome Skeleton) into executable plans
-- Phase 7 research pass recommended before planning — `overlayTitle` string-splice pattern needs reference-implementation extraction from `github.com/charmbracelet/soft-serve/pkg/ui/components/header`
 - Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 
 ### Blockers/Concerns
@@ -124,6 +130,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-24T13:10:55.054Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-chrome-skeleton/07-CONTEXT.md
+Last session: 2026-04-27T12:06:27Z
+Stopped at: Phase 7 Plan 01 complete (primitives landed)
+Resume file: .planning/phases/07-chrome-skeleton/07-02-PLAN.md

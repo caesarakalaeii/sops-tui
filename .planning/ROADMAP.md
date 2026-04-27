@@ -192,7 +192,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Primitives: MenuHint/Hinter/HintsFromBindings + 5 inline hint-set vars, 6-row ASCII logo (Candidate A), RenderMenu via lipgloss/v2/table, 8 new style vars in styles.go
+- [x] 07-01-PLAN.md — Primitives: MenuHint/Hinter/HintsFromBindings + 5 inline hint-set vars, 6-row ASCII logo (Candidate A), RenderMenu via lipgloss/v2/table, 8 new style vars in styles.go
 - [ ] 07-02-PLAN.md — Chrome composer: RenderChrome + WrapTitled + overlayTitle string-splice (closes STATE.md overlayTitle research gap), corners/width/truncation/empty-title unit tests
 - [ ] 07-03-PLAN.md — Integration: flip chromeHeight, rewrite View(), Hints() on 8 sub-models + CommitCount/FindingCount accessors, menuHints dispatcher, titleForState, migrate magic -4, 3 grep-gates + bench budget, 4 golden refresh
 
@@ -263,7 +263,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Clipboard & Git | 3/3 | Complete | - |
 | 5. Power Features | 4/4 | Complete | - |
 | 6. Layout Groundwork | 2/2 | Complete | 2026-04-24 |
-| 7. Chrome Skeleton | 0/3 | Planned | - |
+| 7. Chrome Skeleton | 1/3 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 0/2 | Planned | - |
 | 10. Theming + Accessibility | 0/3 | Planned | - |
