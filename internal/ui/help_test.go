@@ -42,15 +42,22 @@ func TestHelpViewGlobalKeybindings(t *testing.T) {
 	}
 }
 
-// Test 15: View() renders with RoundedBorder and surface background.
-func TestHelpViewHasBorderOrSurface(t *testing.T) {
+// Test 15: View() returns inner content (Phase 7.1 D-112: no inner border).
+// Pre-Phase-7.1 this test asserted RoundedBorder corner characters appeared
+// in HelpModel.View(); the inner-border envelope was stripped per WR-02 so
+// only the outer WrapTitled NormalBorder remains (rendered by AppModel.View
+// at model.go:1342). HelpModel.View() now returns inner content only.
+func TestHelpViewHasNonEmptyContent(t *testing.T) {
 	m := ui.NewHelpModel(120, 40)
 	view := m.View(ui.ViewFileList)
-	// The view should be non-empty and have some structure
+	// The view should be non-empty and contain footer + at least one keybinding line.
 	assert.NotEmpty(t, view, "Help view must not be empty")
-	// Rounded border produces corner characters like ╭ or ╰
-	hasBorder := strings.ContainsAny(view, "╭╮╯╰│─")
-	assert.True(t, hasBorder, "Help view must render with rounded border characters, got: %q", view)
+	assert.True(t, strings.Contains(view, "Press ? or Esc to close"),
+		"Help view must contain the close-prompt footer, got: %q", view)
+	// Phase 7.1 D-112: HelpModel.View() must NOT carry an inner border —
+	// the outer WrapTitled in AppModel.View() owns chrome borders.
+	assert.False(t, strings.ContainsAny(view, "╭╮╯╰"),
+		"HelpModel.View() must NOT emit RoundedBorder corners (single-border framing per WR-02), got: %q", view)
 }
 
 // Test 16: View() footer contains "Press ? or Esc to close".

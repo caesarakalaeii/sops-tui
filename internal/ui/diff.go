@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
@@ -162,26 +161,11 @@ func (m DiffModel) View() string {
 		ConfirmPromptStyle.Render("[n/Esc]") +
 		" cancel"
 
+	// Phase 7.1 D-112: View() returns inner content only; the outer
+	// WrapTitled at AppModel.View() (model.go:1342) is the single border
+	// source. Width/height are still tracked via SetSize for scroll math.
 	inner := title + "\n\n" + content + "\n\n" + footer
-
-	// Full-screen bordered box per UI-SPEC Overlay Layout Contract
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	boxHeight := m.height - 2
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorMuted).
-		Background(ColorSurface).
-		Padding(1, SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	return inner
 }
 
 // Hints returns the 6-hint persistent menu set for DiffModel per D-09.

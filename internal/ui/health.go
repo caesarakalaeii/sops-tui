@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
-
 	"github.com/caesarakalaeii/sops-tui/internal/health"
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
@@ -125,7 +123,7 @@ func (m HealthModel) buildContentLines() []string {
 
 	// Errors footer line
 	if len(m.results.Errors) > 0 {
-		errLine := lipgloss.NewStyle().Foreground(ColorMuted).Render(
+		errLine := OverlayMutedFooterStyle.Render(
 			fmt.Sprintf("%d file(s) skipped -- could not decrypt", len(m.results.Errors)),
 		)
 		lines = append(lines, errLine)
@@ -165,24 +163,10 @@ func (m HealthModel) View() string {
 		inner = title + "\n\n" + content + "\n\n" + footer
 	}
 
-	// Full-screen bordered box per UI-SPEC Overlay Layout Contract
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	boxHeight := m.height - 2
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorMuted).
-		Background(ColorSurface).
-		Padding(1, SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	// Phase 7.1 D-112: View() returns inner content only; the outer
+	// WrapTitled at AppModel.View() (model.go:1342) is the single border
+	// source. Width/height are still tracked via SetSize for scroll math.
+	return inner
 }
 
 // FindingCount returns the total number of health findings — the sum of
