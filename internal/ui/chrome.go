@@ -75,9 +75,12 @@ func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, width int) strin
 // width and height are clamped to minTitledWidth / minTitledHeight so
 // lipgloss never produces a degenerate box.
 //
-// The inner content area is (width - 2) x (height - 2) before the
-// horizontal Padding(0, 1) from TitledBorderStyle - sub-models render
-// their body to that envelope.
+// In lipgloss v2, Style.Width(W).Height(H) on a bordered style sets
+// the OUTER rendered dimensions (border included). The 6-row Phase 7
+// chrome therefore passes the full body envelope (w, h) straight
+// through to TitledBorderStyle.Width(w).Height(h); the horizontal
+// Padding(0, 1) from TitledBorderStyle is absorbed into the inner
+// content area, leaving (width - 4) usable cells per row for the body.
 func WrapTitled(title, body string, width, height int) string {
 	if width < minTitledWidth {
 		width = minTitledWidth
@@ -86,8 +89,8 @@ func WrapTitled(title, body string, width, height int) string {
 		height = minTitledHeight
 	}
 	rendered := TitledBorderStyle.
-		Width(width - 2).
-		Height(height - 2).
+		Width(width).
+		Height(height).
 		Render(body)
 	return overlayTitle(rendered, " "+title+" ")
 }
