@@ -204,9 +204,19 @@ func TestRenderMenu_ASCIIOnlyBody(t *testing.T) {
 	out := ui.RenderMenu(hints, 80)
 	stripped := ansi.Strip(out)
 
+	// Allowlist mirrors internal/app/chrome_test.go:46-54 (TestChromeASCIIOnly,
+	// the canonical chrome ASCII allowlist). NormalBorder() emits SQUARE
+	// corners ┌┐└┘, NOT rounded ╭╮╰╯; per Phase 7 Plan 02 empirical finding.
+	// Drop ╭╮╰╯ — they are never produced by lipgloss.NormalBorder() and
+	// keeping them in the allowlist would silently accept the wrong corner
+	// family if a future change re-enables a border on RenderMenu's table.
 	allowed := map[rune]bool{
 		'\n': true,
-		'─':  true, '│': true, '╭': true, '╮': true, '╰': true, '╯': true,
+		// NormalBorder square corners + horizontals/verticals.
+		'─': true, '│': true, '┌': true, '┐': true, '└': true, '┘': true,
+		// Ellipsis used by ansi.Truncate in overlayTitle (defensive).
+		'…': true,
+		// Arrow runes used in key bindings (defensive; not in menu source today).
 		'↑': true, '↓': true, '←': true, '→': true,
 	}
 	for _, r := range stripped {
