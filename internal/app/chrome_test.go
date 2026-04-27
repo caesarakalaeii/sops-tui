@@ -11,12 +11,14 @@
 package app
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -125,79 +127,147 @@ func TestChromeNormalBorderOnly(t *testing.T) {
 	}
 }
 
-// TestViewNoNewStyle enforces UI-15 + Pitfall 2 (D-22): no
-// lipgloss.NewStyle() call may appear inside AppModel.View()'s body or
-// any nested function literal. Styles must be declared as package vars
-// in internal/ui/styles.go. This is an AST walker over internal/app/model.go.
+// TestViewNoNewStyle enforces UI-15: no lipgloss.NewStyle() allocations
+// inside AppModel.View() OR any helper reachable from View() in the same
+// package. Phase 7.1 D-107: rewrites Phase 7's single-block walker to a
+// two-pass BFS over same-package call edges so helpers (renderRecipientList,
+// renderFormatMenu, etc.) are scanned, not just View()'s direct body.
 //
-// Implementation note: uses ast.Inspect (not ast.Walk) so nested
-// function literals (helper lambdas) are also scanned. A naive Walk
-// over the top-level BlockStmt would miss lambda-embedded NewStyle
-// per Pitfall 2.
+// Pass 1: parse every non-test .go file in internal/app/, collect FuncDecls
+// keyed by name (handles same-package methods on AppModel and standalone
+// helpers); for each FuncDecl, walk its body and collect *ast.CallExpr
+// names — both ident calls (foo()) and selector calls (m.foo() or
+// receiver.foo()), recording only the trailing Sel name when the receiver
+// resolves to the same package.
+//
+// Pass 2: BFS from "View" through the call-edge map; for each reachable
+// function, ast.Inspect its body and report lipgloss.NewStyle() selector
+// calls.
+//
+// Sub-models live in internal/ui — covered by the separate
+// TestSubmodelViewsNoNewStyle in internal/ui/submodel_view_no_newstyle_test.go
+// per CONTEXT.md D-108.
 func TestViewNoNewStyle(t *testing.T) {
 	repoRoot := findRepoRoot(t)
-	path := filepath.Join(repoRoot, "internal/app/model.go")
+	appDir := filepath.Join(repoRoot, "internal", "app")
+
+	// Pass 1: parse non-test files in internal/app/, collect FuncDecls.
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, nil, 0)
-	require.NoError(t, err, "parse model.go")
-
-	var viewBody *ast.BlockStmt
-	for _, decl := range f.Decls {
-		fd, ok := decl.(*ast.FuncDecl)
-		if !ok || fd.Name.Name != "View" || fd.Recv == nil {
-			continue
+	funcs := make(map[string]*ast.FuncDecl) // funcName -> FuncDecl
+	fileOf := make(map[string]string)       // funcName -> file path
+	err := filepath.Walk(appDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
-		if !isAppModelReceiver(fd.Recv) {
-			continue
+		if info.IsDir() {
+			return nil
 		}
-		viewBody = fd.Body
-		break
-	}
-	require.NotNil(t, viewBody, "View() method on AppModel not found in model.go")
-
-	var violations []string
-	ast.Inspect(viewBody, func(n ast.Node) bool {
-		ce, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
+		if !strings.HasSuffix(path, ".go") {
+			return nil
 		}
-		se, ok := ce.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
+		if strings.HasSuffix(path, "_test.go") {
+			return nil // CONTEXT specifics: exclude test files
 		}
-		ident, ok := se.X.(*ast.Ident)
-		if !ok {
-			return true
+		f, parseErr := parser.ParseFile(fset, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
 		}
-		if ident.Name == "lipgloss" && se.Sel.Name == "NewStyle" {
-			pos := fset.Position(ce.Pos())
-			violations = append(violations,
-				"model.go:"+strconv.Itoa(pos.Line)+":"+strconv.Itoa(pos.Column))
+		for _, decl := range f.Decls {
+			fd, ok := decl.(*ast.FuncDecl)
+			if !ok || fd.Body == nil {
+				continue
+			}
+			// Method names collide across receivers in theory; in practice
+			// this package only has AppModel methods + standalone helpers,
+			// no name collisions. If a future package adds a non-AppModel
+			// method named View(), the BFS would falsely follow it; tighten
+			// then.
+			funcs[fd.Name.Name] = fd
+			fileOf[fd.Name.Name] = path
 		}
-		return true
+		return nil
 	})
+	require.NoError(t, err, "walk internal/app for non-test .go files")
+
+	require.Contains(t, funcs, "View", "AppModel.View() FuncDecl not found in internal/app")
+
+	// Pass 1 (continued): collect call edges.
+	edges := make(map[string]map[string]struct{}) // caller -> set of called names
+	for name, fd := range funcs {
+		callees := make(map[string]struct{})
+		ast.Inspect(fd.Body, func(n ast.Node) bool {
+			ce, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			switch fn := ce.Fun.(type) {
+			case *ast.Ident:
+				// Direct call: foo()
+				callees[fn.Name] = struct{}{}
+			case *ast.SelectorExpr:
+				// Selector call: m.foo() or pkg.Foo()
+				// Only follow same-package edges — record the Sel name and
+				// let the BFS resolve it via the funcs map. Cross-package
+				// calls (e.g. ui.RenderChrome) won't have an entry in funcs
+				// and are correctly skipped.
+				callees[fn.Sel.Name] = struct{}{}
+			}
+			return true
+		})
+		edges[name] = callees
+	}
+
+	// Pass 2: BFS from "View".
+	reachable := map[string]bool{"View": true}
+	queue := []string{"View"}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for callee := range edges[cur] {
+			if _, exists := funcs[callee]; !exists {
+				continue // not in this package
+			}
+			if reachable[callee] {
+				continue
+			}
+			reachable[callee] = true
+			queue = append(queue, callee)
+		}
+	}
+
+	// Pass 3: scan each reachable FuncDecl for lipgloss.NewStyle() calls.
+	var violations []string
+	for name := range reachable {
+		fd := funcs[name]
+		ast.Inspect(fd.Body, func(n ast.Node) bool {
+			ce, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			se, ok := ce.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			ident, ok := se.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if ident.Name == "lipgloss" && se.Sel.Name == "NewStyle" {
+				pos := fset.Position(ce.Pos())
+				violations = append(violations, fmt.Sprintf("%s:%d:%d (in %s)",
+					filepath.Base(fileOf[name]), pos.Line, pos.Column, name))
+			}
+			return true
+		})
+	}
+
 	if len(violations) > 0 {
-		t.Fatalf("UI-15 violation: lipgloss.NewStyle() call(s) inside AppModel.View():\n  %s\n\n"+
-			"Declare styles as package vars in internal/ui/styles.go instead.",
+		sort.Strings(violations)
+		t.Fatalf("UI-15 violation: lipgloss.NewStyle() call(s) reachable from AppModel.View():\n  %s\n\n"+
+			"Declare styles as package vars in internal/ui/styles.go instead. "+
+			"Phase 7.1 D-107 BFS walker traverses same-package call edges from View().",
 			strings.Join(violations, "\n  "))
 	}
-}
-
-// isAppModelReceiver reports whether a FuncDecl receiver list is
-// (m AppModel) or (m *AppModel).
-func isAppModelReceiver(recv *ast.FieldList) bool {
-	if recv == nil || len(recv.List) == 0 {
-		return false
-	}
-	typ := recv.List[0].Type
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
-	}
-	ident, ok := typ.(*ast.Ident)
-	if !ok {
-		return false
-	}
-	return ident.Name == "AppModel"
 }
 
 // TestBenchmarkAppView_UnderBudget enforces UI-21 preview / D-24:
