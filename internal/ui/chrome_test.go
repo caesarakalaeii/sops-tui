@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -201,4 +202,108 @@ func TestRenderChrome(t *testing.T) {
 				i, prefix)
 		}
 	})
+}
+
+// fullHintsFixture returns 12 visible MenuHints for chrome composition tests
+// (Phase 7.1 D-120). Mirrors a saturated FileList hint set so RenderMenu
+// fills both columns.
+func fullHintsFixture() []keys.MenuHint {
+	h := make([]keys.MenuHint, 12)
+	for i := 0; i < 12; i++ {
+		h[i] = keys.MenuHint{
+			Mnemonic:    string(rune('a' + i)),
+			Description: fmt.Sprintf("action %d", i),
+			Visible:     true,
+		}
+	}
+	return h
+}
+
+// TestRenderChrome_NarrowFallback asserts the narrow-tier (width < 33)
+// fallback per Phase 7.1 D-116: single-line "press ? for help" stub.
+// Closes WR-03 / 07-VERIFICATION.md Anti-Pattern 4 (chrome overflows at
+// narrow widths, body unreachable at 40x12).
+func TestRenderChrome_NarrowFallback(t *testing.T) {
+	out := RenderChrome(fullHintsFixture(), LogoInfo, 30)
+
+	// Single line — narrow tier produces a one-row stub.
+	require.Equal(t, 1, lipgloss.Height(out),
+		"narrow-tier RenderChrome must be exactly 1 row tall")
+
+	// Stub text present (after ANSI stripping for color).
+	plain := ansi.Strip(out)
+	require.Contains(t, plain, "press ? for help",
+		"narrow-tier output must contain the muted help stub")
+
+	// ASCII-only invariant per UI-15 — every rune <= 0x7F.
+	for _, r := range plain {
+		require.LessOrEqualf(t, r, rune(0x7F),
+			"narrow-tier output contains non-ASCII rune %q at byte: %s", r, plain)
+	}
+}
+
+// TestRenderChrome_DropsInfoPanel asserts the mid-tier (33 <= width < 71)
+// fallback per Phase 7.1 D-116: menu+logo only, info-panel slot dropped.
+// At mid-tier the leftmost columns of every row must contain menu
+// content (first column of the menu), NOT the 38-col blank info-panel
+// placeholder that the full-tier reserves.
+func TestRenderChrome_DropsInfoPanel(t *testing.T) {
+	out := RenderChrome(fullHintsFixture(), LogoInfo, 60)
+
+	// 6-row chrome (max(menuRows, logo rows) = 6).
+	require.LessOrEqual(t, lipgloss.Height(out), 6,
+		"mid-tier RenderChrome must fit in <= 6 rows")
+
+	plain := ansi.Strip(out)
+	firstLine := strings.SplitN(plain, "\n", 2)[0]
+	require.LessOrEqual(t, lipgloss.Width(firstLine), 60,
+		"mid-tier first line must not exceed requested width")
+
+	// Mid-tier drops the info-panel placeholder; the leftmost cols of at
+	// least one row should contain non-space content (the menu starts at
+	// col 0). If the info-panel was still rendered, the leftmost 38 cols
+	// would be all-blank on every row.
+	var sawNonBlankLeft bool
+	for _, line := range strings.Split(plain, "\n") {
+		leadCheck := line
+		if len(leadCheck) > 8 {
+			leadCheck = leadCheck[:8]
+		}
+		if strings.TrimSpace(leadCheck) != "" {
+			sawNonBlankLeft = true
+			break
+		}
+	}
+	require.True(t, sawNonBlankLeft,
+		"mid-tier first 8 cols on at least one row must contain non-space content (info-panel dropped)")
+}
+
+// TestRenderChrome_FullChrome asserts the full-tier (width >= 71)
+// 3-slot layout per Phase 7.1 D-116: info-panel + menu + logo, exactly
+// 6 rows tall. This is the existing Phase 7 behaviour preserved by the
+// 7.1 width-fallback addition.
+func TestRenderChrome_FullChrome(t *testing.T) {
+	out := RenderChrome(fullHintsFixture(), LogoInfo, 200)
+
+	// Full chrome is exactly 6 rows per D-16 (Phase 7).
+	require.Equal(t, 6, lipgloss.Height(out),
+		"full-tier RenderChrome must be exactly 6 rows")
+
+	// First line should extend toward the requested 200-col width.
+	plain := ansi.Strip(out)
+	firstLine := strings.SplitN(plain, "\n", 2)[0]
+	require.GreaterOrEqual(t, lipgloss.Width(firstLine), 100,
+		"full-tier first line must extend toward the requested 200-col width")
+}
+
+// TestRenderMenu_NoCellWrap asserts the manual-columns implementation
+// per Phase 7.1 D-117 never wraps cells vertically. Compare to the
+// Phase 7 lipgloss/v2/table builder which would produce 16+ rows at
+// width=60 due to per-cell text wrapping (the root cause of WR-03 at
+// 80x24).
+func TestRenderMenu_NoCellWrap(t *testing.T) {
+	out := RenderMenu(fullHintsFixture(), 60)
+	require.Equal(t, 6, lipgloss.Height(out),
+		"manual-columns RenderMenu must always produce exactly 6 rows; "+
+			"vertical cell wrapping is forbidden by D-117")
 }
