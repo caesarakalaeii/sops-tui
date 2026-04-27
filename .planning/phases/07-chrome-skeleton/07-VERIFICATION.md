@@ -1,15 +1,71 @@
 ---
 phase: 07-chrome-skeleton
 verified: 2026-04-27T15:30:00Z
-status: gaps_found
+status: gaps_closed_by_phase_7.1
 score: 4/5 success criteria verified
 overrides_applied: 0
 re_verification:
-  previous_status: none
-  previous_score: none
-  gaps_closed: []
+  previous_status: gaps_found
+  previous_score: 4/5 success criteria verified
+  closed_by_phase: 07.1-chrome-gap-closure
+  closed_at: 2026-04-27
+  gaps_closed:
+    - truth: "BenchmarkAppView stays <= 50 us/op at 200x60 (ROADMAP SC5 original wording, CONTEXT.md D-24, REQUIREMENTS UI-21 baseline)"
+      closure_path: "Path (c) - defer perf to Phase 11 SC2; revert all unauthorized amendments"
+      closed_by: "Phase 7.1 Plan 01 (commit 444df3b recorded in 07.1-01-SUMMARY.md)"
+      evidence: |
+        - .planning/ROADMAP.md SC5 wording reverted to "BenchmarkAppView stays <= 50 us/op at 200x60 with no lipgloss.NewStyle() inside View()" (locked CONTEXT.md D-24 verbatim)
+        - internal/app/chrome_test.go const budgetNs reverted to 50_000 (was 5_000_000)
+        - TestBenchmarkAppView_UnderBudget t.Skips with "deferred to Phase 11 SC2 - D-18 caching fallback; original 50 us target preserved per Phase 7.1 governance restoration"
+        - .planning/phases/07-chrome-skeleton/07-DISCUSSION-LOG.md has [APPROVED] 2026-04-27 entry recording the deferral, accepted_by=moersener, Phase 11 SC2 owner
+        - .planning/phases/07-chrome-skeleton/07-03-SUMMARY.md Rule 1 deviation block has Phase 7.1 closure pointer (historical record preserved)
+    - truth: "WR-01 - TestViewNoNewStyle scope was a single-block ast.Inspect over AppModel.View() body; missed reachable helpers (renderRecipientList, renderFormatMenu) and the 12 sub-model NewStyle calls"
+      closure_path: "BFS reachability walker rewrite + cross-package companion walker + NewStyle lifts"
+      closed_by: "Phase 7.1 Plan 04 (commits a8ce35e + d2f945e + sub-model walker addition in 07.1-04-SUMMARY.md)"
+      evidence: |
+        - internal/app/chrome_test.go::TestViewNoNewStyle is now a two-pass BFS over same-package call edges from AppModel.View()
+        - internal/ui/submodel_view_no_newstyle_test.go::TestSubmodelViewsNoNewStyle covers the 8 internal/ui View() owners
+        - 3 inline lipgloss.NewStyle() calls in internal/app/model.go lifted to FormatMenuOverlayStyle, RecipientListFooterStyle, RecipientPromptStyle (in styles.go)
+        - 12 sub-model NewStyle calls (Phase 7.1 Plan 03) lifted to OverlayMutedFooterStyle, MetadataLabelStyle, MetadataValueStyle, MetadataNoneStyle (in styles.go)
+        - Cross-walker invariant: zero lipgloss.NewStyle() calls reachable from any View() in the codebase
+    - truth: "WR-02 - 6 sub-models (help, health, diff, metadata, history, recipientform) rendered their own RoundedBorder envelope inside View(), producing nested double borders after WrapTitled wrapped them at AppModel level"
+      closure_path: "Strip inner RoundedBorder from each of the 6 sub-models; correct width math (m.width-4) so the WrapTitled outer NormalBorder is the only chrome"
+      closed_by: "Phase 7.1 Plan 03 (per 07.1-03-SUMMARY.md)"
+      evidence: |
+        - internal/ui/help.go, health.go, diff.go, metadata.go, history.go, recipientform.go - each View() returns inner content directly (no RoundedBorder envelope)
+        - Sub-models' inner-content width math updated from m.width-2 to m.width-4 to account for the removed inner border
+        - Resize goldens at 120x40 and 200x60 refreshed to show single-border framing per overlay (07-UI-SPEC §single-border-discipline)
+        - FormatMenuOverlayStyle (transient modal) is the only remaining RoundedBorder use - explicitly opts out of WrapTitled
+    - truth: "WR-03 - chrome overflows at narrow widths: at 80x24 chrome takes 16 rows (not 6); at 40x12 chrome takes ~78 rows pushing the body off-screen entirely"
+      closure_path: "Three-tier width-fallback in RenderChrome (full/mid/narrow) + manual JoinHorizontal columns in RenderMenu (replaces lipgloss/v2/table)"
+      closed_by: "Phase 7.1 Plan 05 (this plan; D-116 + D-117 + D-118 + D-119 + D-120)"
+      evidence: |
+        - internal/ui/chrome.go RenderChrome has three width tiers: narrow (<41 -> press ? for help stub), mid (41-98 -> menu+logo, info-panel dropped), full (>=99 -> existing 3-slot)
+        - internal/ui/menu.go RenderMenu uses manual JoinHorizontal of two pre-rendered fixed-width columns + ansi.Truncate per cell - cell wrapping never engages
+        - lipgloss/v2/table import removed from menu.go
+        - 4 new chrome composition tests in internal/ui/chrome_test.go: TestRenderChrome_NarrowFallback, TestRenderChrome_DropsInfoPanel, TestRenderChrome_FullChrome, TestRenderMenu_NoCellWrap
+        - Resize goldens at 40x12 (narrow stub + body reachable) and 80x24 (mid-tier 6-row chrome menu+logo, no info-panel) refreshed; 120x40 + 200x60 also refreshed for column-padding consistency
+    - truth: "WR-04 - TestRenderMenu_ASCIIOnlyBody allowlist included rounded corners (rounded glyphs NormalBorder never emits) - misaligned with the canonical TestChromeASCIIOnly allowlist"
+      closure_path: "Drop rounded corners from menu_test.go allowlist; align with chrome_test.go canonical {newline, square corners, ellipsis, arrows}"
+      closed_by: "Phase 7.1 Plan 02 (per 07.1-02-SUMMARY.md)"
+      evidence: |
+        - internal/ui/menu_test.go TestRenderMenu_ASCIIOnlyBody allowlist no longer contains rounded corners
+        - Both menu_test.go and chrome_test.go reference {newline, square corners, vertical/horizontal NormalBorder glyphs, ellipsis, arrows}
+        - Cross-reference comment in menu_test.go points back at chrome_test.go as the canonical allowlist
+    - truth: "WR-05 - quit-hint suppression in stateRecipientConfirm and stateBulkReKeyConfirm (5-entry hint sets, no q) was undocumented; intent was unclear vs an oversight"
+      closure_path: "Add inline doc comments to RecipientConfirmHints + BulkReKeyConfirmHints declarations in keys/hints.go AND to the dispatcher arms at model.go; cross-reference UI-SPEC §confirm-flow-quit-suppression"
+      closed_by: "Phase 7.1 Plan 02 (per 07.1-02-SUMMARY.md)"
+      evidence: |
+        - internal/keys/hints.go RecipientConfirmHints and BulkReKeyConfirmHints declarations carry "Quit suppressed deliberately during confirm flows" doc comments
+        - internal/app/model.go dispatcher arms point back at the hint-set declarations
+        - .planning/phases/07-chrome-skeleton/07-UI-SPEC.md has §confirm-flow-quit-suppression subsection
   gaps_remaining: []
   regressions: []
+
+# NOTE: gaps: block below records the original Phase 7 verification finding.
+# It is PRESERVED for historical record. The closure record is in
+# re_verification.gaps_closed above. Phase 7.1 closed all 5 gaps; status
+# flipped from gaps_found to gaps_closed_by_phase_7.1.
 gaps:
   - truth: "BenchmarkAppView stays <= 50 us/op at 200x60 (ROADMAP SC5 original wording, CONTEXT.md D-24, REQUIREMENTS UI-21 baseline)"
     status: failed
