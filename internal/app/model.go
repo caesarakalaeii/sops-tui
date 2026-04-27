@@ -1463,8 +1463,12 @@ func (m AppModel) menuHints() []keys.MenuHint {
 		return m.metadata.Hints()
 	case stateDiff:
 		return m.diff.Hints()
+	// Quit suppressed deliberately during recipient action confirm flows so
+	// the user resolves the y/n decision before exiting (UI-SPEC §confirm-flow-quit-suppression).
 	case stateRecipientConfirm:
 		return keys.RecipientConfirmHints
+	// Same intentional quit suppression as RecipientConfirm — see
+	// keys.BulkReKeyConfirmHints declaration.
 	case stateBulkReKeyConfirm:
 		return keys.BulkReKeyConfirmHints
 	case stateHelp:

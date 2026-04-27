@@ -565,4 +565,32 @@ This UI-SPEC is entirely pre-decided. Every design token, every style declaratio
 | Copywriting rules (no `!`, no emoji in chrome, counts in `(N)` format) | 01-UI-SPEC.md §Copywriting Contract (inherited); D-15 title map |
 | Keybinding help strings (`key.WithHelp(k, desc)`) | `internal/keys/bindings.go:29-291` (unchanged in Phase 7) |
 
+---
+
+### §confirm-flow-quit-suppression
+
+In `stateRecipientConfirm` and `stateBulkReKeyConfirm`, the persistent
+keybinding menu intentionally **omits the `[q] quit` hint**. The user
+must resolve the y/n decision before exiting to prevent accidental
+acknowledgement of a partially-actioned destructive flow.
+
+This is the contract that makes `keys.RecipientConfirmHints` (5 entries,
+no `q`) and `keys.BulkReKeyConfirmHints` (5 entries, no `q`) different
+from `DiffModel.Hints()` (6 entries, includes `[q] quit`). The diff body
+is the same in all three states; the *menu* differs by state per the
+dispatcher arms at `internal/app/model.go:1466-1469`.
+
+The Phase 7 implementation at `internal/keys/hints.go` and
+`internal/app/model.go` already enforced this behaviour; Phase 7.1
+(per 07.1-CONTEXT.md D-123, D-124) makes the intentionality explicit
+through doc comments on both hint-set declarations and both dispatcher
+arms, plus this §confirm-flow-quit-suppression subsection as the
+single source of truth.
+
+Cross-references:
+- `internal/keys/hints.go` `RecipientConfirmHints` declaration
+- `internal/keys/hints.go` `BulkReKeyConfirmHints` declaration
+- `internal/app/model.go` `menuHints()` dispatcher arms (lines ~1466-1469)
+- `.planning/phases/07.1-chrome-gap-closure/07.1-UI-SPEC.md` Section C (Phase 7.1 delta — first surfaced this contract)
+
 No section in this UI-SPEC was authored by Claude's discretion against the Auto Mode directive. Items listed under CONTEXT.md §"Claude's Discretion" (logo exact byte-art, overlayTitle impl details, golden file naming, etc.) are implementation details resolved by the planner/executor — not design-contract decisions. Where this spec cites a specific byte-art (§Visuals — Logo) or infoPanelWidth value (38 cols), these are Research §recommendations locked into the contract to reduce executor ambiguity per the downstream-consumer prescriptiveness rule.

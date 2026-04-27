@@ -65,6 +65,12 @@ var FileListSearchHints = []MenuHint{
 // RecipientConfirmHints is the hint set for stateRecipientConfirm —
 // the y/n confirmation over a shared diff body. Disambiguates the shared
 // stateDiff body via AppModel.state (recipientAction unused here per D-10).
+//
+// Quit suppressed deliberately during recipient action confirm flows so
+// the user resolves the y/n decision before exiting; UI-SPEC
+// §confirm-flow-quit-suppression. Compare DiffModel.Hints() (6 entries
+// including [q] quit) — the underlying diff body is the same; only the
+// hint set differs by state (Phase 7 D-10 dispatcher disambiguation).
 var RecipientConfirmHints = []MenuHint{
 	{Mnemonic: "y", Description: "confirm add/remove recipient", Visible: true},
 	{Mnemonic: "n", Description: "cancel", Visible: true},
@@ -75,6 +81,12 @@ var RecipientConfirmHints = []MenuHint{
 
 // BulkReKeyConfirmHints is the hint set for stateBulkReKeyConfirm —
 // the y/n/Esc per-file confirmation during a bulk re-key run.
+//
+// Quit suppressed deliberately during bulk re-key confirm flows so the
+// user resolves the y/n decision before exiting; UI-SPEC
+// §confirm-flow-quit-suppression. Compare DiffModel.Hints() (6 entries
+// including [q] quit) — the underlying diff body is the same; only the
+// hint set differs by state.
 var BulkReKeyConfirmHints = []MenuHint{
 	{Mnemonic: "y", Description: "confirm re-key this file", Visible: true},
 	{Mnemonic: "n", Description: "skip this file", Visible: true},
