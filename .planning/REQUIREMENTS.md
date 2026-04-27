@@ -58,15 +58,15 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ### Header Region
 
-- [ ] **UI-01**: User sees a persistent multi-column keybinding menu in the header on every view — no `?` press required to discover hotkeys
-- [ ] **UI-02**: User sees a 6-row ASCII logo anchored to the top-right of the header, ~26 columns wide
+- [x] **UI-01**: User sees a persistent multi-column keybinding menu in the header on every view — no `?` press required to discover hotkeys
+- [x] **UI-02**: User sees a 6-row ASCII logo anchored to the top-right of the header, ~26 columns wide
 - [ ] **UI-03**: Logo recolors to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and health aggregate
 - [ ] **UI-04**: User sees a header info panel (top-left) with five rows: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
 - [ ] **UI-05**: Info-panel fields are truncated and de-PII'd before render: age fingerprint ≤10 chars with ellipsis, paths are repo-relative, no copy bindings ever target chrome content
 
 ### Content Framing
 
-- [ ] **UI-06**: Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) is wrapped in a titled bordered region; title encodes the view name and when relevant an item count
+- [x] **UI-06**: Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) is wrapped in a titled bordered region; title encodes the view name and when relevant an item count
 - [ ] **UI-07**: Breadcrumb segments render as colored chip pills replacing the legacy ` > ` text separator; the active (last) segment uses the accent color
 - [ ] **UI-08**: Bottom status bar shrinks to only right-aligned env indicators + clipboard state; the breadcrumb moves to a dedicated crumb row above the titled body
 
@@ -81,7 +81,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 - [ ] **UI-12**: Default palette is tuned to k9s conventions (accent shifts toward hot-pink/purple typical of k9s skins) while keeping the AdaptiveColor ban from v1.0
 - [ ] **UI-13**: On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible
 - [ ] **UI-14**: Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (prefix like `[I]` / `[W]` / `[E]`, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
-- [ ] **UI-15**: Persistent chrome content is ASCII-only; `lipgloss.NormalBorder()` is the only border style used in chrome (grep-gated in CI to prevent regressions to fancy borders or emoji)
+- [x] **UI-15**: Persistent chrome content is ASCII-only; `lipgloss.NormalBorder()` is the only border style used in chrome (grep-gated in CI to prevent regressions to fancy borders or emoji)
 - [ ] **UI-16**: The app survives rendering at 40×12 through 200×60 without layout corruption; narrow-terminal rendering may be ugly but must not truncate critical data or overflow the viewport
 
 ### Layout Safety (groundwork)
@@ -164,10 +164,10 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-17 | Phase 6 | Complete (Plan 02) |
 | UI-18 | Phase 6 | Complete (Plan 01 gate + Plan 02 allowlist removed) |
 | UI-19 | Phase 6 | Complete (Plan 01) |
-| UI-01 | Phase 7 | Pending |
-| UI-02 | Phase 7 | Pending |
-| UI-06 | Phase 7 | Pending (Plan 02 shipped composer: WrapTitled + overlayTitle; Plan 03 integrates) |
-| UI-15 | Phase 7 | Pending |
+| UI-01 | Phase 7 | Complete (Plan 03 — menuHints dispatcher + RenderMenu integration) |
+| UI-02 | Phase 7 | Complete (Plan 03 — RenderChrome with logo top-right at all 4 resolutions) |
+| UI-06 | Phase 7 | Complete (Plan 03 — every primary view wrapped via WrapTitled with D-15 titles) |
+| UI-15 | Phase 7 | Complete (Plan 03 — TestChromeASCIIOnly + TestChromeNormalBorderOnly + TestViewNoNewStyle grep-gates all green) |
 | UI-04 | Phase 8 | Pending |
 | UI-05 | Phase 8 | Pending |
 | UI-07 | Phase 8 | Pending |
@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-27 — Phase 07 Plan 02 progress note on UI-06 (composer landed; integration in Plan 03)*
+*Last updated: 2026-04-27 — Phase 07 Plan 03 complete; UI-01, UI-02, UI-06, UI-15 marked complete*
