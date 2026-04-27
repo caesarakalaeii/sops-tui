@@ -5,6 +5,14 @@
 // JoinHorizontal of an info-panel placeholder (reserved for Phase 8),
 // the persistent keybinding menu, and the ASCII logo.
 //
+// RenderChrome falls back through three width tiers per
+// 07.1-UI-SPEC.md Section B (Phase 7.1 D-116): at width >= 71 cols the
+// full 3-slot (info-panel + menu + logo) layout renders; at
+// 33 <= width < 71 the info-panel slot is dropped (mid tier); at
+// width < 33 a single-line "press ? for help" stub renders (narrow
+// tier). All three tiers preserve UI-15's NormalBorder-only +
+// ASCII-only contract.
+//
 // WrapTitled wraps any sub-model body in a NormalBorder box with a
 // title injected into the top border line via overlayTitle. The wrapper
 // uses the TitledBorderStyle package var (BorderForeground: ColorMuted,
@@ -41,6 +49,12 @@ const infoPanelWidth = 38
 // logoWidth is the fixed Phase 7 logo envelope per D-01 (Candidate A).
 const logoWidth = 25
 
+// minMenuCol is the floor for menu cell width — below this, the menu
+// would be too narrow to render mnemonic + description cleanly.
+// Used by Phase 7.1 D-116 two-tier width fallback to choose between
+// mid-tier (menu+logo) and narrow-tier (one-line stub).
+const minMenuCol = 8
+
 // minTitledWidth / minTitledHeight clamp WrapTitled arguments so the
 // underlying lipgloss border math never renders a sub-border box.
 const (
@@ -48,25 +62,48 @@ const (
 	minTitledHeight = 3
 )
 
-// RenderChrome composes the persistent 6-row header band:
+// RenderChrome composes the persistent header band, falling back through
+// three width tiers per 07.1-UI-SPEC.md Section B (Phase 7.1 D-116):
 //
-//	[info panel placeholder 38x6][menu residual x 6][logo 25x6]
-//
-// Width is clamped to avoid negative menu widths at narrow terminals;
-// narrow-terminal aesthetics deferred to Phase 10 (UI-16).
+//   - Full (width >= infoPanelWidth + logoWidth + minMenuCol, ~71+):
+//     [info-panel-placeholder 38x6 | menu residual x 6 | logo 25x6] —
+//     the existing 3-slot layout.
+//   - Mid (logoWidth + minMenuCol <= width < 71):
+//     [menu | logo] — info-panel slot dropped.
+//   - Narrow (width < logoWidth + minMenuCol, ~33):
+//     single-line "press ? for help" stub via ChromeNarrowFallbackStyle.
 //
 // logoStatus is plumbed for Phase 10 severity coupling; Phase 7 callers
-// pass LogoInfo unconditionally per D-02.
+// pass LogoInfo unconditionally per D-02. The narrow-tier fallback was
+// added in Phase 7.1 D-116 to close WR-03 / 07-VERIFICATION.md
+// Anti-Pattern 4 (chrome overflows at narrow widths, body unreachable
+// at 40x12).
 func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, width int) string {
-	info := InfoPanelPlaceholderStyle.Render("")
+	// Narrow tier: width below logoWidth + minMenuCol (~33 cols).
+	// Render a single-line muted stub; no border.
+	if width < logoWidth+minMenuCol {
+		return ChromeNarrowFallbackStyle.Render("press ? for help")
+	}
 
+	// Mid tier: width below infoPanelWidth + logoWidth + minMenuCol (~71 cols).
+	// Drop the info-panel slot; render menu+logo only.
+	if width < infoPanelWidth+logoWidth+minMenuCol {
+		menuWidth := width - logoWidth
+		// menuWidth is guaranteed >= minMenuCol because the narrow-tier
+		// check above caught width < logoWidth + minMenuCol.
+		menu := RenderMenu(hints, menuWidth)
+		logo := RenderLogo(logoStatus, logoWidth)
+		return lipgloss.JoinHorizontal(lipgloss.Top, menu, logo)
+	}
+
+	// Full tier: existing 3-slot layout. Width math unchanged.
+	info := InfoPanelPlaceholderStyle.Render("")
 	menuWidth := width - infoPanelWidth - logoWidth
 	if menuWidth < 1 {
 		menuWidth = 1
 	}
 	menu := RenderMenu(hints, menuWidth)
 	logo := RenderLogo(logoStatus, logoWidth)
-
 	return lipgloss.JoinHorizontal(lipgloss.Top, info, menu, logo)
 }
 

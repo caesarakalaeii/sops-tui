@@ -221,9 +221,18 @@ var (
 	// MenuDescStyle renders the description column text in default foreground (D-05).
 	MenuDescStyle = lipgloss.NewStyle().Foreground(ColorFg)
 
-	// MenuCellStyle is the per-cell outer style applied via StyleFunc(row, col).
-	// Currently a no-op; reserved for Phase 10 per-column tweaks (padding, alignment).
-	MenuCellStyle = lipgloss.NewStyle()
+	// MenuColumnStyle is the wrapper for each pre-rendered fixed-width
+	// column in RenderMenu (Phase 7.1 D-117 — replaces the Phase 7
+	// lipgloss/v2/table builder). Width is applied at the call site
+	// because it varies per call (width/menuCols). The var has no
+	// per-frame data so it does not trip TestSubmodelViewsNoNewStyle in
+	// internal/ui (which scans sub-models, not styles.go).
+	//
+	// Phase 7's per-cell StyleFunc return value was deleted alongside
+	// the table builder removal — package vars should match what's
+	// actually rendered. Phase 10's per-column tweaks can introduce a
+	// new var if needed.
+	MenuColumnStyle = lipgloss.NewStyle()
 
 	// LogoStyleInfo is the Phase 7 unconditional logo color (D-02).
 	// Phase 10 (UI-03) flips between Info/Warn/Error based on aggregate severity.
@@ -318,4 +327,12 @@ var (
 	// prompt in renderRecipientList (Phase 7.1 D-109 lift from model.go
 	// renderRecipientList).
 	RecipientPromptStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// ChromeNarrowFallbackStyle renders the narrow-tier "press ? for help"
+	// stub in RenderChrome (Phase 7.1 D-116). Foreground = ColorMuted; no
+	// border (the stub is a single line, not a box). At terminal widths
+	// below logoWidth + minMenuCol (~33 cols), the chrome cannot fit the
+	// 6-row menu+logo pair, so this single-line fallback keeps the body
+	// region reachable.
+	ChromeNarrowFallbackStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 )
