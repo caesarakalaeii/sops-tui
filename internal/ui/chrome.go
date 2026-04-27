@@ -14,10 +14,10 @@
 // overlayTitle is a community-standard string-splice pattern for
 // lipgloss v2, which as of 2026-04-24 has no native border-title API.
 // CONTEXT.md D-14 cited charmbracelet/soft-serve/pkg/ui/components/header
-// as a reference; the Phase 7 research (07-RESEARCH.md §"Closed Research
+// as a reference; the Phase 7 research (07-RESEARCH.md section"Closed Research
 // Gaps" #1) verified that soft-serve main HEAD does NOT contain the
 // pattern. The pattern is community-standard across the bubbletea
-// ecosystem (gh, glow, charm's own examples) - see 07-RESEARCH.md §1
+// ecosystem (gh, glow, charm's own examples) - see 07-RESEARCH.md section1
 // for the full reference-implementation gap analysis and pkg.go.dev
 // verification of lipgloss v2's lack of native border-title API.
 //
@@ -109,7 +109,7 @@ func WrapTitled(title, body string, width, height int) string {
 //
 // This is a community-standard pattern for lipgloss v2, which has no
 // native border-title API (verified 2026-04-24 against lipgloss v2.0.3
-// pkg.go.dev). See package doc and 07-RESEARCH.md §1 for the full
+// pkg.go.dev). See package doc and 07-RESEARCH.md section1 for the full
 // reference-implementation gap analysis and the soft-serve revision
 // audit that closed CONTEXT.md D-14's source citation.
 func overlayTitle(rendered, title string) string {
