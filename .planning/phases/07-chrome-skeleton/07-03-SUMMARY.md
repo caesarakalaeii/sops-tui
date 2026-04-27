@@ -229,6 +229,7 @@ Per Research §"Plan 3 Commit Sequence" — three atomic, bisect-friendly commit
 - **Verification:** TestBenchmarkAppView_UnderBudget passes at 2.80 ms/op with 2.20 ms headroom (56% of budget).
 - **Committed in:** `f4d61fe` (Task 3 commit)
 - **Path forward:** D-18 anticipated this with the caching fallback. A model-level cache keyed on `(state, recipientAction, IsSearchActive, width)` could amortise the table rebuild. Phase 11 UI-21 may revisit.
+- **Closure (Phase 7.1, 2026-04-27):** This deviation was reverted in Phase 7.1 per the governance restoration decision (07.1-CONTEXT.md D-101..D-106). The 5 ms budget and the SC5 wording amendment have both been reverted; `TestBenchmarkAppView_UnderBudget` now t.Skips with the original 50 µs constant preserved, deferring perf work to Phase 11 SC2 D-18 caching fallback. See 07.1-CONTEXT.md and 07-DISCUSSION-LOG.md `[APPROVED] 2026-04-27` entry.
 
 **2. [Rule 1 - Bug] Replaced § (U+A7) in chrome.go citation comments with "section"**
 - **Found during:** Task 3, when TestChromeASCIIOnly reported `internal/ui/chrome.go:17`, `:20`, `:112` non-ASCII U+A7
