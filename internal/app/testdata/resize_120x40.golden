@@ -1,9 +1,9 @@
-                                      [k/↑] move up                [K] bulk re-key selected      ____   ___  ____  ____
-                                      [j/↓] move down              [H] health check             / ___| / _ \|  _ \/ ___|
-                                      [enter/l] open               [?] toggle help              \___ \| | | | |_) \___ \
-                                      [/] search                   [q] quit                      ___) | |_| |  __/ ___) |
-                                      [i] file info                [g] go to top                |____/ \___/|_|   |____/
-                                      [space] toggle select        [G] go to bottom                                  tui
+                                      [k/↑] move up               [K] bulk re-key selected      ____   ___  ____  ____
+                                      [j/↓] move down             [H] health check             / ___| / _ \|  _ \/ ___|
+                                      [enter/l] open              [?] toggle help              \___ \| | | | |_) \___ \
+                                      [/] search                  [q] quit                      ___) | |_| |  __/ ___) |
+                                      [i] file info               [g] go to top                |____/ \___/|_|   |____/
+                                      [space] toggle select       [G] go to bottom                                  tui
 ┌─ Files (0) ──────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ No SOPS files found                                                                                                  │
 │                                                                                                                      │

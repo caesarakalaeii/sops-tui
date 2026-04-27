@@ -1,80 +1,4 @@
-                                      [  ____   ___  ____  ____
-                                        / ___| / _ \|  _ \/ ___|
-                                        \___ \| | | | |_) \___ \
-                                         ___) | |_| |  __/ ___) |
-                                        |____/ \___/|_|   |____/
-                                                             tui
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                      [
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                      [
-
-
-
-
-
-
-
-
-
-
-
-
-                                      [
-
-
-
-
-
-
-                                      [
-
-
-
-
-
-
-
-
-
-                                      [
-
-
-
-
-
-
-
-
-
-
-
-
+press ? for help
 ┌─ Files (0) ──────────────────────────┐
 │ No SOPS files found                  │
 │                                      │
@@ -82,6 +6,7 @@
 │ directory or parents.                │
 │ Run sops-tui in a repository with a  │
 │ .sops.yaml configuration.            │
+│                                      │
 └──────────────────────────────────────┘
 sops-tui > files  |  0 items  |  sops:✓
 age:✓ .sops.yaml:✓ no git
