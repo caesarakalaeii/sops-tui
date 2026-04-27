@@ -166,7 +166,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-19 | Phase 6 | Complete (Plan 01) |
 | UI-01 | Phase 7 | Pending |
 | UI-02 | Phase 7 | Pending |
-| UI-06 | Phase 7 | Pending |
+| UI-06 | Phase 7 | Pending (Plan 02 shipped composer: WrapTitled + overlayTitle; Plan 03 integrates) |
 | UI-15 | Phase 7 | Pending |
 | UI-04 | Phase 8 | Pending |
 | UI-05 | Phase 8 | Pending |
@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-23 — v1.1 traceability table populated; UI-01..UI-21 mapped across Phases 6-11*
+*Last updated: 2026-04-27 — Phase 07 Plan 02 progress note on UI-06 (composer landed; integration in Plan 03)*
