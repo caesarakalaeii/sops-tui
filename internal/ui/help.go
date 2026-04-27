@@ -12,7 +12,6 @@ package ui
 
 import (
 	"charm.land/bubbles/v2/help"
-	"charm.land/lipgloss/v2"
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
@@ -79,30 +78,15 @@ func (m HelpModel) View(fromState ViewState) string {
 	content := m.help.View(km)
 
 	// Footer per UI-SPEC Copywriting Contract
-	footer := lipgloss.NewStyle().
-		Foreground(ColorMuted).
-		Render("Press ? or Esc to close")
+	footer := OverlayMutedFooterStyle.Render("Press ? or Esc to close")
 
+	// Phase 7.1 D-112: View() returns inner content only; the outer
+	// WrapTitled at AppModel.View() (model.go:1342) is the single border
+	// source. The previous m.width-2 / m.height-2 inner-box clamping is
+	// gone — WrapTitled's TitledBorderStyle owns chrome arithmetic.
 	inner := content + "\n\n" + footer
 
-	// Full-screen bordered box per UI-SPEC Help Overlay
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	boxHeight := m.height - 2
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorMuted).
-		Background(ColorSurface).
-		Padding(1, SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	return inner
 }
 
 // Hints returns the 3-hint persistent menu set for HelpModel per D-09.

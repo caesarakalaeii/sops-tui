@@ -14,8 +14,6 @@ package ui
 import (
 	"strings"
 
-	"charm.land/lipgloss/v2"
-
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
 
@@ -80,9 +78,10 @@ func (m *MetadataModel) ScrollUp() {
 // buildContentLines constructs all scrollable content lines for the metadata overlay.
 // Returns each line as a pre-rendered string.
 func (m MetadataModel) buildContentLines() []string {
-	labelStyle := lipgloss.NewStyle().Foreground(ColorMuted).Width(16)
-	valueStyle := lipgloss.NewStyle().Foreground(ColorFg)
-	noneStyle := lipgloss.NewStyle().Foreground(ColorMuted)
+	// Phase 7.1 D-110: package vars in styles.go, byte-identical chains.
+	labelStyle := MetadataLabelStyle
+	valueStyle := MetadataValueStyle
+	noneStyle := MetadataNoneStyle
 
 	none := noneStyle.Render("(none)")
 
@@ -155,30 +154,13 @@ func (m MetadataModel) View() string {
 	content := strings.Join(visibleLines, "\n")
 
 	// Footer per UI-SPEC Copywriting Contract
-	footer := lipgloss.NewStyle().
-		Foreground(ColorMuted).
-		Render("Press i or Esc to close")
+	footer := OverlayMutedFooterStyle.Render("Press i or Esc to close")
 
+	// Phase 7.1 D-112: View() returns inner content only; the outer
+	// WrapTitled at AppModel.View() (model.go:1342) is the single border
+	// source. Width/height are still tracked via SetSize for scroll math.
 	inner := title + "\n\n" + content + "\n\n" + footer
-
-	// Full-screen bordered box per UI-SPEC Overlay Layout Contract
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	boxHeight := m.height - 2
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorMuted).
-		Background(ColorSurface).
-		Padding(1, SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	return inner
 }
 
 // Hints returns the 5-hint persistent menu set for MetadataModel per D-09.

@@ -223,14 +223,22 @@ func TestMetadataViewContainsAllLabelStrings(t *testing.T) {
 	}
 }
 
-// TestMetadataRoundedBorderExists verifies the output contains rounded border characters.
-func TestMetadataRoundedBorderExists(t *testing.T) {
+// TestMetadataNoInnerBorder verifies MetadataModel.View() emits no inner
+// RoundedBorder corners after Phase 7.1 D-112 (WR-02 fix).
+//
+// Pre-Phase-7.1 this test (TestMetadataRoundedBorderExists) asserted the
+// output contained rounded corners ╭╮╰╯; that inner-border envelope was
+// the WR-02 nested-double-border anti-pattern. The single-border framing
+// per UI-SPEC §A is now owned by the outer WrapTitled NormalBorder in
+// AppModel.View() at model.go:1342. MetadataModel.View() returns inner
+// content only.
+func TestMetadataNoInnerBorder(t *testing.T) {
 	meta := ui.MetadataContent{Version: "3.12.2"}
 	m := ui.NewMetadataModel(meta, 80, 24)
 	output := m.View()
-	// RoundedBorder uses rounded corner characters: ╭ or ╰
-	hasRoundedCorner := strings.ContainsAny(output, "╭╰╮╯")
-	assert.True(t, hasRoundedCorner, "View() must contain rounded border characters (╭, ╰, ╮, ╯)")
+	assert.NotEmpty(t, output, "View() must not be empty")
+	assert.False(t, strings.ContainsAny(output, "╭╰╮╯"),
+		"MetadataModel.View() must NOT emit RoundedBorder corners after Phase 7.1 D-112; got: %q", output)
 }
 
 // TestMetadataHints verifies MetadataModel.Hints() returns the 5-hint set per D-09:

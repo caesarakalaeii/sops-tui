@@ -19,7 +19,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/textinput"
-	"charm.land/lipgloss/v2"
 	"filippo.io/age"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
@@ -128,10 +127,15 @@ func (m RecipientFormModel) View() string {
 	// Title per UI-SPEC Copywriting Contract
 	title := DiffKeyStyle.Render("Add Recipient")
 
-	// Prompt label
-	prompt := lipgloss.NewStyle().Foreground(ColorMuted).Render("Age public key:")
+	// Prompt label (Phase 7.1 D-110: lifted to package var; same muted chain)
+	prompt := OverlayMutedFooterStyle.Render("Age public key:")
 
-	// Input area width constrained to avoid overflow
+	// Phase 7.1 D-113: inputWidth derives from post-WrapTitled inner area
+	// (m.width - 4: NormalBorder=2 + Padding(0,1)=2) minus an 8-col label +
+	// spacing budget = m.width - 12 (coincidentally identical to the
+	// pre-strip math, which derived -12 = -(2 + 10) for the inner-border
+	// envelope; post-strip it derives -12 = -(4 + 8) for the WrapTitled
+	// envelope and the label budget).
 	inputWidth := m.width - 12
 	if inputWidth < 1 {
 		inputWidth = 1
@@ -148,26 +152,11 @@ func (m RecipientFormModel) View() string {
 	footer := ConfirmPromptStyle.Render("[enter]") + " confirm   " +
 		ConfirmPromptStyle.Render("[esc]") + " cancel"
 
+	// Phase 7.1 D-112: View() returns inner content only; the outer
+	// WrapTitled at AppModel.View() (model.go:1342) is the single border
+	// source. Width/height are still tracked via SetSize for input math.
 	inner := title + "\n\n" + prompt + " " + inputArea + errLine + "\n\n" + footer
-
-	// Full-screen bordered box per UI-SPEC Overlay Layout Contract
-	boxWidth := m.width - 2
-	if boxWidth < 1 {
-		boxWidth = 1
-	}
-	boxHeight := m.height - 2
-	if boxHeight < 1 {
-		boxHeight = 1
-	}
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ColorMuted).
-		Background(ColorSurface).
-		Padding(1, SpaceMD).
-		Width(boxWidth).
-		Height(boxHeight).
-		Render(inner)
+	return inner
 }
 
 // Hints returns the 2-hint persistent menu set for RecipientFormModel per D-09.

@@ -252,4 +252,33 @@ var (
 	InfoPanelPlaceholderStyle = lipgloss.NewStyle().
 					Width(38).
 					Height(6)
+
+	// Phase 7.1 D-110: package vars lifted out of overlay sub-models
+	// (help.go, health.go, history.go, metadata.go, recipientform.go) so
+	// the sub-models contain zero `lipgloss.NewStyle()` calls. This
+	// satisfies Plan 04's TestSubmodelViewsNoNewStyle AST walker and the
+	// project-wide "all styles are package vars" discipline.
+
+	// OverlayMutedFooterStyle is the muted footer text style shared by 5
+	// overlay sub-models (help, health, history, metadata, recipientform)
+	// for "Press X or Esc to close" footers and similar muted prompts
+	// (Phase 7.1 D-110 lift; was an inline lipgloss.NewStyle() in each
+	// sub-model's View() before the AST walker BFS scope expansion).
+	// Same chain as GitNoRepoStyle but a separate alias so Phase 8+ can
+	// diverge them without touching call sites.
+	OverlayMutedFooterStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// MetadataLabelStyle is the muted label column style in MetadataModel
+	// content lines (Phase 7.1 D-110 lift from metadata.go:83).
+	MetadataLabelStyle = lipgloss.NewStyle().Foreground(ColorMuted).Width(16)
+
+	// MetadataValueStyle is the foreground value column style in
+	// MetadataModel content lines (Phase 7.1 D-110 lift from metadata.go:84).
+	MetadataValueStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// MetadataNoneStyle is the muted "(none)" placeholder style in
+	// MetadataModel content lines (Phase 7.1 D-110 lift from metadata.go:85;
+	// could alias GitNoRepoStyle but kept as a separate name to document
+	// intent for Phase 8+).
+	MetadataNoneStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 )
