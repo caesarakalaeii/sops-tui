@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7.1 Plan 04 complete (BFS reachability walker + 3 model.go NewStyle lifts + sub-model walker — both walkers report 0 violations; WR-01 closed)
-last_updated: "2026-04-27T15:00:00.000Z"
-last_activity: 2026-04-27 -- Phase 7.1 Plan 04 complete (BFS reachability AST walker + 3 NewStyle lifts + sub-model walker)
+stopped_at: Phase 7.1 COMPLETE (Plan 05 — narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1; WR-03 closed; all 5 SC + 5 WR gaps from Phase 7 verification now closed)
+last_updated: "2026-04-27T16:56:50.000Z"
+last_activity: 2026-04-27 -- Phase 7.1 Plan 05 complete (narrow-terminal chrome clamp + verification closure - FINAL plan of Phase 7.1)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 27
-  completed_plans: 26
-  percent: 96
+  completed_plans: 27
+  percent: 100
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 07.1 (chrome-gap-closure) — Plan 04 of 5 complete; Plan 05 next
-Plan: 4 of 5 (Plans 01 + 02 + 03 + 04 complete)
-Status: Ready to execute Plan 05 (narrow-terminal chrome clamp)
-Last activity: 2026-04-27 -- Phase 7.1 Plan 04 complete (BFS reachability walker + 3 NewStyle lifts + sub-model walker)
+Phase: 07.1 (chrome-gap-closure) — COMPLETE (all 5 plans landed)
+Plan: 5 of 5 (Plans 01 + 02 + 03 + 04 + 05 complete)
+Status: Phase 7.1 ready for /gsd-verify-work re-run; expected status gaps_closed_by_phase_7.1
+Last activity: 2026-04-27 -- Phase 7.1 Plan 05 complete (narrow-terminal chrome clamp + verification closure - FINAL plan of Phase 7.1)
 
-Progress (v1.1 only): [████████░░] 40% (2/6 phases complete, 9/15 plans complete)
+Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress (v1.1 only): [████████░░] 40% (2/6 phases complete,
 | Phase 07 P02 | 5m | 2 tasks | 3 files |
 | Phase 07 P03 | 16m | 3 tasks | 24 files |
 | Phase 07.1 P04 | 8m | 3 tasks | 4 files |
+| Phase 07.1 P05 | 20m | 4 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -124,11 +125,23 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 07.1 Plan 04]: TestSubmodelViewsNoNewStyle added in internal/ui/submodel_view_no_newstyle_test.go — per-file FuncDecl scan over an explicit 8-file submodelFiles allowlist (filelist, detail, help, diff, metadata, health, history, recipientform). Sub-models are leaf renderers; BFS would add no value. Companion to internal/app's BFS walker.
 - [Phase 07.1 Plan 04]: Cross-walker invariant achieved — 0 lipgloss.NewStyle() calls reachable from any View() in the codebase. Both walkers (TestViewNoNewStyle BFS in app + TestSubmodelViewsNoNewStyle FuncDecl scan in ui) report 0 violations.
 - [Phase 07.1 Plan 04]: Task 1 RED + Task 2 GREEN landed in separate commits per plan Option A (a8ce35e + d2f945e) — captures WR-01 issue + fix arc cleanly in git history rather than collapsing to a single commit. Task 3 (sub-model walker) committed as 00fbec8. All 3 commits cryptographically signed (G status); GPG-signing checkpoint resolved by orchestrator priming gpg-agent.
+- [Phase 07.1 Plan 05]: RenderChrome falls back through three width tiers per 07.1-UI-SPEC §B — narrow (width<41 → "press ? for help" stub via ChromeNarrowFallbackStyle), mid (41≤width<99 → menu+logo, info-panel dropped), full (width≥99 → existing 3-slot layout). Threshold formulas use minMenuCol=8 (per-column legibility floor) + minFullMenuCol=18 (comfortable per-column budget for full tier). Closes WR-03.
+- [Phase 07.1 Plan 05]: RenderMenu rewritten as manual JoinHorizontal of two pre-rendered fixed-width columns + ansi.Truncate(desc, descWidth, "") per cell — replaces Phase 7's lipgloss/v2/table builder. Cell wrapping never engages (D-117 invariant). Side benefit: removes ~394 us/op contribution to chrome bench. lipgloss/v2/table import dropped from menu.go.
+- [Phase 07.1 Plan 05]: 4 new chrome composition tests in internal/ui/chrome_test.go (D-120) — TestRenderChrome_NarrowFallback (width=30 → 1-row stub), TestRenderChrome_DropsInfoPanel (width=60 → ≤6 rows, no info-panel signature), TestRenderChrome_FullChrome (width=200 → exactly 6 rows), TestRenderMenu_NoCellWrap (width=60 → exactly 6 rows). All pass at -count=1.
+- [Phase 07.1 Plan 05]: All 4 resize goldens refreshed (40x12 narrow stub + body reachable; 80x24 mid-tier 6-row chrome menu+logo no info-panel; 120x40 + 200x60 full-tier with manual-columns padding). Plan said "120x40 and 200x60 NOT modified" but the table→manual-columns swap shifted column padding by 1 cell at all widths — Rule 1 deviation, refreshed all 4.
+- [Phase 07.1 Plan 05]: Three Rule 1 deviations applied during execution: (a) width thresholds adjusted from CONTEXT D-116 single-floor formula (33/71) to two-tier per-column-budget formula (41/99) to reconcile plan's contradictory per-width golden expectations; (b) ansi.Truncate replaces MenuDescStyle.MaxWidth for cell clip (lipgloss/v2 MaxWidth allows soft-wrap, breaking D-117 no-wrap invariant); (c) all 4 resize goldens refreshed (not just 40x12 + 80x24). All deviations documented in 07.1-05-SUMMARY.md.
+- [Phase 07.1 Plan 05]: 07-VERIFICATION.md frontmatter status flipped from gaps_found to gaps_closed_by_phase_7.1; re_verification.gaps_closed populated with 6 entries (SC5 + WR-01..WR-05) recording closure_path + closed_by + evidence per plan; original gaps: block preserved with explanatory comment for historical record. THE LAST TASK of Phase 7.1.
+- [Phase 07.1 Plan 05]: Phase 7.1 COMPLETE. All 5 SC + 5 WR gaps from Phase 7's VERIFICATION.md closed: SC5 governance restoration (Plan 01); WR-04+WR-05 menu allowlist + quit-hint docs (Plan 02); WR-02 nested double borders strip (Plan 03); WR-01 BFS AST walker (Plan 04); WR-03 narrow-terminal chrome clamp (Plan 05). Five atomic commits in this plan: 1e078a2 (refactor T1+T2) + 4262a8a (test T3) + cd93367 (fix R1 deviations) + f3416bb (test goldens) + c7d25ed (docs verification closure).
 
 ### Pending Todos
 
 - ~~Execute Phase 07 Plan 03~~ CLOSED 2026-04-27 by Phase 07 Plan 03 — chromeHeight flipped, AppModel.View() rewritten with chrome composition, Hints() on 8 sub-models, dispatcher tested across 14 branches, 4 grep-gates + bench-budget enforce discipline, 4 resize goldens refreshed.
 - ~~Phase 7 WR-01: AST walker scope failure (TestViewNoNewStyle missed helpers reachable from View())~~ CLOSED 2026-04-27 by Phase 7.1 Plan 04 — BFS reachability walker rewrite + 3 model.go NewStyle lifts + sub-model walker; both walkers report 0 violations.
+- ~~Phase 7 WR-03: Narrow-terminal chrome overflow (40x12 body unreachable, 80x24 chrome 16 rows)~~ CLOSED 2026-04-27 by Phase 7.1 Plan 05 — three-tier width fallback in RenderChrome + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens.
+- ~~Phase 7 SC5 governance gap~~ CLOSED 2026-04-27 by Phase 7.1 Plan 01 — path (c) deferral; ROADMAP SC5 reverted, budgetNs back to 50_000, t.Skip with verbatim message, [APPROVED] entry in DISCUSSION-LOG.md.
+- ~~Phase 7 WR-02: Nested double borders on 6 sub-models~~ CLOSED 2026-04-27 by Phase 7.1 Plan 03 — inner RoundedBorder stripped from help/health/diff/metadata/history/recipientform; FormatMenuOverlayStyle is the only remaining RoundedBorder use (transient modal carve-out).
+- ~~Phase 7 WR-04+WR-05: Menu allowlist alignment + quit-hint suppression docs~~ CLOSED 2026-04-27 by Phase 7.1 Plan 02 — rounded corners removed from menu_test.go allowlist; doc comments added to RecipientConfirmHints + BulkReKeyConfirmHints + dispatcher arms; UI-SPEC §confirm-flow-quit-suppression.
+- ~~Phase 7.1 closing wave: update 07-VERIFICATION.md frontmatter (D-105)~~ CLOSED 2026-04-27 by Phase 7.1 Plan 05 — status flipped to gaps_closed_by_phase_7.1; re_verification.gaps_closed populated with 6 entries.
 - Manual UAT per Phase 06 D-15 / CLAUDE.md k9s-visual-parity — cycle through file list / detail / help / diff / metadata / history / health / recipient form at 40x12, 80x24, 120x40, AND 200x60 in a real terminal to confirm chrome aligns + no content paints under the status bar (deferred from executor; belongs to `/gsd-verify-work`)
 - Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 - Phase 10/11: revisit BenchmarkAppView budget — currently 5 ms with 56% headroom over ~2.8 ms/op measurement; D-18 caching fallback (model-level cache keyed on (state, recipientAction, IsSearchActive, width)) can tighten this if user-perceived latency matters
@@ -152,6 +165,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-27T15:00:00Z
-Stopped at: Phase 7.1 Plan 04 complete (BFS reachability walker + 3 model.go NewStyle lifts + sub-model walker — both walkers report 0 violations; WR-01 closed)
-Resume file: ready for Phase 7.1 Plan 05 (narrow-terminal chrome clamp — RenderChrome 3-tier fallback + RenderMenu manual columns + 4 chrome composition tests + refresh 40x12+80x24 goldens + update 07-VERIFICATION.md frontmatter)
+Last session: 2026-04-27T16:56:50Z
+Stopped at: Phase 7.1 COMPLETE — Plan 05 (narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1) closes all 5 SC + 5 WR gaps from Phase 7 verification
+Resume file: ready for /gsd-verify-work re-run on Phase 7 (expected status gaps_closed_by_phase_7.1) OR begin Phase 8 (Header Info Panel + Crumb Chips) on the now-clean chrome contract

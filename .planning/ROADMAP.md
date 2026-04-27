@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
 - [x] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
-- [ ] **Phase 7.1: Chrome Gap Closure (INSERTED)** - Restore SC5 governance (revert unauthorized ROADMAP/test-gate amendments; defer perf to Phase 11), strip nested sub-model RoundedBorder boxes, clamp narrow-terminal chrome overflow, extend View() AST walker into helpers, align menu test allowlist
+- [x] **Phase 7.1: Chrome Gap Closure (INSERTED)** - Restore SC5 governance (revert unauthorized ROADMAP/test-gate amendments; defer perf to Phase 11), strip nested sub-model RoundedBorder boxes, clamp narrow-terminal chrome overflow, extend View() AST walker into helpers, align menu test allowlist
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [ ] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained
 - [ ] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival
@@ -217,7 +217,7 @@ Plans:
 - [x] 07.1-02-PLAN.md — Align menu_test.go allowlist with chrome_test.go canonical + document quit-hint suppression in hints.go + model.go + 07-UI-SPEC.md
 - [x] 07.1-03-PLAN.md — Strip nested RoundedBorder envelope from 6 sub-models, lift surviving NewStyle calls, refresh 120x40+200x60 goldens
 - [x] 07.1-04-PLAN.md — Rewrite TestViewNoNewStyle as BFS reachability walker, lift 3 model.go NewStyle calls, add sub-model AST walker in internal/ui
-- [ ] 07.1-05-PLAN.md — Narrow-terminal chrome clamp (RenderChrome 3-tier fallback + RenderMenu manual columns), 4 new chrome composition tests, refresh 40x12+80x24 goldens, update 07-VERIFICATION.md frontmatter
+- [x] 07.1-05-PLAN.md — Narrow-terminal chrome clamp (RenderChrome 3-tier fallback + RenderMenu manual columns), 4 new chrome composition tests, refresh 40x12+80x24 goldens, update 07-VERIFICATION.md frontmatter
 
 **UI hint**: yes
 
