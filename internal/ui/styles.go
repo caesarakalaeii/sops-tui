@@ -244,4 +244,12 @@ var (
 
 	// TitleLabelStyle renders the title text inside the border top-line overlay (muted).
 	TitleLabelStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// InfoPanelPlaceholderStyle reserves the 6-row x 38-col top-left area
+	// of the chrome for Phase 8's header info panel (D-16, Pitfall 1 mitigation).
+	// Phase 7 renders the empty string into this style so lipgloss.Height
+	// returns exactly 6 and JoinHorizontal alignment is preserved.
+	InfoPanelPlaceholderStyle = lipgloss.NewStyle().
+					Width(38).
+					Height(6)
 )
