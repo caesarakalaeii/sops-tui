@@ -2,7 +2,7 @@
 //
 // RenderMenu renders the persistent keybinding menu as a 2-col x 6-row
 // grid via manual lipgloss.JoinHorizontal of two pre-rendered
-// fixed-width columns (Phase 7.1 D-117 — replaces the Phase 7
+// fixed-width columns (Phase 7.1 D-117 - replaces the Phase 7
 // lipgloss/v2/table builder so cell wrapping never engages). Fixed
 // layout at all widths per D-04 (narrow-terminal aesthetics deferred
 // to Phase 10). Column-major fill per D-07: hints 0..5 land in
@@ -12,11 +12,14 @@
 //
 // Each cell is composed as:
 //
-//	MenuKeyStyle.Render("[" + mnemonic + "]") + " " + MenuDescStyle.MaxWidth(descWidth).Render(desc)
+//	MenuKeyStyle.Render("[" + mnemonic + "]") + " " + MenuDescStyle.Render(ansi.Truncate(desc, descWidth, ""))
 //
 // so the mnemonic gets the accent foreground and the description gets
-// the default foreground per D-05. MaxWidth on the description ensures
-// the cell clips rather than wraps when the column width is tight.
+// the default foreground per D-05. ansi.Truncate clips the description
+// to fit the column budget - guaranteeing single-line cells per D-117
+// "cell wrapping never engages". (Earlier MaxWidth-based attempt caused
+// wrapping in lipgloss/v2 because MaxWidth allows soft-wrap of long
+// content; explicit pre-render truncation is the only reliable clip.)
 //
 // Note: Never use type any. Never use lipgloss.AdaptiveColor (issue #1036).
 package ui
@@ -25,6 +28,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
 )
@@ -70,14 +74,17 @@ func RenderMenu(hints []keys.MenuHint, width int) string {
 		colWidth = minMenuCol
 	}
 
-	// Mnemonic + brackets + space budget: "[X] " = 4 cells minimum;
-	// give the description the remaining space inside colWidth via
-	// MaxWidth (clip, do not wrap).
-	const keyBudget = 4 // "[" + mnemonic-1 + "]" + space
-	descWidth := colWidth - keyBudget
-	if descWidth < 1 {
-		descWidth = 1
-	}
+	// Each cell is `[mnem] desc`. The mnemonic-with-brackets segment
+	// length depends on the mnemonic itself (e.g. "j" → "[j]" = 3 cells;
+	// "enter" → "[enter]" = 7 cells). We compute descWidth per-cell from
+	// the actual mnemonic length so descriptions get all remaining
+	// horizontal budget without bleeding into the next column.
+	//
+	// Per-cell formula:
+	//
+	//	descWidth = colWidth - lipgloss.Width("[" + mnem + "] ")
+	//
+	// Floor at 1 so ansi.Truncate always has at least 1 cell to emit.
 
 	// D-07: column-major fill. hints[0..menuRows-1] -> col 0;
 	// hints[menuRows..2*menuRows-1] -> col 1.
@@ -86,16 +93,14 @@ func RenderMenu(hints []keys.MenuHint, width int) string {
 	for r := 0; r < menuRows; r++ {
 		// Left column
 		if r < len(visible) {
-			leftRows[r] = MenuKeyStyle.Render("["+visible[r].Mnemonic+"]") + " " +
-				MenuDescStyle.MaxWidth(descWidth).Render(visible[r].Description)
+			leftRows[r] = renderMenuCell(visible[r], colWidth)
 		} else {
 			leftRows[r] = ""
 		}
 		// Right column
 		idx := r + menuRows
 		if idx < len(visible) {
-			rightRows[r] = MenuKeyStyle.Render("["+visible[idx].Mnemonic+"]") + " " +
-				MenuDescStyle.MaxWidth(descWidth).Render(visible[idx].Description)
+			rightRows[r] = renderMenuCell(visible[idx], colWidth)
 		} else {
 			rightRows[r] = ""
 		}
@@ -105,4 +110,18 @@ func RenderMenu(hints []keys.MenuHint, width int) string {
 	rightCol := MenuColumnStyle.Width(colWidth).Render(strings.Join(rightRows, "\n"))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, leftCol, rightCol)
+}
+
+// renderMenuCell composes a single menu cell at the requested column
+// width, truncating the description with ansi.Truncate so the cell
+// never wraps to a second line (Phase 7.1 D-117 hard invariant).
+func renderMenuCell(h keys.MenuHint, colWidth int) string {
+	keyLabel := MenuKeyStyle.Render("[" + h.Mnemonic + "]")
+	keyVisible := lipgloss.Width(keyLabel) + 1 // +1 for the space separator
+	descWidth := colWidth - keyVisible
+	if descWidth < 1 {
+		descWidth = 1
+	}
+	desc := ansi.Truncate(h.Description, descWidth, "")
+	return keyLabel + " " + MenuDescStyle.Render(desc)
 }

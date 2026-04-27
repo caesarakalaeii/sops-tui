@@ -150,9 +150,14 @@ func TestWrapTitled(t *testing.T) {
 
 // TestRenderChrome verifies the 6-row persistent chrome band composes
 // correctly at multiple widths with and without hints.
+//
+// Phase 7.1 D-116 update: at width < ~41 the chrome falls back to the
+// narrow-tier 1-row stub (TestRenderChrome_NarrowFallback covers that
+// boundary). The 6-row contract applies at mid + full tiers — i.e.,
+// widths >= 41. Test widths below were bumped accordingly.
 func TestRenderChrome(t *testing.T) {
-	t.Run("returns exactly 6 rows at any width", func(t *testing.T) {
-		for _, w := range []int{40, 80, 120, 200} {
+	t.Run("returns exactly 6 rows at any non-narrow width", func(t *testing.T) {
+		for _, w := range []int{50, 80, 120, 200} {
 			chrome := RenderChrome(nil, LogoInfo, w)
 			require.Equal(t, 6, lipgloss.Height(chrome),
 				"chrome height must be 6 at width %d, got %d",
