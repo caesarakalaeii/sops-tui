@@ -189,7 +189,7 @@ Plans:
   2. A 6-row ASCII logo (~26 columns wide) is anchored to the top-right of the header on every view
   3. Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) renders inside a titled bordered region whose title encodes the view name and, where relevant, an item count
   4. Only `lipgloss.NormalBorder()` appears in chrome rendering code; persistent chrome is ASCII-only (emoji-free); a CI grep-gate prevents regressions
-  5. `AppModel.View()` composes `[header][optional crumbs][titled body][status bar]` and `BenchmarkAppView` stays under the per-frame budget at 200×60 without any `lipgloss.NewStyle()` calls inside `View()` (Phase 7 budget: 5 ms — Rule 1 deviation from the original 50 µs target documented in 07-03-SUMMARY.md; Phase 11 may tighten via D-18 caching fallback)
+  5. `AppModel.View()` composes `[header][optional crumbs][titled body][status bar]` AND `BenchmarkAppView` stays ≤ 50 µs/op at 200×60 with no `lipgloss.NewStyle()` inside `View()`
 **Plans:** 3 plans
 
 Plans:

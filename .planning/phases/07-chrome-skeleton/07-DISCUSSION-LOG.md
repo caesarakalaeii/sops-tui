@@ -128,3 +128,29 @@
 ## Deferred Ideas
 
 None — all architectural details for Phase 7 addressed within scope. Items deferred to later phases (8, 9, 10, 11, v2) are already enumerated in ROADMAP.md and restated in CONTEXT.md `<deferred>` section.
+
+---
+
+## [APPROVED] 2026-04-27 — Phase 7.1 SC5 governance restoration
+
+**Decision:** Path (c) — defer perf to Phase 11 SC2; revert all unauthorized amendments.
+
+**Accepted by:** moersener
+**Accepted at:** 2026-04-27
+
+**What was reverted:**
+1. `internal/app/chrome_test.go` line 230 — `const budgetNs` reverted from `5_000_000` (5 ms) back to `50_000` (50 µs locked D-24 value).
+2. `TestBenchmarkAppView_UnderBudget` now t.Skips with the original 50 µs constant preserved in code form.
+3. `.planning/ROADMAP.md` line 192 — SC5 wording reverted to `BenchmarkAppView stays ≤ 50 µs/op at 200×60 with no lipgloss.NewStyle() inside View()` (the locked CONTEXT.md D-24 target).
+
+**What stays:** The `[optional crumbs]` ROADMAP wording is a legitimate amendment (crumbs are conditionally omitted when crumbsHeight=0; unrelated to the perf gap). It remains.
+
+**Phase 11 ownership:** Phase 11 SC2 retains the verbatim original target `BenchmarkAppView stays ≤ 50 µs/op at 200×60 with the full chrome rendered`. D-18 caching fallback (model-level cache keyed on `(state, recipientAction, IsSearchActive, width)`) is the anticipated resolution path; Phase 11 may choose alternative paths (allocation hygiene, lipgloss internal optimisations) provided the 50 µs target is met.
+
+**Cross-references:**
+- `.planning/phases/07.1-chrome-gap-closure/07.1-CONTEXT.md` D-101..D-106
+- `.planning/phases/07-chrome-skeleton/07-VERIFICATION.md` Gap 1 (BLOCKER)
+- `.planning/phases/07-chrome-skeleton/07-RESEARCH.md` §"Open Questions Q4 RESOLVED" (which forbade pre-emptively raising the budget — the original Rule 1 deviation contradicted this)
+- `.planning/phases/07-chrome-skeleton/07-03-SUMMARY.md` "Rule 1 deviation" block (historical record retained with a closure pointer added in this same Phase 7.1 plan)
+
+This is the audit-trail entry the original Rule 1 deviation should have produced.
