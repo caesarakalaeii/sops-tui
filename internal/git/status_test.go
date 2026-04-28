@@ -215,3 +215,52 @@ func TestRelativeTime(t *testing.T) {
 		assert.Equal(t, "1 minute ago", result)
 	})
 }
+
+// TestGetBranch verifies branch resolution and the detached-HEAD case.
+// Mirrors TestGetFileStatuses 3-subtest shape (status_test.go:76-127).
+// Phase 8 D-215.
+func TestGetBranch(t *testing.T) {
+	t.Run("non-git directory returns ErrRepositoryNotExists", func(t *testing.T) {
+		dir := t.TempDir()
+		branch, detached, err := git.GetBranch(dir)
+		require.ErrorIs(t, err, gogit.ErrRepositoryNotExists)
+		assert.Equal(t, "", branch)
+		assert.False(t, detached)
+	})
+
+	t.Run("normal branch returns branch name", func(t *testing.T) {
+		dir := t.TempDir()
+		repo := initRepo(t, dir)
+		commitFile(t, repo, dir, "first.yaml", "data", "initial commit")
+
+		branch, detached, err := git.GetBranch(dir)
+		require.NoError(t, err)
+		assert.False(t, detached)
+		// PlainInit creates the default branch (master in go-git v5.17.0;
+		// some go-git versions / configs default to main). Accept either
+		// so the test is portable across CI configurations.
+		assert.Contains(t, []string{"master", "main"}, branch,
+			"expected master or main, got %q", branch)
+	})
+
+	t.Run("detached HEAD returns 7-char hash with detached=true", func(t *testing.T) {
+		dir := t.TempDir()
+		repo := initRepo(t, dir)
+		commitFile(t, repo, dir, "first.yaml", "data", "initial commit")
+
+		// Detach HEAD by checking out the commit hash directly.
+		head, err := repo.Head()
+		require.NoError(t, err)
+		wt, err := repo.Worktree()
+		require.NoError(t, err)
+		err = wt.Checkout(&gogit.CheckoutOptions{Hash: head.Hash()})
+		require.NoError(t, err)
+
+		branch, detached, err := git.GetBranch(dir)
+		require.NoError(t, err)
+		assert.True(t, detached, "checkout to commit hash must produce detached HEAD")
+		assert.Len(t, branch, 7, "detached HEAD branch must be 7-char short hash; got %q (%d chars)", branch, len(branch))
+		// Verify it is the prefix of the actual commit hash.
+		assert.Equal(t, head.Hash().String()[:7], branch)
+	})
+}

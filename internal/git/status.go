@@ -236,3 +236,40 @@ func GetLastCommitTime(repoRoot, relPath string) (time.Time, error) {
 
 // RelativeTime exports relativeTime for testing.
 var RelativeTime = relativeTime
+
+// GetBranch returns the current HEAD branch name plus a flag indicating
+// whether HEAD is detached.
+//
+// On a normal branch: branch = "main" (or whatever Short() returns from
+// "refs/heads/main"); detached = false.
+//
+// On detached HEAD: branch = first 7 chars of the commit hash; detached = true.
+//
+// On a non-git directory: returns ("", false, gogit.ErrRepositoryNotExists)
+// matching the GetFileStatuses contract (Phase 4 D-12 — non-git dirs are
+// not an error condition; the caller switches on ErrRepositoryNotExists).
+//
+// Phase 8 D-215. Called by AppModel's GitStatusMsg async cmd to populate
+// m.infoPanel.GitBranch + GitDetached for the chrome info panel `git:` row.
+func GetBranch(repoRoot string) (branch string, detached bool, err error) {
+	repo, err := gogit.PlainOpenWithOptions(repoRoot, &gogit.PlainOpenOptions{DetectDotGit: true})
+	if err == gogit.ErrRepositoryNotExists {
+		return "", false, gogit.ErrRepositoryNotExists
+	}
+	if err != nil {
+		return "", false, err
+	}
+	ref, err := repo.Head()
+	if err != nil {
+		return "", false, err
+	}
+	if ref.Name().IsBranch() {
+		return ref.Name().Short(), false, nil
+	}
+	// Detached HEAD: return short commit hash (defensive on length).
+	h := ref.Hash().String()
+	if len(h) > 7 {
+		h = h[:7]
+	}
+	return h, true, nil
+}
