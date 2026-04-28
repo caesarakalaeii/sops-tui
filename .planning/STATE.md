@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 08 Plan 02 COMPLETE — git.GetBranch (D-215) + StatusBarModel shrunk to right-aligned env+clipboard only + Segments() accessor + renderBreadcrumb deleted + SetItemCount no-op; ready for Plan 03 (integration + goldens)
-last_updated: "2026-04-28T11:13:04Z"
-last_activity: 2026-04-28 -- Phase 08 Plan 02 complete
+stopped_at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
+last_updated: "2026-04-28T14:58:15.311Z"
+last_activity: 2026-04-28 -- Phase 08 planning complete
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 30
-  completed_plans: 29
-  percent: 97
+  completed_plans: 30
+  percent: 100
 ---
 
 # Project State
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 Milestone: v1.1 — k9s visual parity
 Phase: 08 (header-info-panel) — EXECUTING
 Plan: 3 of 3
-Status: Executing Phase 08
-Last activity: 2026-04-28 -- Phase 08 Plan 02 complete
+Status: Ready to execute
+Last activity: 2026-04-28 -- Phase 08 planning complete
 
 Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 
