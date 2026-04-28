@@ -1,10 +1,11 @@
 ---
 phase: 8
 slug: header-info-panel
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-28
+reviewed_at: 2026-04-28
 parent_spec: 07-chrome-skeleton/07-UI-SPEC.md
 delta_specs:
   - 07.1-chrome-gap-closure/07.1-UI-SPEC.md
