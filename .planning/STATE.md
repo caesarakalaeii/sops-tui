@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
-last_updated: "2026-04-28T11:12:49Z"
-last_activity: 2026-04-28 -- Phase 08 Plan 01 complete
+stopped_at: Phase 08 Plan 02 COMPLETE — git.GetBranch (D-215) + StatusBarModel shrunk to right-aligned env+clipboard only + Segments() accessor + renderBreadcrumb deleted + SetItemCount no-op; ready for Plan 03 (integration + goldens)
+last_updated: "2026-04-28T11:13:04Z"
+last_activity: 2026-04-28 -- Phase 08 Plan 02 complete
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 30
-  completed_plans: 28
-  percent: 93
+  completed_plans: 29
+  percent: 97
 ---
 
 # Project State
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v1.1 — k9s visual parity
 Phase: 08 (header-info-panel) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Executing Phase 08
-Last activity: 2026-04-28 -- Phase 08 Plan 01 complete
+Last activity: 2026-04-28 -- Phase 08 Plan 02 complete
 
 Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 
@@ -71,6 +71,7 @@ Progress (v1.1 only): [█████████░] 47% (3/6 phases complete,
 | Phase 07.1 P04 | 8m | 3 tasks | 4 files |
 | Phase 07.1 P05 | 20m | 4 tasks | 10 files |
 | Phase 08 P01 | 5m | 3 tasks | 7 files |
+| Phase 08 P02 | 25m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 08 Plan 01]: middleTruncate uses ansi.TruncateLeft for the right fragment (Pitfall B fix). ansi.Truncate is tail-only; using it for both halves produces right-truncated output instead of middle-truncated. ansi.TruncateLeft(s, sw-right, "") extracts the trailing right cells correctly.
 - [Phase 08 Plan 01]: TestRenderCrumbs_ActiveBoldBg checks for "[1;" not "1m" — lipgloss/v2 encodes bold as a combined SGR sequence \x1b[1;38;2;...;48;2;...m. The standalone \x1b[1m form does not appear when bold is combined with color attributes.
 - [Phase 08 Plan 01]: Age fingerprint always middle-truncated to ≤10 cells (D-203 + D-220 Q5) regardless of input length. The security gate is "≤10 chars with visible ellipsis" — this applies even to fingerprints that happen to be ≤10 chars (they pass through unchanged since middleTruncate returns s unchanged if width ≤ maxCells).
+- [Phase 08 Plan 02]: SetItemCount neutered to no-op (_, _ = count, label) — not deleted. 14 call-sites in model.go preserved without touching model.go; Plan 3 owns optional cleanup. itemCount/itemLabel struct fields deleted. Method signature retained for backward compat (D-209 author choice).
+- [Phase 08 Plan 02]: GetBranch signature locked per D-215: func GetBranch(repoRoot string) (branch string, detached bool, err error). Non-git dir returns gogit.ErrRepositoryNotExists matching GetFileStatuses D-12 contract. Detached HEAD returns 7-char hash prefix with detached=true. Defensive len(h) > 7 guard prevents panic on edge case.
+- [Phase 08 Plan 02]: Segments() value receiver returns nil for empty breadcrumb (not []string{""}). Callers can cleanly branch on len(segments) == 0. SetBreadcrumb sets "sops-tui" default so normal-path Segments() always returns non-nil.
+- [Phase 08 Plan 02]: View() spacer in clipboard-hot path uses StatusBarStyle.Render(" ") (package-level var) not lipgloss.NewStyle() — consistent with D-22 no-NewStyle() in View() reachables. renderEnvIndicators NewStyle() calls are pre-existing technical debt deferred per Pitfall C rule.
+- [Phase 08 Plan 02]: renderBreadcrumb private function deleted (was dead code after D-211 left-section removal). fmt import removed from statusbar.go (was only used by deleted fmt.Sprintf item-count rendering).
 
 ### Pending Todos
 

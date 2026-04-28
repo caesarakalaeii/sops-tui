@@ -61,14 +61,14 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 - [x] **UI-01**: User sees a persistent multi-column keybinding menu in the header on every view — no `?` press required to discover hotkeys
 - [x] **UI-02**: User sees a 6-row ASCII logo anchored to the top-right of the header, ~26 columns wide
 - [ ] **UI-03**: Logo recolors to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and health aggregate
-- [ ] **UI-04**: User sees a header info panel (top-left) with five rows: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
+- [x] **UI-04**: User sees a header info panel (top-left) with five rows: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
 - [ ] **UI-05**: Info-panel fields are truncated and de-PII'd before render: age fingerprint ≤10 chars with ellipsis, paths are repo-relative, no copy bindings ever target chrome content
 
 ### Content Framing
 
 - [x] **UI-06**: Every primary view (Files, Detail, Metadata, Diff, Help, History, Health, Recipients, RecipientForm) is wrapped in a titled bordered region; title encodes the view name and when relevant an item count
 - [ ] **UI-07**: Breadcrumb segments render as colored chip pills replacing the legacy ` > ` text separator; the active (last) segment uses the accent color
-- [ ] **UI-08**: Bottom status bar shrinks to only right-aligned env indicators + clipboard state; the breadcrumb moves to a dedicated crumb row above the titled body
+- [x] **UI-08**: Bottom status bar shrinks to only right-aligned env indicators + clipboard state; the breadcrumb moves to a dedicated crumb row above the titled body
 
 ### Keybinding Discoverability
 
@@ -168,10 +168,10 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-02 | Phase 7 | Complete (Plan 03 — RenderChrome with logo top-right at all 4 resolutions) |
 | UI-06 | Phase 7 | Complete (Plan 03 — every primary view wrapped via WrapTitled with D-15 titles) |
 | UI-15 | Phase 7 | Complete (Plan 03 — TestChromeASCIIOnly + TestChromeNormalBorderOnly + TestViewNoNewStyle grep-gates all green) |
-| UI-04 | Phase 8 | Pending |
+| UI-04 | Phase 8 | Complete (Plan 02 — GetBranch git data source + Plan 01 RenderInfoPanel primitives) |
 | UI-05 | Phase 8 | Pending |
 | UI-07 | Phase 8 | Pending |
-| UI-08 | Phase 8 | Pending |
+| UI-08 | Phase 8 | Complete (Plan 02 — StatusBarModel.View() shrunk to right-aligned env+clipboard only; Segments() accessor; renderBreadcrumb deleted) |
 | UI-09 | Phase 9 | Pending |
 | UI-10 | Phase 9 | Pending |
 | UI-11 | Phase 9 | Pending |

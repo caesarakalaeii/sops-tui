@@ -234,8 +234,8 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Primitives: InfoPanelData + RenderInfoPanel + middleTruncate, RenderCrumbs + truncateSegmentsToWidth, ParseAgeKeyFingerprint + AgeKeyFilePath, 8 new style vars in styles.go (Wave 1)
-- [ ] 08-02-PLAN.md — git.GetBranch helper (3-subtest coverage) + status-bar shrink (right-aligned env+clipboard only, drop renderBreadcrumb, neuter SetItemCount, add Segments() accessor) (Wave 1)
+- [x] 08-01-PLAN.md — Primitives: InfoPanelData + RenderInfoPanel + middleTruncate, RenderCrumbs + truncateSegmentsToWidth, ParseAgeKeyFingerprint + AgeKeyFilePath, 8 new style vars in styles.go (Wave 1)
+- [x] 08-02-PLAN.md — git.GetBranch helper (3-subtest coverage) + status-bar shrink (right-aligned env+clipboard only, drop renderBreadcrumb, neuter SetItemCount, add Segments() accessor) (Wave 1)
 - [ ] 08-03-PLAN.md — Integration: AppModel.infoPanel cache + 4 refresh seams + RenderChrome signature change + crumbsHeight flip + grep-gate scope extension + 4 resize goldens regen + D-220 5-question security review sign-off (Wave 2)
 **UI hint**: yes
 
