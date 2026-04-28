@@ -17,7 +17,6 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -47,10 +46,12 @@ type EnvStatus struct {
 
 // StatusBarModel holds the state for the persistent bottom status bar.
 // It is a value type — methods that modify state return a new StatusBarModel.
+//
+// Phase 8 D-209/D-211: count and label fields removed; titled-border
+// title is the canonical count display (Phase 7 D-15). SetItemCount is kept
+// as a no-op for backward compat with 14 model.go call-sites.
 type StatusBarModel struct {
 	breadcrumb   string
-	itemCount    int
-	itemLabel    string // "items" or "keys" depending on active view
 	env          EnvStatus
 	flash        string
 	flashGen     int
@@ -62,7 +63,6 @@ type StatusBarModel struct {
 func NewStatusBarModel(env EnvStatus) StatusBarModel {
 	return StatusBarModel{
 		breadcrumb: "sops-tui",
-		itemLabel:  "items",
 		env:        env,
 	}
 }
@@ -77,11 +77,30 @@ func (m *StatusBarModel) SetBreadcrumb(segments ...string) {
 	m.breadcrumb = strings.Join(parts, " > ")
 }
 
-// SetItemCount updates the item count and label displayed in the center section.
-// Example: SetItemCount(12, "items") → "12 items"
+// Segments returns the underlying breadcrumb segments split on " > ".
+// Phase 8 D-210: read-path counterpart to SetBreadcrumb; consumed by
+// AppModel.View() via ui.RenderCrumbs(m.status.Segments(), m.width)
+// to render the chip-pill row above the titled body.
+//
+// SetBreadcrumb joins parts with " > "; Segments reverses the join.
+// Returns nil for an empty breadcrumb so the caller can distinguish
+// "no segments" from "single empty segment".
+func (m StatusBarModel) Segments() []string {
+	if m.breadcrumb == "" {
+		return nil
+	}
+	return strings.Split(m.breadcrumb, " > ")
+}
+
+// SetItemCount is retained as a no-op for backward compatibility with
+// 14 existing call-sites in internal/app/model.go. Phase 8 D-209
+// moves the canonical count display to the titled-border title (Phase 7
+// D-15: "Files (12)" / "History (47)" / etc.); the status-bar item
+// count center section is deleted (D-211). Plan 3 may delete the
+// method body + the 14 call-sites in its own commit; Plan 2 does
+// not block that.
 func (m *StatusBarModel) SetItemCount(count int, label string) {
-	m.itemCount = count
-	m.itemLabel = label
+	_, _ = count, label
 }
 
 // Env returns the current environment status indicators.
@@ -131,9 +150,13 @@ func (m StatusBarModel) Update(msg tea.Msg) (StatusBarModel, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the status bar at the given width.
-// During a flash: renders full-width centered flash text on surface background.
-// Normal mode: three sections separated by muted pipes.
+// View renders the status bar at the given width. After Phase 8 D-211
+// the normal path renders ONLY the right cluster (env indicators +
+// optional clipboard hot indicator) right-aligned on the surface bg.
+// The breadcrumb LEFT section moved to ui.RenderCrumbs (chip-pill row
+// above the titled body); the item-count CENTER section moved to the
+// titled-border title (Phase 7 D-15). Pipe separators (" | ") are
+// gone. Flash branch is unchanged per D-212.
 func (m StatusBarModel) View(width int) string {
 	if m.flash != "" {
 		return StatusBarStyle.
@@ -142,56 +165,18 @@ func (m StatusBarModel) View(width int) string {
 			Render(m.flash)
 	}
 
-	// Left: breadcrumb
-	left := renderBreadcrumb(m.breadcrumb)
-
-	// Center: item count
-	center := DimText.Render(fmt.Sprintf("%d %s", m.itemCount, m.itemLabel))
-
-	// Section separator
-	sep := lipgloss.NewStyle().
-		Foreground(ColorMuted).
-		Padding(0, SpaceSM).
-		Render("|")
-
-	// Right: clipboard indicator (if hot) + env indicators
 	right := renderEnvIndicators(m.env)
 	if m.clipboardHot {
 		clipIndicator := ClipboardHotStyle.Render("[clip]")
-		spacer := lipgloss.NewStyle().Foreground(ColorMuted).Render(" ")
+		// StatusBarStyle is already a package var (no NewStyle() in View()).
+		spacer := StatusBarStyle.Render(" ")
 		right = lipgloss.JoinHorizontal(lipgloss.Top, clipIndicator, spacer, right)
 	}
 
-	// Compose the three sections
-	composed := lipgloss.JoinHorizontal(lipgloss.Top,
-		left, sep, center, sep, right,
-	)
-
-	// Render on surface background, filling the full width
 	return StatusBarStyle.
 		Width(width).
-		Render(composed)
-}
-
-// renderBreadcrumb renders the breadcrumb string with styled segments.
-// The last segment (active page) is styled with BreadcrumbActive (accent color).
-// Separators " > " are styled with BreadcrumbSep (muted color).
-func renderBreadcrumb(breadcrumb string) string {
-	segments := strings.Split(breadcrumb, " > ")
-	var parts []string
-	for i, seg := range segments {
-		if i == len(segments)-1 {
-			// Last segment: active (accent color)
-			parts = append(parts, BreadcrumbActive.Render(seg))
-		} else {
-			// Preceding segments: dim
-			parts = append(parts, DimText.Render(seg))
-		}
-		if i < len(segments)-1 {
-			parts = append(parts, BreadcrumbSep.Render(" > "))
-		}
-	}
-	return strings.Join(parts, "")
+		Align(lipgloss.Right).
+		Render(right)
 }
 
 // renderEnvIndicators builds the right-hand env indicator string.
