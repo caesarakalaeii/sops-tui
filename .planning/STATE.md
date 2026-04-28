@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7.1 COMPLETE — Plan 05 (narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1) closes all 5 SC + 5 WR gaps from Phase 7 verification
-last_updated: "2026-04-28T11:05:16.818Z"
-last_activity: 2026-04-28 -- Phase 08 planning complete
+stopped_at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
+last_updated: "2026-04-28T11:12:49Z"
+last_activity: 2026-04-28 -- Phase 08 Plan 01 complete
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 30
-  completed_plans: 27
-  percent: 90
+  completed_plans: 28
+  percent: 93
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 08 — header-info-panel (v1.1 milestone)
+**Current focus:** Phase 08 — header-info-panel
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 08 (header-info-panel) — Ready for /gsd-plan-phase
-Plan: not yet planned (CONTEXT.md authored 2026-04-28)
-Status: Ready to execute
-Last activity: 2026-04-28 -- Phase 08 planning complete
+Phase: 08 (header-info-panel) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 08
+Last activity: 2026-04-28 -- Phase 08 Plan 01 complete
 
 Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 
@@ -70,6 +70,7 @@ Progress (v1.1 only): [█████████░] 47% (3/6 phases complete,
 | Phase 07 P03 | 16m | 3 tasks | 24 files |
 | Phase 07.1 P04 | 8m | 3 tasks | 4 files |
 | Phase 07.1 P05 | 20m | 4 tasks | 10 files |
+| Phase 08 P01 | 5m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 07.1 Plan 05]: Three Rule 1 deviations applied during execution: (a) width thresholds adjusted from CONTEXT D-116 single-floor formula (33/71) to two-tier per-column-budget formula (41/99) to reconcile plan's contradictory per-width golden expectations; (b) ansi.Truncate replaces MenuDescStyle.MaxWidth for cell clip (lipgloss/v2 MaxWidth allows soft-wrap, breaking D-117 no-wrap invariant); (c) all 4 resize goldens refreshed (not just 40x12 + 80x24). All deviations documented in 07.1-05-SUMMARY.md.
 - [Phase 07.1 Plan 05]: 07-VERIFICATION.md frontmatter status flipped from gaps_found to gaps_closed_by_phase_7.1; re_verification.gaps_closed populated with 6 entries (SC5 + WR-01..WR-05) recording closure_path + closed_by + evidence per plan; original gaps: block preserved with explanatory comment for historical record. THE LAST TASK of Phase 7.1.
 - [Phase 07.1 Plan 05]: Phase 7.1 COMPLETE. All 5 SC + 5 WR gaps from Phase 7's VERIFICATION.md closed: SC5 governance restoration (Plan 01); WR-04+WR-05 menu allowlist + quit-hint docs (Plan 02); WR-02 nested double borders strip (Plan 03); WR-01 BFS AST walker (Plan 04); WR-03 narrow-terminal chrome clamp (Plan 05). Five atomic commits in this plan: 1e078a2 (refactor T1+T2) + 4262a8a (test T3) + cd93367 (fix R1 deviations) + f3416bb (test goldens) + c7d25ed (docs verification closure).
+- [Phase 08 Plan 01]: Three primitive renderers shipped: RenderInfoPanel (5-row info panel, cfg/age/rcp/git/fil order locked by D-201), RenderCrumbs (k9s-exact <segment> chip pills with three-channel active encoding per D-206), ParseAgeKeyFingerprint (type-asserts to *age.X25519Identity before Recipient().String() — never Identity.String() directly per D-220 Q1). 8 package-level style vars added to styles.go. Zero AppModel coupling — Plan 3 wires integration.
+- [Phase 08 Plan 01]: middleTruncate uses ansi.TruncateLeft for the right fragment (Pitfall B fix). ansi.Truncate is tail-only; using it for both halves produces right-truncated output instead of middle-truncated. ansi.TruncateLeft(s, sw-right, "") extracts the trailing right cells correctly.
+- [Phase 08 Plan 01]: TestRenderCrumbs_ActiveBoldBg checks for "[1;" not "1m" — lipgloss/v2 encodes bold as a combined SGR sequence \x1b[1;38;2;...;48;2;...m. The standalone \x1b[1m form does not appear when bold is combined with color attributes.
+- [Phase 08 Plan 01]: Age fingerprint always middle-truncated to ≤10 cells (D-203 + D-220 Q5) regardless of input length. The security gate is "≤10 chars with visible ellipsis" — this applies even to fingerprints that happen to be ≤10 chars (they pass through unchanged since middleTruncate returns s unchanged if width ≤ maxCells).
 
 ### Pending Todos
 
@@ -145,7 +150,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Manual UAT per Phase 06 D-15 / CLAUDE.md k9s-visual-parity — cycle through file list / detail / help / diff / metadata / history / health / recipient form at 40x12, 80x24, 120x40, AND 200x60 in a real terminal to confirm chrome aligns + no content paints under the status bar (deferred from executor; belongs to `/gsd-verify-work`)
 - Phase 10 research pass recommended before planning — aggregate health severity classification (is "git dirty" a warn or info? is "stale recipient key" a warn?)
 - Phase 10/11: revisit BenchmarkAppView budget — currently 5 ms with 56% headroom over ~2.8 ms/op measurement; D-18 caching fallback (model-level cache keyed on (state, recipientAction, IsSearchActive, width)) can tighten this if user-perceived latency matters
-- Phase 8 planning: flip crumbsHeight from 0 to real chip-row height; replace "" placeholder in View()'s sections slice with rendered crumbs row; inflate the 38x6 InfoPanelPlaceholderStyle slot with the 5-row info panel content per UI-04
+- ~~Phase 8 planning: flip crumbsHeight from 0 to real chip-row height; replace "" placeholder in View()'s sections slice with rendered crumbs row; inflate the 38x6 InfoPanelPlaceholderStyle slot with the 5-row info panel content per UI-04~~ PARTIAL — Plan 01 ships primitives; Plan 03 wires AppModel integration (crumbsHeight flip + sections slice update + RenderChrome signature change + chrome wiring)
 
 ### Blockers/Concerns
 
@@ -165,6 +170,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-27T16:56:50Z
-Stopped at: Phase 7.1 COMPLETE — Plan 05 (narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1) closes all 5 SC + 5 WR gaps from Phase 7 verification
-Resume file: ready for /gsd-verify-work re-run on Phase 7 (expected status gaps_closed_by_phase_7.1) OR begin Phase 8 (Header Info Panel + Crumb Chips) on the now-clean chrome contract
+Last session: 2026-04-28T11:12:49Z
+Stopped at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
+Resume file: run /gsd-execute-phase 08 to continue with Plan 02
