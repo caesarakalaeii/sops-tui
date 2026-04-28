@@ -24,8 +24,10 @@ import (
 	"testing"
 )
 
-// submodelFiles is the canonical list of sub-model View() owners.
-// Phase 7.1 scope; Phase 8 adds info-panel content (separate concern).
+// submodelFiles is the canonical list of sub-model View() owners +
+// Phase 8 chrome primitives (infopanel.go + crumbs.go). The grep-gate
+// ensures NO lipgloss.NewStyle() calls appear in any FuncDecl of these
+// files, so package-var styles are the single source of truth.
 var submodelFiles = []string{
 	"filelist.go",
 	"detail.go",
@@ -35,6 +37,8 @@ var submodelFiles = []string{
 	"health.go",
 	"history.go",
 	"recipientform.go",
+	"infopanel.go", // Phase 8 D-219
+	"crumbs.go",    // Phase 8 D-219
 }
 
 // findRepoRootUI mirrors findRepoRoot from internal/app/layout_test.go.

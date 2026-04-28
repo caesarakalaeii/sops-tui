@@ -158,7 +158,7 @@ func TestWrapTitled(t *testing.T) {
 func TestRenderChrome(t *testing.T) {
 	t.Run("returns exactly 6 rows at any non-narrow width", func(t *testing.T) {
 		for _, w := range []int{50, 80, 120, 200} {
-			chrome := RenderChrome(nil, LogoInfo, w)
+			chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, w)
 			require.Equal(t, 6, lipgloss.Height(chrome),
 				"chrome height must be 6 at width %d, got %d",
 				w, lipgloss.Height(chrome))
@@ -166,7 +166,7 @@ func TestRenderChrome(t *testing.T) {
 	})
 
 	t.Run("contains logo art at right-anchored position", func(t *testing.T) {
-		chrome := RenderChrome(nil, LogoInfo, 200)
+		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, 200)
 		stripped := ansi.Strip(chrome)
 		// Logo Candidate A signature markers (logo.go LogoSmall): the row
 		// 4 baseline contains "|____/" twice and row 5 contains "tui".
@@ -181,7 +181,7 @@ func TestRenderChrome(t *testing.T) {
 			{Mnemonic: "?", Description: "help", Visible: true},
 			{Mnemonic: "q", Description: "quit", Visible: true},
 		}
-		chrome := RenderChrome(hints, LogoInfo, 200)
+		chrome := RenderChrome(hints, LogoInfo, InfoPanelData{}, 200)
 		stripped := ansi.Strip(chrome)
 		for _, mnem := range []string{"[j]", "[k]", "[?]", "[q]"} {
 			require.Contains(t, stripped, mnem,
@@ -189,23 +189,17 @@ func TestRenderChrome(t *testing.T) {
 		}
 	})
 
-	t.Run("reserves info panel width via placeholder", func(t *testing.T) {
-		chrome := RenderChrome(nil, LogoInfo, 200)
+	t.Run("info panel slot populated in full tier (Phase 8 D-201)", func(t *testing.T) {
+		// Phase 8: the info-panel slot is now live. With an empty InfoPanelData
+		// (all sentinels), the leftmost 38 cols render the "-" empty markers
+		// rather than blank whitespace. We verify the slot is non-blank.
+		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{RecipientCount: -1, FileCount: -1}, 200)
 		stripped := ansi.Strip(chrome)
 		lines := strings.Split(strings.TrimRight(stripped, "\n"), "\n")
 		require.GreaterOrEqual(t, len(lines), 6,
 			"chrome must render at least 6 rows")
-		for i, line := range lines[:6] {
-			if len(line) < 38 {
-				continue // short-clipped row OK (defensive)
-			}
-			// Leftmost 38 cols must be whitespace (info-panel placeholder
-			// reserves the column for Phase 8 without painting content).
-			prefix := line[:38]
-			require.Equal(t, "", strings.TrimSpace(prefix),
-				"row %d leftmost 38 cols must be blank (info-panel placeholder), got %q",
-				i, prefix)
-		}
+		// With empty markers, the info panel rows contain "cfg: -" etc.
+		require.Contains(t, stripped, "cfg:", "info panel must contain cfg: label in full tier")
 	})
 }
 
@@ -229,7 +223,7 @@ func fullHintsFixture() []keys.MenuHint {
 // Closes WR-03 / 07-VERIFICATION.md Anti-Pattern 4 (chrome overflows at
 // narrow widths, body unreachable at 40x12).
 func TestRenderChrome_NarrowFallback(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, 30)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 30)
 
 	// Single line — narrow tier produces a one-row stub.
 	require.Equal(t, 1, lipgloss.Height(out),
@@ -253,7 +247,7 @@ func TestRenderChrome_NarrowFallback(t *testing.T) {
 // content (first column of the menu), NOT the 38-col blank info-panel
 // placeholder that the full-tier reserves.
 func TestRenderChrome_DropsInfoPanel(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, 60)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 60)
 
 	// 6-row chrome (max(menuRows, logo rows) = 6).
 	require.LessOrEqual(t, lipgloss.Height(out), 6,
@@ -288,7 +282,7 @@ func TestRenderChrome_DropsInfoPanel(t *testing.T) {
 // 6 rows tall. This is the existing Phase 7 behaviour preserved by the
 // 7.1 width-fallback addition.
 func TestRenderChrome_FullChrome(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, 200)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 200)
 
 	// Full chrome is exactly 6 rows per D-16 (Phase 7).
 	require.Equal(t, 6, lipgloss.Height(out),

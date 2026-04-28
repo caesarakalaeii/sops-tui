@@ -23,7 +23,14 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/caesarakalaeii/sops-tui/internal/keys"
+	"github.com/caesarakalaeii/sops-tui/internal/sops"
+	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
 
 // TestChromeASCIIOnly enforces UI-15 (D-20): chrome source files must
@@ -58,7 +65,8 @@ func TestChromeASCIIOnly(t *testing.T) {
 		"internal/ui/chrome.go",
 		"internal/ui/logo.go",
 		"internal/ui/menu.go",
-		"internal/ui/crumbs.go", // Phase 8; skipped if missing.
+		"internal/ui/crumbs.go",    // Phase 8 D-219
+		"internal/ui/infopanel.go", // Phase 8 D-219
 	}
 	var violations []string
 	for _, rel := range files {
@@ -106,6 +114,8 @@ func TestChromeNormalBorderOnly(t *testing.T) {
 		"internal/ui/chrome.go",
 		"internal/ui/logo.go",
 		"internal/ui/menu.go",
+		"internal/ui/crumbs.go",    // Phase 8 D-219
+		"internal/ui/infopanel.go", // Phase 8 D-219
 	}
 	var violations []string
 	for _, rel := range files {
@@ -312,4 +322,68 @@ func TestBenchmarkAppView_UnderBudget(t *testing.T) {
 	}
 	t.Logf("BenchmarkAppView: %d ns/op (budget %d ns/op, headroom %d ns/op)",
 		nsPerOp, budgetNs, budgetNs-nsPerOp)
+}
+
+// TestRenderChrome_FullTierWithInfoPanel asserts the full-tier chrome
+// output contains all 5 info-panel labels at width=200 (Phase 8 D-219).
+// The 38x6 InfoPanelPlaceholderStyle slot is inflated with
+// RenderInfoPanel(info) per Phase 8 D-213.
+func TestRenderChrome_FullTierWithInfoPanel(t *testing.T) {
+	info := ui.InfoPanelData{
+		SopsYamlRelPath: "secrets/.sops.yaml",
+		AgeFingerprint:  "age1abcdefghijklmnop",
+		RecipientCount:  4,
+		GitBranch:       "main",
+		GitDirty:        true,
+		FileCount:       12,
+	}
+	hints := []keys.MenuHint{
+		{Mnemonic: "?", Description: "help", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
+	}
+	out := ui.RenderChrome(hints, ui.LogoInfo, info, 200)
+	stripped := ansi.Strip(out)
+
+	for _, label := range []string{"cfg:", "age:", "rcp:", "git:", "fil:"} {
+		assert.Containsf(t, stripped, label,
+			"full-tier chrome must contain %q label (D-201)", label)
+	}
+	assert.Contains(t, stripped, "secrets/.sops.yaml",
+		"cfg row must contain the rendered repo-relative path")
+	assert.Contains(t, stripped, "main",
+		"git row must contain the branch name")
+}
+
+// TestCrumbsHeight_NonZero asserts crumbsHeight(m) > 0 after a
+// WindowSizeMsg + breadcrumb is set (Phase 8 D-216 + D-219). Phase 7's
+// crumbsHeight=0 stub is gone; the real height is now lipgloss.Height
+// of RenderCrumbs output, typically 1 row.
+func TestCrumbsHeight_NonZero(t *testing.T) {
+	m := NewAppModel(ui.EnvStatus{}, "")
+	// First-frame guard requires width > 0 -- send WindowSizeMsg first.
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	am := updated.(AppModel)
+	am.status.SetBreadcrumb("sops-tui", "files", "prod.yaml")
+	h := crumbsHeight(am)
+	assert.Greater(t, h, 0,
+		"crumbsHeight must be >0 after width is set + breadcrumb populated (D-216)")
+}
+
+// TestInfoPanelCacheRefresh_OnFilesDiscovered asserts m.infoPanel.FileCount
+// reflects len(msg.Files) after the FilesDiscoveredMsg handler runs
+// (Phase 8 D-213 + D-219).
+func TestInfoPanelCacheRefresh_OnFilesDiscovered(t *testing.T) {
+	m := NewAppModel(ui.EnvStatus{}, "")
+	// First-frame guard
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	am := updated.(AppModel)
+
+	files := []sops.DiscoveredFile{
+		{Name: "a.yaml", AbsPath: "/tmp/a.yaml"},
+		{Name: "b.yaml", AbsPath: "/tmp/b.yaml"},
+	}
+	updated2, _ := am.Update(FilesDiscoveredMsg{Files: files})
+	am2 := updated2.(AppModel)
+	assert.Equal(t, 2, am2.infoPanel.FileCount,
+		"FileCount must reflect len(msg.Files) after FilesDiscoveredMsg refresh (D-213)")
 }
