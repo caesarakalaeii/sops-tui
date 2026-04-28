@@ -4,6 +4,7 @@
 [/] search                 [q] quit                     ___) | |_| |  __/ ___) |
 [i] file info              [g] go to top               |____/ \___/|_|   |____/
 [space] toggle select      [G] go to bottom                                 tui
+ <sops-tui> <files>
 ┌─ Files (0) ──────────────────────────────────────────────────────────────────┐
 │ No SOPS files found                                                          │
 │                                                                              │
@@ -19,6 +20,5 @@
 │                                                                              │
 │                                                                              │
 │                                                                              │
-│                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-sops-tui > files  |  0 items  |  sops:✓ age:✓ .sops.yaml:✓ no git
+                                                sops:✓ age:✓ .sops.yaml:✓ no git

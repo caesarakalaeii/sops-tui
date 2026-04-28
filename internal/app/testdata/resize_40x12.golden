@@ -1,4 +1,5 @@
 press ? for help
+ <sops-tui> <files>
 ┌─ Files (0) ──────────────────────────┐
 │ No SOPS files found                  │
 │                                      │
@@ -8,5 +9,4 @@ press ? for help
 │ .sops.yaml configuration.            │
 │                                      │
 └──────────────────────────────────────┘
-sops-tui > files  |  0 items  |  sops:✓
-age:✓ .sops.yaml:✓ no git
+        sops:✓ age:✓ .sops.yaml:✓ no git
