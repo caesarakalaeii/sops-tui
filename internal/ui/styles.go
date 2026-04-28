@@ -335,4 +335,57 @@ var (
 	// 6-row menu+logo pair, so this single-line fallback keeps the body
 	// region reachable.
 	ChromeNarrowFallbackStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// Phase 8: Header info panel + crumb chip styles (D-201..D-208, D-216).
+	// All declared as package-level vars to satisfy TestViewNoNewStyle (BFS)
+	// and TestSubmodelViewsNoNewStyle (file-scope, scope extended to
+	// infopanel.go + crumbs.go in Plan 3).
+
+	// InfoPanelLabelStyle renders the muted 5-cell label column (D-201).
+	// Width(5) enforces 4-char-label + 1-trailing-space alignment without
+	// manual padding (e.g. "cfg:" + " " rendered at Width(5) -> "cfg: ").
+	InfoPanelLabelStyle = lipgloss.NewStyle().Foreground(ColorMuted).Width(5)
+
+	// InfoPanelValueStyle renders the foreground value column (D-201, D-204).
+	// Width is NOT applied -- values are pre-truncated via middleTruncate
+	// in infopanel.go before reaching this style.
+	InfoPanelValueStyle = lipgloss.NewStyle().Foreground(ColorFg)
+
+	// InfoPanelSepStyle is reserved for Phase 10 visual tweak (UI-SPEC
+	// section Color section "Phase 8 new style declarations"). Phase 8 does
+	// not render an explicit separator cell -- the trailing space inside
+	// the label Width(5) provides the gap. Declared as no-op so the symbol
+	// exists for forward compat without API churn.
+	InfoPanelSepStyle = lipgloss.NewStyle()
+
+	// CrumbChipStyle renders inactive crumb chip pills (D-206).
+	// Two-channel encoding: surface bg + fg color contrast.
+	CrumbChipStyle = lipgloss.NewStyle().Background(ColorSurface).Foreground(ColorFg)
+
+	// CrumbChipActiveStyle renders the active (last) crumb chip pill (D-206).
+	// THREE-channel encoding: accent bg + inverted fg (bg color used as fg) +
+	// bold weight. Bold is the colorblind-safe redundancy channel (Pitfall 9).
+	// k9s deviation: k9s uses bg-only swap; sops-tui adds bold deliberately
+	// so the active-vs-inactive distinction survives 16-color downsampling.
+	CrumbChipActiveStyle = lipgloss.NewStyle().
+				Background(ColorAccent).
+				Foreground(ColorBg).
+				Bold(true)
+
+	// CrumbChipSepStyle is reserved for forward compat (Phase 10). Phase 8
+	// renders the inter-chip separator as a plain " " literal -- no styling.
+	CrumbChipSepStyle = lipgloss.NewStyle()
+
+	// CrumbChipEllipsisStyle renders the middle-truncation overflow chip
+	// "<...>" (D-216). Muted foreground + no bg fill so the chip reads as
+	// "data was here, dropped due to width" -- distinct from both inactive
+	// (bg-filled) and active (bg+bold) chips.
+	CrumbChipEllipsisStyle = lipgloss.NewStyle().Foreground(ColorMuted)
+
+	// CrumbRowStyle is the row container for the joined chips (D-208).
+	// PaddingLeft(SpaceXS) + PaddingRight(SpaceXS) mirrors k9s
+	// crumbs.go:32 SetBorderPadding(0,0,1,1).
+	CrumbRowStyle = lipgloss.NewStyle().
+			PaddingLeft(SpaceXS).
+			PaddingRight(SpaceXS)
 )
