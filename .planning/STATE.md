@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 7.1 COMPLETE (Plan 05 — narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1; WR-03 closed; all 5 SC + 5 WR gaps from Phase 7 verification now closed)
-last_updated: "2026-04-27T16:56:50.000Z"
-last_activity: 2026-04-27 -- Phase 7.1 Plan 05 complete (narrow-terminal chrome clamp + verification closure - FINAL plan of Phase 7.1)
+stopped_at: Phase 7.1 COMPLETE + verified (gsd-verifier passed 6/6 must-haves; gsd-code-review issues_found info-only; ready for Phase 8)
+last_updated: "2026-04-28T07:25:43.000Z"
+last_activity: 2026-04-28 -- Phase 7.1 verification passed (6/6); ready for Phase 8 (Header Info Panel + Crumb Chips)
 progress:
   total_phases: 8
   completed_phases: 7
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 07 — chrome-skeleton
+**Current focus:** Phase 08 — header-info-panel (v1.1 milestone)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 07.1 (chrome-gap-closure) — COMPLETE (all 5 plans landed)
-Plan: 5 of 5 (Plans 01 + 02 + 03 + 04 + 05 complete)
-Status: Phase 7.1 ready for /gsd-verify-work re-run; expected status gaps_closed_by_phase_7.1
-Last activity: 2026-04-27 -- Phase 7.1 Plan 05 complete (narrow-terminal chrome clamp + verification closure - FINAL plan of Phase 7.1)
+Phase: 08 (header-info-panel) — Ready to start
+Plan: not yet planned
+Status: Phase 7.1 verified (6/6 must-haves); chrome contract is clean for Phase 8 info-panel work
+Last activity: 2026-04-28 -- Phase 7.1 verification passed; ready for Phase 8
 
 Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 

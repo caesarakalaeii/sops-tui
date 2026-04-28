@@ -101,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 — milestone v1.1 (k9s visual parity) started*
+*Last updated: 2026-04-28 — Phase 7 (chrome skeleton) + Phase 7.1 (gap closure) complete; chrome contract clean (zero NewStyle reachable from View, single titled border per overlay, 3-tier narrow-terminal clamp); Phase 8 (header info panel) next*

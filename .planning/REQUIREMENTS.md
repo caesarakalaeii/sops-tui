@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-27 — Phase 07 Plan 03 complete; UI-01, UI-02, UI-06, UI-15 marked complete*
+*Last updated: 2026-04-28 — Phase 7.1 complete (chrome-gap-closure); UI-15 governance hardened; UI-16 partial coverage closed (40×12 + 80×24 narrow-tier survival), broader matrix stays Phase 10; UI-21 deferred to Phase 11 SC2 (50µs target preserved via t.Skip)*
