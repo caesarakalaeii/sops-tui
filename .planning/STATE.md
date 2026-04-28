@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: — Functional Core
 status: executing
-stopped_at: Phase 8 CONTEXT.md authored (20 decisions across 4 gray areas + plan split + validation + security review); ready for /gsd-plan-phase 8
-last_updated: "2026-04-28T12:00:00.000Z"
-last_activity: 2026-04-28 -- Phase 8 discuss-phase complete; CONTEXT.md + DISCUSSION-LOG.md committed (89ce390)
+stopped_at: Phase 7.1 COMPLETE — Plan 05 (narrow-terminal 3-tier chrome fallback + manual-columns RenderMenu + 4 new composition tests + 4 refreshed resize goldens + 07-VERIFICATION.md frontmatter flipped to gaps_closed_by_phase_7.1) closes all 5 SC + 5 WR gaps from Phase 7 verification
+last_updated: "2026-04-28T11:05:16.818Z"
+last_activity: 2026-04-28 -- Phase 08 planning complete
 progress:
-  total_phases: 8
-  completed_phases: 7
-  total_plans: 27
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 30
   completed_plans: 27
-  percent: 100
+  percent: 90
 ---
 
 # Project State
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 Milestone: v1.1 — k9s visual parity
 Phase: 08 (header-info-panel) — Ready for /gsd-plan-phase
 Plan: not yet planned (CONTEXT.md authored 2026-04-28)
-Status: Phase 8 CONTEXT.md captured 20 decisions across 4 gray areas (info-panel schema D-201..D-204, chip pill design D-205..D-208, status-bar shrink D-209..D-212, data refresh + age key D-213..D-216) plus plan split (D-217..D-218), validation (D-219), and security review (D-220). Resume file: .planning/phases/08-header-info-panel/08-CONTEXT.md
-Last activity: 2026-04-28 -- Phase 8 discuss-phase complete (89ce390); ready for /gsd-plan-phase 8
+Status: Ready to execute
+Last activity: 2026-04-28 -- Phase 08 planning complete
 
 Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
 
