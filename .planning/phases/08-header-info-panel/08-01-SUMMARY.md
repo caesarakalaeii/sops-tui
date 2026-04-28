@@ -161,6 +161,18 @@ Plan 2 (`08-02-PLAN.md`) can proceed immediately:
 
 Plan 3 (`08-03-PLAN.md`) AppModel integration is unblocked pending Plan 2 completion.
 
+## Self-Check: PASSED
+
+- All 7 key files exist on disk: FOUND
+- All 3 task commits verified in git log: 256cdf6, 9e0cab3, 52fca6a — FOUND
+- Full test suite (`go test ./... -count=1`): all 9 packages OK
+- Zero lipgloss.NewStyle() in renderer files: PASS
+- D-220 Q1 leak guard (no ids[0].String()): PASS
+- Pitfall A type-assert present: PASS
+- Pitfall B both ansi functions present: PASS
+- 8 new style vars in styles.go: PASS
+- Zero AppModel coupling: PASS
+
 ---
 *Phase: 08-header-info-panel*
 *Completed: 2026-04-28*
