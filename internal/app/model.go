@@ -263,6 +263,11 @@ type AppModel struct {
 	recipientPubkey string           // pubkey being added/removed (for sops call after confirm)
 	recipientList   []string         // current file's recipients for remove-recipient overlay
 	currentParsed   parser.ParsedFile // parsed data for current detail file (for recipient access)
+	// Phase 8 D-213: cached info-panel data. Refreshed at four event
+	// seams (NewAppModel + FilesDiscoveredMsg + FilesParsedMsg +
+	// GitStatusMsg). View() reads this cache only -- zero I/O at
+	// render time (Pitfall 15).
+	infoPanel ui.InfoPanelData
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -282,6 +287,17 @@ func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
 	}
 	m.status.SetBreadcrumb("files")
 	m.status.SetItemCount(0, "items")
+	// Phase 8 D-213 + D-214: populate startup-known info-panel fields.
+	// Sentinel values (-1, "") are rendered as "-" per D-204 until the
+	// corresponding refresh seam fires (FilesDiscoveredMsg -> FileCount;
+	// FilesParsedMsg -> RecipientCount; GitStatusMsg -> GitBranch/GitDetached/GitDirty).
+	m.infoPanel = ui.InfoPanelData{
+		SopsYamlRelPath: deriveSopsYamlRelPath(sopsYamlPath),
+		AgeFingerprint:  loadAgeFingerprint(),
+		RecipientCount:  -1,
+		GitBranch:       "",
+		FileCount:       -1,
+	}
 	return m
 }
 
@@ -346,6 +362,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		w, h := bodyDims(m)
 		m.fileList = ui.NewFileListModel(items, w, h)
 		m.status.SetItemCount(len(items), "items")
+		// Phase 8 D-213: refresh cached FileCount + repo-relative path.
+		m.infoPanel.FileCount = len(msg.Files)
+		m.infoPanel.SopsYamlRelPath = deriveSopsYamlRelPath(m.sopsYamlPath)
 		// Dispatch async git status fetch (D-11).
 		relPaths := make([]string, len(msg.Files))
 		for i, f := range msg.Files {
@@ -370,6 +389,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		w, h := bodyDims(m)
 		m.currentParsed = msg.Parsed
+		// Phase 8 D-213: refresh RecipientCount cache after parse.
+		// Single insertion point covers all 3 FilesParsedMsg producers
+		// (lines 667, 1019, 1233) -- they all route through this handler.
+		m.infoPanel.RecipientCount = len(m.currentParsed.Metadata.AgeRecipients)
 		m.detail = ui.NewDetailModel(
 			m.currentFile.Name,
 			msg.Parsed.Nodes,
@@ -590,6 +613,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status.SetEnv(env)
 		m.gitRepoRoot = filepath.Dir(m.sopsYamlPath)
 
+		// Phase 8 D-213 + D-215: refresh git fields. GetBranch returns
+		// ("", false, ErrRepositoryNotExists) for non-git directories;
+		// we treat that as the "-" empty state per D-204.
+		if msg.GitAvailable && m.gitRepoRoot != "" {
+			branch, detached, gerr := gitpkg.GetBranch(m.gitRepoRoot)
+			if gerr != nil {
+				m.infoPanel.GitBranch = ""
+				m.infoPanel.GitDetached = false
+			} else {
+				m.infoPanel.GitBranch = branch
+				m.infoPanel.GitDetached = detached
+			}
+		} else {
+			m.infoPanel.GitBranch = ""
+			m.infoPanel.GitDetached = false
+		}
+
 		if msg.Err != nil || !msg.GitAvailable {
 			return m, nil
 		}
@@ -599,6 +639,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.files[i].GitStatus = string(gs)
 			}
 		}
+		// Aggregate dirty: any file with non-clean GitStatus.
+		dirty := false
+		for _, f := range m.files {
+			if f.GitStatus != "" && f.GitStatus != string(gitpkg.GitStatusClean) {
+				dirty = true
+				break
+			}
+		}
+		m.infoPanel.GitDirty = dirty
 		// Rebuild file list items with git badge data.
 		items := make([]ui.FileItem, len(m.files))
 		for i, f := range m.files {
@@ -1342,17 +1391,13 @@ func (m AppModel) View() tea.View {
 		wrapped = ui.WrapTitled(title, body, w, h)
 	}
 
-	chrome := ui.RenderChrome(hints, ui.LogoInfo, m.width)
+	// Phase 8 D-213 + D-216: chrome consumes m.infoPanel cache;
+	// crumbs row is unconditional (independent of chrome tier per
+	// D-216) -- the conditional guard from Phase 7 D-17 is removed.
+	chrome := ui.RenderChrome(hints, ui.LogoInfo, m.infoPanel, m.width)
+	crumbs := ui.RenderCrumbs(m.status.Segments(), m.width)
 	statusBar := m.status.View(m.width)
-
-	// Conditional join: omit the crumbs-placeholder slot in Phase 7 because
-	// JoinVertical of an empty string would still consume one row. Phase 8
-	// flips crumbsHeight and unconditionally appends the chip row here.
-	sections := []string{chrome}
-	if crumbsHeight(m) > 0 {
-		sections = append(sections, "") // Phase 8 will replace with rendered crumbs row.
-	}
-	sections = append(sections, wrapped, statusBar)
+	sections := []string{chrome, crumbs, wrapped, statusBar}
 	full := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
 	v := tea.NewView(full)
@@ -1529,16 +1574,21 @@ func chromeHeight(m AppModel) int {
 	if m.width == 0 {
 		return 0
 	}
-	chrome := ui.RenderChrome(m.menuHints(), ui.LogoInfo, m.width)
+	chrome := ui.RenderChrome(m.menuHints(), ui.LogoInfo, m.infoPanel, m.width)
 	return lipgloss.Height(chrome)
 }
 
 // crumbsHeight returns the rendered height of the breadcrumb chip row.
-// Phase 6: stub returning 0 (breadcrumb still lives in the status bar).
-// Phase 8: flipped to the real rendered height of the chip pill row.
+// Phase 8 D-216 + Claude's Discretion: returns lipgloss.Height of the
+// RenderCrumbs output (typically 1 row; chips don't wrap by D-216
+// overflow rule). First-frame safety: returns 0 when m.width == 0
+// so bodyDims doesn't over-subtract before the first WindowSizeMsg
+// arrives -- mirrors chromeHeight's first-frame guard.
 func crumbsHeight(m AppModel) int {
-	_ = m
-	return 0
+	if m.width == 0 {
+		return 0
+	}
+	return lipgloss.Height(ui.RenderCrumbs(m.status.Segments(), m.width))
 }
 
 // populateCrossFileItems lazily populates the cross-file search item cache (GIT-03).
@@ -1957,6 +2007,39 @@ func (m AppModel) renderRecipientList() string {
 
 // renderFormatMenu renders the format selection menu overlay for ambiguous rotation.
 // Per 03-UI-SPEC.md §Format Menu: rounded border, surface background, 5 format options.
+// deriveSopsYamlRelPath converts an absolute .sops.yaml path to a
+// repo-relative form for chrome rendering (Phase 8 D-220 question 2:
+// paths must never expose $HOME or absolute filesystem layout).
+// Returns "" for empty input; falls back to filepath.Base on cwd
+// resolution / Rel failure.
+func deriveSopsYamlRelPath(absPath string) string {
+	if absPath == "" {
+		return ""
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return filepath.Base(absPath)
+	}
+	rel, err := filepath.Rel(cwd, absPath)
+	if err != nil {
+		return filepath.Base(absPath)
+	}
+	return rel
+}
+
+// loadAgeFingerprint reads the user's age identity once at startup
+// and returns the public Recipient().String() for chrome rendering.
+// Phase 8 D-220 question 1: only the public Recipient string is
+// surfaced; the AGE-SECRET-KEY private key is never read or rendered
+// (the type-assert in ui.ParseAgeKeyFingerprint is the security gate).
+func loadAgeFingerprint() string {
+	path, err := ui.AgeKeyFilePath()
+	if err != nil {
+		return ""
+	}
+	return ui.ParseAgeKeyFingerprint(path)
+}
+
 func renderFormatMenu(cursor, width, height int) string {
 	title := ui.DiffKeyStyle.Render("Select format for new secret:")
 	var sb strings.Builder

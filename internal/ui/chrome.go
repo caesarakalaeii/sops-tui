@@ -103,16 +103,16 @@ const (
 // added in Phase 7.1 D-116 to close WR-03 / 07-VERIFICATION.md
 // Anti-Pattern 4 (chrome overflows at narrow widths, body unreachable
 // at 40x12).
-func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, width int) string {
+func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelData, width int) string {
 	// Narrow tier: width below logoWidth + 2*minMenuCol (~41 cols).
-	// Render a single-line muted stub; no border.
+	// Render a single-line muted stub; no border. Info parameter ignored.
 	if width < logoWidth+menuCols*minMenuCol {
 		return ChromeNarrowFallbackStyle.Render("press ? for help")
 	}
 
 	// Mid tier: width below infoPanelWidth + logoWidth + 2*minFullMenuCol
 	// (~99 cols). Drop the info-panel slot; render menu+logo only with
-	// generous menu width.
+	// generous menu width. Info parameter ignored per Phase 7.1 D-116.
 	if width < infoPanelWidth+logoWidth+menuCols*minFullMenuCol {
 		menuWidth := width - logoWidth
 		// menuWidth is guaranteed >= 2*minMenuCol because the narrow-tier
@@ -122,15 +122,18 @@ func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, width int) strin
 		return lipgloss.JoinHorizontal(lipgloss.Top, menu, logo)
 	}
 
-	// Full tier: existing 3-slot layout. Width math unchanged.
-	info := InfoPanelPlaceholderStyle.Render("")
+	// Full tier: existing 3-slot layout. Phase 8 D-201..D-204: inflate the
+	// 38x6 slot with the live info panel. RenderInfoPanel produces 5 rows
+	// of label+value content; the InfoPanelPlaceholderStyle wrapper enforces
+	// the 38x6 envelope per Phase 7 D-16 (unchanged in Phase 8).
+	infoSlot := InfoPanelPlaceholderStyle.Render(RenderInfoPanel(info))
 	menuWidth := width - infoPanelWidth - logoWidth
 	if menuWidth < 1 {
 		menuWidth = 1
 	}
 	menu := RenderMenu(hints, menuWidth)
 	logo := RenderLogo(logoStatus, logoWidth)
-	return lipgloss.JoinHorizontal(lipgloss.Top, info, menu, logo)
+	return lipgloss.JoinHorizontal(lipgloss.Top, infoSlot, menu, logo)
 }
 
 // WrapTitled wraps body in a NormalBorder box of outer width x height
