@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: — Functional Core
-status: executing
-stopped_at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
-last_updated: "2026-04-28T14:58:15.311Z"
-last_activity: 2026-04-28 -- Phase 08 planning complete
+milestone: v1.1
+milestone_name: k9s visual parity
+status: ready_for_next_phase
+stopped_at: Phase 08 COMPLETE — 5/5 SC verified per 08-VERIFICATION.md (info panel, de-PII'd values, k9s chip pills, crumb row above body, AppModel.infoPanel cache); ready for Phase 09 discussion (Keybinding Discoverability)
+last_updated: "2026-04-29T00:00:00Z"
+last_activity: 2026-04-29 -- Phase 08 verified, ready for Phase 09
 progress:
-  total_phases: 9
+  total_phases: 12
   completed_phases: 9
-  total_plans: 30
+  total_plans: 37
   completed_plans: 30
-  percent: 100
+  percent: 81
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 08 — header-info-panel
+**Current focus:** Phase 09 — keybinding-discoverability (discussion pending)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 08 (header-info-panel) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-04-28 -- Phase 08 planning complete
+Phase: 09 (keybinding-discoverability) — READY FOR DISCUSSION
+Plan: not yet planned
+Status: Ready for /gsd-discuss-phase 9
+Last activity: 2026-04-29 -- Phase 08 verified (5/5 SC), ready for Phase 09
 
-Progress (v1.1 only): [█████████░] 47% (3/6 phases complete, 10/15 plans complete)
+Progress (v1.1 only): [█████░░░] 65% (4/7 phases complete, 13/20 plans complete)
 
 ## Performance Metrics
 
