@@ -12,7 +12,7 @@ sops-tui ships in two milestones. **Milestone v1.0 (Phases 1-5)** delivered the 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-### Milestone v1.0 — Functional Core
+**Milestone v1.0 — Functional Core**
 
 - [x] **Phase 1: Foundation** - TUI skeleton, SOPS subprocess wrapper, config discovery, security groundwork, startup validation
 - [x] **Phase 2: Read Loop** - File browser, key names without decrypt, SOPS metadata, fuzzy search, full navigation (completed 2026-04-14)
@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Clipboard & Git** - Clipboard with auto-clear and signal safety, git change badges, blame/history, cross-file search
 - [x] **Phase 5: Power Features** - Recipient management, bulk re-key, secret health checks
 
-### Milestone v1.1 — k9s Visual Parity
+**Milestone v1.1 — k9s Visual Parity**
 
 - [x] **Phase 6: Layout Groundwork** - `bodyDims()` helper, migrate 15 SetSize call-sites, CI grep-gate, ANSI-stripped teatest harness
 - [x] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
