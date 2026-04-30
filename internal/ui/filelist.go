@@ -377,16 +377,11 @@ func (m FileListModel) ItemCount() int {
 }
 
 // Hints returns the persistent-menu hint set for FileListModel per D-09.
-// Derives the first 10 hints from the keymap (single source of truth per
-// D-08) and appends g/G explicitly since FileListKeyMap.ShortHelp()
-// intentionally omits them (they are navigation micro-keys).
+// Derives all 12 hints from FileListKeyMap.ShortHelp() per D-304 and D-301
+// (total derivation — no manual append). GoTop (g) and GoBottom (G) are
+// now part of ShortHelp() at positions 10 and 11 respectively.
 func (m FileListModel) Hints() []keys.MenuHint {
-	hints := keys.HintsFromBindings(m.keys.ShortHelp())
-	hints = append(hints,
-		keys.MenuHint{Mnemonic: "g", Description: "go to top", Visible: true},
-		keys.MenuHint{Mnemonic: "G", Description: "go to bottom", Visible: true},
-	)
-	return hints
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }
 
 // SelectedItems returns all FileItems with Selected == true.
