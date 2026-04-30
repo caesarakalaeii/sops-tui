@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: k9s visual parity
-status: ready_for_next_phase
-stopped_at: Phase 08 COMPLETE — 5/5 SC verified per 08-VERIFICATION.md (info panel, de-PII'd values, k9s chip pills, crumb row above body, AppModel.infoPanel cache); ready for Phase 09 discussion (Keybinding Discoverability)
-last_updated: "2026-04-29T00:00:00Z"
-last_activity: 2026-04-29 -- Phase 08 verified, ready for Phase 09
+status: context_gathered
+stopped_at: Phase 09 CONTEXT captured — 13 decisions across 4 areas (Hints SoT, drift defense, golden matrix, inline package vars). 11 new keymaps in bindings.go; runtime-equality drift detector; 13-entry menu matrix structure-only; recipientAction parameter dropped. Ready for /gsd-plan-phase 9.
+last_updated: "2026-04-30T00:00:00Z"
+last_activity: 2026-04-30 -- Phase 09 context gathered, ready for planning
 progress:
   total_phases: 12
   completed_phases: 9
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 09 — keybinding-discoverability (discussion pending)
+**Current focus:** Phase 09 — keybinding-discoverability (context captured, planning pending)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 09 (keybinding-discoverability) — READY FOR DISCUSSION
+Phase: 09 (keybinding-discoverability) — CONTEXT CAPTURED
 Plan: not yet planned
-Status: Ready for /gsd-discuss-phase 9
-Last activity: 2026-04-29 -- Phase 08 verified (5/5 SC), ready for Phase 09
+Status: Ready for /gsd-plan-phase 9
+Last activity: 2026-04-30 -- Phase 09 context gathered (13 decisions, 4 areas)
 
 Progress (v1.1 only): [█████░░░] 65% (4/7 phases complete, 13/20 plans complete)
 
