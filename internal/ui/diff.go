@@ -31,6 +31,7 @@ type DiffEntry struct {
 // It shows old and new values for one or more keys before re-encryption.
 // The user confirms with y or cancels with n/Esc.
 type DiffModel struct {
+	keys      keys.DiffKeyMap
 	entries   []DiffEntry
 	title     string
 	width     int
@@ -45,6 +46,7 @@ type DiffModel struct {
 // for multiple entries.
 func NewDiffModel(title string, entries []DiffEntry, width, height int) DiffModel {
 	return DiffModel{
+		keys:    keys.DefaultDiffKeyMap,
 		title:   title,
 		entries: entries,
 		width:   width,
@@ -170,16 +172,10 @@ func (m DiffModel) View() string {
 
 // Hints returns the 6-hint persistent menu set for DiffModel per D-09.
 // Covers the confirm/cancel/scroll axes. The modal states
-// stateRecipientConfirm and stateBulkReKeyConfirm use inline hint sets
-// on AppModel (keys.RecipientConfirmHints / BulkReKeyConfirmHints) since
-// they share the diff body but change the y/n semantics.
+// stateRecipientConfirm and stateBulkReKeyConfirm use keymap-derived hints
+// via keys.DefaultRecipientConfirmKeyMap / DefaultBulkReKeyConfirmKeyMap since
+// they share the diff body but change the y/n semantics (D-301, D-313).
+// Derives from DiffKeyMap.ShortHelp() per D-301 (total derivation).
 func (m DiffModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "y", Description: "confirm re-encrypt", Visible: true},
-		{Mnemonic: "n", Description: "cancel", Visible: true},
-		{Mnemonic: "Esc", Description: "cancel", Visible: true},
-		{Mnemonic: "j", Description: "scroll down", Visible: true},
-		{Mnemonic: "k", Description: "scroll up", Visible: true},
-		{Mnemonic: "q", Description: "quit", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }

@@ -32,6 +32,7 @@ const (
 // HelpModel renders a full-screen keybinding overlay.
 // It wraps bubbles/help.Model and adds the sops-tui styled border and footer.
 type HelpModel struct {
+	keys   keys.HelpKeyMap
 	help   help.Model
 	width  int
 	height int
@@ -47,6 +48,7 @@ func NewHelpModel(width, height int) HelpModel {
 	h.Styles.FullDesc = HelpDescStyle
 	h.Styles.FullSeparator = HelpDescStyle
 	return HelpModel{
+		keys:   keys.DefaultHelpKeyMap,
 		help:   h,
 		width:  width,
 		height: height,
@@ -93,10 +95,7 @@ func (m HelpModel) View(fromState ViewState) string {
 // The full help reference is the view itself (UI-11 retains the ?
 // overlay as the complete reference); the persistent menu just shows
 // how to close and quit.
+// Derives from HelpKeyMap.ShortHelp() per D-301 (total derivation — no literal slices).
 func (m HelpModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "Esc", Description: "close help", Visible: true},
-		{Mnemonic: "?", Description: "close help", Visible: true},
-		{Mnemonic: "q", Description: "quit", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }

@@ -24,6 +24,7 @@ import (
 // It mirrors HistoryModel's pattern: bordered box, surface background, j/k scroll.
 // The parent AppModel drives scrolling via ScrollDown()/ScrollUp() (no Update()).
 type HealthModel struct {
+	keys    keys.HealthKeyMap
 	results health.HealthCheckResult
 	loading bool
 	width   int
@@ -35,6 +36,7 @@ type HealthModel struct {
 // The model starts in loading=true state; call SetResults() to transition to content.
 func NewHealthModel(width, height int) HealthModel {
 	return HealthModel{
+		keys:    keys.DefaultHealthKeyMap,
 		loading: true,
 		width:   width,
 		height:  height,
@@ -178,12 +180,7 @@ func (m HealthModel) FindingCount() int {
 }
 
 // Hints returns the 5-hint persistent menu set for HealthModel per D-09.
+// Derives from HealthKeyMap.ShortHelp() per D-301 (total derivation).
 func (m HealthModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "j", Description: "scroll down", Visible: true},
-		{Mnemonic: "k", Description: "scroll up", Visible: true},
-		{Mnemonic: "H", Description: "close health", Visible: true},
-		{Mnemonic: "Esc", Description: "close health", Visible: true},
-		{Mnemonic: "q", Description: "quit", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }

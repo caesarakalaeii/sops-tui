@@ -20,6 +20,7 @@ import (
 // HistoryModel renders a full-screen overlay showing git commit history for a file.
 // It mirrors MetadataModel's pattern: bordered box, surface background, j/k scroll.
 type HistoryModel struct {
+	keys     keys.HistoryKeyMap
 	filename string
 	entries  []gitpkg.CommitEntry
 	loading  bool
@@ -32,6 +33,7 @@ type HistoryModel struct {
 // The model starts in loading=true state; call SetEntries() to transition to content.
 func NewHistoryModel(filename string, width, height int) HistoryModel {
 	return HistoryModel{
+		keys:     keys.DefaultHistoryKeyMap,
 		filename: filename,
 		loading:  true,
 		width:    width,
@@ -130,12 +132,7 @@ func (m HistoryModel) CommitCount() int {
 }
 
 // Hints returns the 5-hint persistent menu set for HistoryModel per D-09.
+// Derives from HistoryKeyMap.ShortHelp() per D-301 (total derivation).
 func (m HistoryModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "j", Description: "scroll down", Visible: true},
-		{Mnemonic: "k", Description: "scroll up", Visible: true},
-		{Mnemonic: "b", Description: "close history", Visible: true},
-		{Mnemonic: "Esc", Description: "close history", Visible: true},
-		{Mnemonic: "q", Description: "quit", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }

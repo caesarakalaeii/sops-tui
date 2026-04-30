@@ -32,6 +32,7 @@ type MetadataContent struct {
 // MetadataModel renders a full-screen overlay showing SOPS file metadata.
 // It mirrors HelpModel's pattern: bordered box, surface background, j/k scroll.
 type MetadataModel struct {
+	keys   keys.MetadataKeyMap
 	meta   MetadataContent
 	width  int
 	height int
@@ -41,6 +42,7 @@ type MetadataModel struct {
 // NewMetadataModel creates a MetadataModel sized to the given dimensions.
 func NewMetadataModel(meta MetadataContent, width, height int) MetadataModel {
 	return MetadataModel{
+		keys:   keys.DefaultMetadataKeyMap,
 		meta:   meta,
 		width:  width,
 		height: height,
@@ -164,12 +166,7 @@ func (m MetadataModel) View() string {
 }
 
 // Hints returns the 5-hint persistent menu set for MetadataModel per D-09.
+// Derives from MetadataKeyMap.ShortHelp() per D-301 (total derivation).
 func (m MetadataModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "j", Description: "scroll down", Visible: true},
-		{Mnemonic: "k", Description: "scroll up", Visible: true},
-		{Mnemonic: "i", Description: "close metadata", Visible: true},
-		{Mnemonic: "Esc", Description: "close metadata", Visible: true},
-		{Mnemonic: "q", Description: "quit", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }

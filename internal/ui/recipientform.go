@@ -28,6 +28,7 @@ import (
 // The user types a key, presses Enter to validate/confirm, or Esc to cancel.
 // Validation uses age.ParseX25519Recipient per D-02 (T-05-05 mitigation).
 type RecipientFormModel struct {
+	keys      keys.RecipientFormKeyMap
 	input     textinput.Model
 	errMsg    string // validation error displayed below input
 	width     int
@@ -44,6 +45,7 @@ func NewRecipientFormModel(width, height int) RecipientFormModel {
 	ti.CharLimit = 200 // T-05-06: mitigate DoS via long input
 	ti.Prompt = ""
 	return RecipientFormModel{
+		keys:   keys.DefaultRecipientFormKeyMap,
 		input:  ti,
 		width:  width,
 		height: height,
@@ -160,9 +162,7 @@ func (m RecipientFormModel) View() string {
 }
 
 // Hints returns the 2-hint persistent menu set for RecipientFormModel per D-09.
+// Derives from RecipientFormKeyMap.ShortHelp() per D-301 (total derivation).
 func (m RecipientFormModel) Hints() []keys.MenuHint {
-	return []keys.MenuHint{
-		{Mnemonic: "Enter", Description: "confirm", Visible: true},
-		{Mnemonic: "Esc", Description: "cancel", Visible: true},
-	}
+	return keys.HintsFromBindings(m.keys.ShortHelp())
 }
