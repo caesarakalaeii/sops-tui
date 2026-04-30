@@ -280,9 +280,12 @@ func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
 		fileList:      ui.NewFileListModel([]ui.FileItem{}, 0, 0),
 		detail:        ui.NewDetailModel("", []ui.TreeNode{}, 0, 0, true, ""),
 		help:          ui.NewHelpModel(0, 0),
+		diff:          ui.NewDiffModel("", nil, 0, 0),
 		status:        ui.NewStatusBarModel(env),
 		sopsYamlPath:  sopsYamlPath,
 		health:        ui.NewHealthModel(0, 0),
+		history:       ui.NewHistoryModel("", 0, 0),
+		metadata:      ui.NewMetadataModel(ui.MetadataContent{}, 0, 0),
 		recipientForm: ui.NewRecipientFormModel(0, 0),
 	}
 	m.status.SetBreadcrumb("files")
@@ -1497,7 +1500,7 @@ func bodyDims(m AppModel) (w, h int) {
 // D-09 for FormatMenu).
 func (m AppModel) menuHints() []keys.MenuHint {
 	if m.state == stateFileList && m.fileList.IsSearchActive() {
-		return keys.FileListSearchHints
+		return keys.HintsFromBindings(keys.DefaultFileListSearchKeyMap.ShortHelp())
 	}
 	switch m.state {
 	case stateFileList:
@@ -1510,12 +1513,13 @@ func (m AppModel) menuHints() []keys.MenuHint {
 		return m.diff.Hints()
 	// Quit suppressed deliberately during recipient action confirm flows so
 	// the user resolves the y/n decision before exiting (UI-SPEC §confirm-flow-quit-suppression).
+	// RecipientConfirmKeyMap.HiddenFromMenu() returns Quit per D-313.
 	case stateRecipientConfirm:
-		return keys.RecipientConfirmHints
-	// Same intentional quit suppression as RecipientConfirm — see
-	// keys.BulkReKeyConfirmHints declaration.
+		return keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp())
+	// Same intentional quit suppression as RecipientConfirm —
+	// BulkReKeyConfirmKeyMap.HiddenFromMenu() returns Quit per D-313.
 	case stateBulkReKeyConfirm:
-		return keys.BulkReKeyConfirmHints
+		return keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp())
 	case stateHelp:
 		return m.help.Hints()
 	case stateHistory:
@@ -1525,9 +1529,9 @@ func (m AppModel) menuHints() []keys.MenuHint {
 	case stateRecipientForm:
 		return m.recipientForm.Hints()
 	case stateRecipientList:
-		return keys.RecipientListHints
+		return keys.HintsFromBindings(keys.DefaultRecipientListKeyMap.ShortHelp())
 	case stateFormatMenu:
-		return keys.FormatMenuHints
+		return keys.HintsFromBindings(keys.DefaultFormatMenuKeyMap.ShortHelp())
 	}
 	return nil
 }

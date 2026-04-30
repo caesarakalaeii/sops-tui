@@ -1,17 +1,20 @@
-// Package keys additions for Phase 7 (chrome skeleton).
+// Package keys additions for Phase 7 (chrome skeleton) and hardened in
+// Phase 9 (keybinding discoverability).
 //
 // MenuHint is one row in the persistent keybinding menu. Hinter is the
 // interface every interactive sub-model implements so the AppModel
 // dispatcher can query the active view's hints on every View() call.
 // HintsFromBindings converts bubbles/v2/key.Binding.Help() output directly
 // into MenuHint entries — the keymap is the single source of truth for
-// menu content (Pitfall 3 mitigation).
+// menu content (D-301 — total derivation; closes SC5).
 //
-// Inline hint-set package vars cover states with no owning sub-model:
-// FileListSearchHints (D-11 search-active override), RecipientConfirmHints
-// and BulkReKeyConfirmHints (shared diff body, disambiguated by
-// recipientAction), RecipientListHints (no sub-model — renderer lives on
-// AppModel per Pitfall 3), and FormatMenuHints (modal overlay per D-09).
+// After Phase 9: all hint sets derive from keymap.ShortHelp() — there are
+// no inline package-var hint slices in this file anymore. The 5 stateless
+// states that lacked an owning sub-model now have keymap-backed types in
+// bindings.go (FileListSearchKeyMap, RecipientConfirmKeyMap,
+// BulkReKeyConfirmKeyMap, RecipientListKeyMap, FormatMenuKeyMap). The
+// visibility-suppression contract (Visible=false) is formalized via the
+// unexported menuVisibilityOverrider interface in bindings.go (D-307).
 //
 // Note: Never use type any. Never use lipgloss.AdaptiveColor (issue #1036).
 package keys
@@ -48,68 +51,4 @@ func HintsFromBindings(bindings []key.Binding) []MenuHint {
 		})
 	}
 	return hints
-}
-
-// FileListSearchHints is the D-11 override applied when FileListModel
-// has an active inline search. Replaces the default FileList hints while
-// search is active so the menu reflects keys that actually work.
-var FileListSearchHints = []MenuHint{
-	{Mnemonic: "Esc", Description: "exit search", Visible: true},
-	{Mnemonic: "Enter", Description: "select result", Visible: true},
-	{Mnemonic: "j/↓", Description: "next result", Visible: true},
-	{Mnemonic: "k/↑", Description: "prev result", Visible: true},
-	{Mnemonic: "?", Description: "toggle help", Visible: true},
-	{Mnemonic: "q", Description: "quit", Visible: true},
-}
-
-// RecipientConfirmHints is the hint set for stateRecipientConfirm —
-// the y/n confirmation over a shared diff body. Disambiguates the shared
-// stateDiff body via AppModel.state (recipientAction unused here per D-10).
-//
-// Quit suppressed deliberately during recipient action confirm flows so
-// the user resolves the y/n decision before exiting; UI-SPEC
-// §confirm-flow-quit-suppression. Compare DiffModel.Hints() (6 entries
-// including [q] quit) — the underlying diff body is the same; only the
-// hint set differs by state (Phase 7 D-10 dispatcher disambiguation).
-var RecipientConfirmHints = []MenuHint{
-	{Mnemonic: "y", Description: "confirm add/remove recipient", Visible: true},
-	{Mnemonic: "n", Description: "cancel", Visible: true},
-	{Mnemonic: "Esc", Description: "cancel", Visible: true},
-	{Mnemonic: "j", Description: "scroll down", Visible: true},
-	{Mnemonic: "k", Description: "scroll up", Visible: true},
-}
-
-// BulkReKeyConfirmHints is the hint set for stateBulkReKeyConfirm —
-// the y/n/Esc per-file confirmation during a bulk re-key run.
-//
-// Quit suppressed deliberately during bulk re-key confirm flows so the
-// user resolves the y/n decision before exiting; UI-SPEC
-// §confirm-flow-quit-suppression. Compare DiffModel.Hints() (6 entries
-// including [q] quit) — the underlying diff body is the same; only the
-// hint set differs by state.
-var BulkReKeyConfirmHints = []MenuHint{
-	{Mnemonic: "y", Description: "confirm re-key this file", Visible: true},
-	{Mnemonic: "n", Description: "skip this file", Visible: true},
-	{Mnemonic: "Esc", Description: "abort bulk re-key", Visible: true},
-	{Mnemonic: "j", Description: "scroll down", Visible: true},
-	{Mnemonic: "k", Description: "scroll up", Visible: true},
-}
-
-// RecipientListHints is the hint set for stateRecipientList — which is
-// rendered inline by AppModel (renderRecipientList at model.go:1799)
-// rather than an owning sub-model per Pitfall 3.
-var RecipientListHints = []MenuHint{
-	{Mnemonic: "1-9", Description: "select recipient to remove", Visible: true},
-	{Mnemonic: "Esc", Description: "cancel", Visible: true},
-	{Mnemonic: "q", Description: "quit", Visible: true},
-}
-
-// FormatMenuHints is the hint set for stateFormatMenu — the inline
-// overlay modal driven by renderFormatMenu at model.go:1857 (no
-// owning sub-model per D-09).
-var FormatMenuHints = []MenuHint{
-	{Mnemonic: "j", Description: "next format", Visible: true},
-	{Mnemonic: "k", Description: "prev format", Visible: true},
-	{Mnemonic: "Enter", Description: "confirm format", Visible: true},
-	{Mnemonic: "Esc", Description: "cancel", Visible: true},
 }

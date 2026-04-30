@@ -56,12 +56,13 @@ func TestHintsFromBindings_EmptyInput(t *testing.T) {
 
 // TestHintsFromBindings_RealFileListKeyMap feeds the real
 // DefaultFileListKeyMap.ShortHelp() and asserts every binding round-trips.
+// After D-304 (Phase 9): ShortHelp returns 12 bindings (GoTop + GoBottom appended).
 func TestHintsFromBindings_RealFileListKeyMap(t *testing.T) {
 	bindings := keys.DefaultFileListKeyMap.ShortHelp()
-	require.Len(t, bindings, 10, "DefaultFileListKeyMap.ShortHelp must return 10 bindings")
+	require.Len(t, bindings, 12, "DefaultFileListKeyMap.ShortHelp must return 12 bindings")
 
 	hints := keys.HintsFromBindings(bindings)
-	require.Len(t, hints, 10, "expected 10 hints from 10 bindings")
+	require.Len(t, hints, 12, "expected 12 hints from 12 bindings")
 	for i, b := range bindings {
 		help := b.Help()
 		assert.Equal(t, help.Key, hints[i].Mnemonic, "Mnemonic must equal binding.Help().Key at index %d", i)
@@ -70,8 +71,9 @@ func TestHintsFromBindings_RealFileListKeyMap(t *testing.T) {
 	}
 }
 
-// TestFileListSearchHints_ExactCopy locks the verbatim copy from
-// UI-SPEC §"Inline hint sets" for the search-active override (D-11).
+// TestFileListSearchHints_ExactCopy locks the verbatim description strings
+// for the search-active override (D-11). After Phase 9 D-312, the authoritative
+// source is DefaultFileListSearchKeyMap.ShortHelp() in bindings.go.
 func TestFileListSearchHints_ExactCopy(t *testing.T) {
 	expected := []keys.MenuHint{
 		{Mnemonic: "Esc", Description: "exit search", Visible: true},
@@ -81,11 +83,14 @@ func TestFileListSearchHints_ExactCopy(t *testing.T) {
 		{Mnemonic: "?", Description: "toggle help", Visible: true},
 		{Mnemonic: "q", Description: "quit", Visible: true},
 	}
-	assert.Equal(t, expected, keys.FileListSearchHints)
+	assert.Equal(t, expected, keys.HintsFromBindings(keys.DefaultFileListSearchKeyMap.ShortHelp()))
 }
 
-// TestRecipientConfirmHints_ExactCopy locks the verbatim copy for the y/n
-// confirm overlay over the shared diff body.
+// TestRecipientConfirmHints_ExactCopy locks the verbatim description strings
+// for the y/n confirm overlay over the shared diff body. After Phase 9 D-312,
+// the authoritative source is DefaultRecipientConfirmKeyMap.ShortHelp() in bindings.go.
+// Note: Quit is the 6th element (from GlobalKeyMap embedding) but is suppressed
+// from the persistent menu via RecipientConfirmKeyMap.HiddenFromMenu() (D-313).
 func TestRecipientConfirmHints_ExactCopy(t *testing.T) {
 	expected := []keys.MenuHint{
 		{Mnemonic: "y", Description: "confirm add/remove recipient", Visible: true},
@@ -93,12 +98,16 @@ func TestRecipientConfirmHints_ExactCopy(t *testing.T) {
 		{Mnemonic: "Esc", Description: "cancel", Visible: true},
 		{Mnemonic: "j", Description: "scroll down", Visible: true},
 		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
 	}
-	assert.Equal(t, expected, keys.RecipientConfirmHints)
+	assert.Equal(t, expected, keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp()))
 }
 
-// TestBulkReKeyConfirmHints_ExactCopy locks the verbatim copy for the per-file
-// bulk re-key confirmation overlay.
+// TestBulkReKeyConfirmHints_ExactCopy locks the verbatim description strings
+// for the per-file bulk re-key confirmation overlay. After Phase 9 D-312,
+// the authoritative source is DefaultBulkReKeyConfirmKeyMap.ShortHelp() in bindings.go.
+// Note: Quit is the 6th element (from GlobalKeyMap embedding) but is suppressed
+// from the persistent menu via BulkReKeyConfirmKeyMap.HiddenFromMenu() (D-313).
 func TestBulkReKeyConfirmHints_ExactCopy(t *testing.T) {
 	expected := []keys.MenuHint{
 		{Mnemonic: "y", Description: "confirm re-key this file", Visible: true},
@@ -106,23 +115,26 @@ func TestBulkReKeyConfirmHints_ExactCopy(t *testing.T) {
 		{Mnemonic: "Esc", Description: "abort bulk re-key", Visible: true},
 		{Mnemonic: "j", Description: "scroll down", Visible: true},
 		{Mnemonic: "k", Description: "scroll up", Visible: true},
+		{Mnemonic: "q", Description: "quit", Visible: true},
 	}
-	assert.Equal(t, expected, keys.BulkReKeyConfirmHints)
+	assert.Equal(t, expected, keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp()))
 }
 
-// TestRecipientListHints_ExactCopy locks the verbatim copy for the recipient
-// list view (renderer lives on AppModel — Pitfall 3).
+// TestRecipientListHints_ExactCopy locks the verbatim description strings
+// for the recipient list view. After Phase 9 D-312, the authoritative source
+// is DefaultRecipientListKeyMap.ShortHelp() in bindings.go.
 func TestRecipientListHints_ExactCopy(t *testing.T) {
 	expected := []keys.MenuHint{
 		{Mnemonic: "1-9", Description: "select recipient to remove", Visible: true},
 		{Mnemonic: "Esc", Description: "cancel", Visible: true},
 		{Mnemonic: "q", Description: "quit", Visible: true},
 	}
-	assert.Equal(t, expected, keys.RecipientListHints)
+	assert.Equal(t, expected, keys.HintsFromBindings(keys.DefaultRecipientListKeyMap.ShortHelp()))
 }
 
-// TestFormatMenuHints_ExactCopy locks the verbatim copy for the inline format
-// menu modal (no owning sub-model per D-09).
+// TestFormatMenuHints_ExactCopy locks the verbatim description strings
+// for the inline format menu modal. After Phase 9 D-312, the authoritative
+// source is DefaultFormatMenuKeyMap.ShortHelp() in bindings.go.
 func TestFormatMenuHints_ExactCopy(t *testing.T) {
 	expected := []keys.MenuHint{
 		{Mnemonic: "j", Description: "next format", Visible: true},
@@ -130,7 +142,7 @@ func TestFormatMenuHints_ExactCopy(t *testing.T) {
 		{Mnemonic: "Enter", Description: "confirm format", Visible: true},
 		{Mnemonic: "Esc", Description: "cancel", Visible: true},
 	}
-	assert.Equal(t, expected, keys.FormatMenuHints)
+	assert.Equal(t, expected, keys.HintsFromBindings(keys.DefaultFormatMenuKeyMap.ShortHelp()))
 }
 
 // TestHinterInterface_Compiles asserts a type with Hints() []MenuHint can be

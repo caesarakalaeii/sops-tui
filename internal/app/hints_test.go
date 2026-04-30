@@ -57,8 +57,8 @@ func TestMenuHints_StateFileList_SearchActive(t *testing.T) {
 		"precondition: search must be active before asserting hint override")
 
 	hints := m.menuHints()
-	require.Equal(t, keys.FileListSearchHints, hints,
-		"search-active override must return keys.FileListSearchHints verbatim (D-11)")
+	require.Equal(t, keys.HintsFromBindings(keys.DefaultFileListSearchKeyMap.ShortHelp()), hints,
+		"search-active override must return DefaultFileListSearchKeyMap-derived hints (D-301)")
 }
 
 // TestMenuHints_StateDetail — delegation to DetailModel.Hints().
@@ -92,7 +92,7 @@ func TestMenuHints_StateRecipientConfirm(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateRecipientConfirm
 	hints := m.menuHints()
-	require.Equal(t, keys.RecipientConfirmHints, hints)
+	require.Equal(t, keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp()), hints)
 }
 
 // TestMenuHints_StateBulkReKeyConfirm — inline package-var dispatch.
@@ -100,7 +100,7 @@ func TestMenuHints_StateBulkReKeyConfirm(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateBulkReKeyConfirm
 	hints := m.menuHints()
-	require.Equal(t, keys.BulkReKeyConfirmHints, hints)
+	require.Equal(t, keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp()), hints)
 }
 
 // TestMenuHints_StateHelp — delegation.
@@ -140,7 +140,7 @@ func TestMenuHints_StateRecipientList(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateRecipientList
 	hints := m.menuHints()
-	require.Equal(t, keys.RecipientListHints, hints)
+	require.Equal(t, keys.HintsFromBindings(keys.DefaultRecipientListKeyMap.ShortHelp()), hints)
 }
 
 // TestMenuHints_StateFormatMenu — D-09 inline.
@@ -148,7 +148,7 @@ func TestMenuHints_StateFormatMenu(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateFormatMenu
 	hints := m.menuHints()
-	require.Equal(t, keys.FormatMenuHints, hints)
+	require.Equal(t, keys.HintsFromBindings(keys.DefaultFormatMenuKeyMap.ShortHelp()), hints)
 }
 
 // TestMenuHints_DefaultArm_ReturnsNil — defensive: an unknown state yields nil.
