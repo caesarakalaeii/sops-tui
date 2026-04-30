@@ -631,3 +631,312 @@ var DefaultRecipientFormKeyMap = RecipientFormKeyMap{
 		key.WithHelp("Esc", "cancel"),
 	),
 }
+
+// FileListSearchKeyMap holds keybindings for the file list search-active override (D-11).
+// Applied when FileListModel has an active inline search; replaces default FileList hints
+// so the menu reflects keys that actually work in search mode.
+// Implements help.KeyMap via ShortHelp() and FullHelp().
+type FileListSearchKeyMap struct {
+	// ExitSearch exits the search mode (esc).
+	ExitSearch key.Binding
+	// Select selects the highlighted search result (enter).
+	Select key.Binding
+	// NextResult moves to the next search result (j, down).
+	NextResult key.Binding
+	// PrevResult moves to the previous search result (k, up).
+	PrevResult key.Binding
+	// ToggleHelp toggles the help overlay (?).
+	ToggleHelp key.Binding
+	// Quit exits the application (q, ctrl+c).
+	Quit key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for the search-active state.
+// Implements help.KeyMap.
+func (k FileListSearchKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.ExitSearch, k.Select, k.NextResult, k.PrevResult, k.ToggleHelp, k.Quit}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Single group.
+func (k FileListSearchKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.ExitSearch, k.Select, k.NextResult, k.PrevResult, k.ToggleHelp, k.Quit},
+	}
+}
+
+// DefaultFileListSearchKeyMap is the default instance with description strings matching
+// the literal FileListSearchHints values from Phase 7 (description-string lock).
+var DefaultFileListSearchKeyMap = FileListSearchKeyMap{
+	ExitSearch: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "exit search"),
+	),
+	Select: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("Enter", "select result"),
+	),
+	NextResult: key.NewBinding(
+		key.WithKeys("j", "down"),
+		key.WithHelp("j/↓", "next result"),
+	),
+	PrevResult: key.NewBinding(
+		key.WithKeys("k", "up"),
+		key.WithHelp("k/↑", "prev result"),
+	),
+	ToggleHelp: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	),
+}
+
+// RecipientConfirmKeyMap and BulkReKeyConfirmKeyMap suppress the Quit
+// binding from the persistent menu (Visible=false) while keeping it
+// bound and functional in AppModel.Update().
+//
+// Rationale (UI-SPEC §confirm-flow-quit-suppression): during a y/n
+// confirmation gating a destructive operation (re-encryption, recipient
+// change, bulk re-key per file), advertising the quit hint encourages
+// bailing out without resolving the prompt. Quit is still bound (q,
+// ctrl+c via embedded GlobalKeyMap) so users who memorize it still
+// exit, but the menu nudges them toward y/n decisions.
+//
+// Compare DiffKeyMap.ShortHelp() (6 entries including q) — DiffModel
+// shows quit because the diff body is non-destructive on its own;
+// confirmation arms re-purpose the diff body for destructive flows
+// and suppress quit accordingly (Phase 7 D-10 dispatcher disambiguation,
+// Phase 9 D-313 formalization via HiddenFromMenu()).
+
+// RecipientConfirmKeyMap holds keybindings for stateRecipientConfirm —
+// the y/n confirmation over a shared diff body.
+// Embeds GlobalKeyMap; Quit is suppressed from the persistent menu via HiddenFromMenu().
+// Implements help.KeyMap via ShortHelp() and FullHelp().
+type RecipientConfirmKeyMap struct {
+	GlobalKeyMap
+	// Confirm accepts the recipient change (y).
+	Confirm key.Binding
+	// Cancel rejects without changes (n).
+	Cancel key.Binding
+	// Abort cancels via Esc.
+	Abort key.Binding
+	// ScrollDown scrolls the diff content down (j, down).
+	ScrollDown key.Binding
+	// ScrollUp scrolls the diff content up (k, up).
+	ScrollUp key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for stateRecipientConfirm.
+// Quit from GlobalKeyMap is included so HiddenFromMenu() can suppress it.
+// Implements help.KeyMap.
+func (k RecipientConfirmKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Confirm, k.Cancel, k.Abort, k.ScrollDown, k.ScrollUp, k.Quit}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Two groups: confirm/cancel, scroll/global.
+func (k RecipientConfirmKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Confirm, k.Cancel, k.Abort},
+		{k.ScrollDown, k.ScrollUp, k.Help, k.Quit},
+	}
+}
+
+// HiddenFromMenu suppresses Quit from the persistent menu per D-313 and
+// UI-SPEC §confirm-flow-quit-suppression. The Quit binding remains functional
+// in AppModel.Update(); only the menu rendering is suppressed.
+func (k RecipientConfirmKeyMap) HiddenFromMenu() []key.Binding {
+	return []key.Binding{k.Quit}
+}
+
+// DefaultRecipientConfirmKeyMap is the default instance with description strings matching
+// the literal RecipientConfirmHints values from Phase 7 (description-string lock).
+var DefaultRecipientConfirmKeyMap = RecipientConfirmKeyMap{
+	GlobalKeyMap: DefaultGlobalKeyMap,
+	Confirm: key.NewBinding(
+		key.WithKeys("y"),
+		key.WithHelp("y", "confirm add/remove recipient"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "cancel"),
+	),
+	Abort: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "cancel"),
+	),
+	ScrollDown: key.NewBinding(
+		key.WithKeys("j", "down"),
+		key.WithHelp("j", "scroll down"),
+	),
+	ScrollUp: key.NewBinding(
+		key.WithKeys("k", "up"),
+		key.WithHelp("k", "scroll up"),
+	),
+}
+
+// BulkReKeyConfirmKeyMap holds keybindings for stateBulkReKeyConfirm —
+// the y/n/Esc per-file confirmation during a bulk re-key run.
+// Embeds GlobalKeyMap; Quit is suppressed from the persistent menu via HiddenFromMenu().
+// Implements help.KeyMap via ShortHelp() and FullHelp().
+type BulkReKeyConfirmKeyMap struct {
+	GlobalKeyMap
+	// Confirm accepts re-keying this file (y).
+	Confirm key.Binding
+	// Cancel skips this file (n).
+	Cancel key.Binding
+	// Abort aborts the entire bulk re-key (esc).
+	Abort key.Binding
+	// ScrollDown scrolls the diff content down (j, down).
+	ScrollDown key.Binding
+	// ScrollUp scrolls the diff content up (k, up).
+	ScrollUp key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for stateBulkReKeyConfirm.
+// Quit from GlobalKeyMap is included so HiddenFromMenu() can suppress it.
+// Implements help.KeyMap.
+func (k BulkReKeyConfirmKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Confirm, k.Cancel, k.Abort, k.ScrollDown, k.ScrollUp, k.Quit}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Two groups: confirm/cancel, scroll/global.
+func (k BulkReKeyConfirmKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Confirm, k.Cancel, k.Abort},
+		{k.ScrollDown, k.ScrollUp, k.Help, k.Quit},
+	}
+}
+
+// HiddenFromMenu suppresses Quit from the persistent menu per D-313 and
+// UI-SPEC §confirm-flow-quit-suppression. The Quit binding remains functional
+// in AppModel.Update(); only the menu rendering is suppressed.
+func (k BulkReKeyConfirmKeyMap) HiddenFromMenu() []key.Binding {
+	return []key.Binding{k.Quit}
+}
+
+// DefaultBulkReKeyConfirmKeyMap is the default instance with description strings matching
+// the literal BulkReKeyConfirmHints values from Phase 7 (description-string lock).
+var DefaultBulkReKeyConfirmKeyMap = BulkReKeyConfirmKeyMap{
+	GlobalKeyMap: DefaultGlobalKeyMap,
+	Confirm: key.NewBinding(
+		key.WithKeys("y"),
+		key.WithHelp("y", "confirm re-key this file"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "skip this file"),
+	),
+	Abort: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "abort bulk re-key"),
+	),
+	ScrollDown: key.NewBinding(
+		key.WithKeys("j", "down"),
+		key.WithHelp("j", "scroll down"),
+	),
+	ScrollUp: key.NewBinding(
+		key.WithKeys("k", "up"),
+		key.WithHelp("k", "scroll up"),
+	),
+}
+
+// RecipientListKeyMap holds keybindings for stateRecipientList — the inline
+// recipient removal list rendered by AppModel.
+// Implements help.KeyMap via ShortHelp() and FullHelp().
+type RecipientListKeyMap struct {
+	// Select selects a recipient by digit key (1-9).
+	Select key.Binding
+	// Cancel cancels without removing a recipient (esc).
+	Cancel key.Binding
+	// Quit exits the application (q, ctrl+c).
+	Quit key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for stateRecipientList.
+// Implements help.KeyMap.
+func (k RecipientListKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Select, k.Cancel, k.Quit}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Single group.
+func (k RecipientListKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Select, k.Cancel, k.Quit},
+	}
+}
+
+// DefaultRecipientListKeyMap is the default instance with description strings matching
+// the literal RecipientListHints values from Phase 7 (description-string lock).
+// The "1-9" mnemonic is a display convention; the actual matchable keys are individual digits.
+var DefaultRecipientListKeyMap = RecipientListKeyMap{
+	Select: key.NewBinding(
+		key.WithKeys("1", "2", "3", "4", "5", "6", "7", "8", "9"),
+		key.WithHelp("1-9", "select recipient to remove"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "cancel"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	),
+}
+
+// FormatMenuKeyMap holds keybindings for stateFormatMenu — the inline format
+// selection overlay driven by renderFormatMenu (no owning sub-model per D-09).
+// No Quit in ShortHelp per OQ-3 — the format menu is a transient modal overlay;
+// global quit via AppModel still works but is not advertised here.
+// Implements help.KeyMap via ShortHelp() and FullHelp().
+type FormatMenuKeyMap struct {
+	// Next selects the next format (j, down).
+	Next key.Binding
+	// Prev selects the previous format (k, up).
+	Prev key.Binding
+	// Confirm accepts the selected format (enter).
+	Confirm key.Binding
+	// Cancel dismisses the format menu (esc).
+	Cancel key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for stateFormatMenu.
+// No Quit per OQ-3 (format menu is a transient modal; quit not advertised).
+// Implements help.KeyMap.
+func (k FormatMenuKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Next, k.Prev, k.Confirm, k.Cancel}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Single group of 4.
+func (k FormatMenuKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Next, k.Prev, k.Confirm, k.Cancel},
+	}
+}
+
+// DefaultFormatMenuKeyMap is the default instance with description strings matching
+// the literal FormatMenuHints values from Phase 7 (description-string lock).
+var DefaultFormatMenuKeyMap = FormatMenuKeyMap{
+	Next: key.NewBinding(
+		key.WithKeys("j", "down"),
+		key.WithHelp("j", "next format"),
+	),
+	Prev: key.NewBinding(
+		key.WithKeys("k", "up"),
+		key.WithHelp("k", "prev format"),
+	),
+	Confirm: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("Enter", "confirm format"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "cancel"),
+	),
+}
