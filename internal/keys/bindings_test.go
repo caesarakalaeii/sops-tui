@@ -96,3 +96,102 @@ func TestDetailKeyMap_SearchAndInfoBindings(t *testing.T) {
 	assert.True(t, key.Matches(press("/"), km.Search), "Search must match '/'")
 	assert.True(t, key.Matches(press("i"), km.Info), "Info must match 'i'")
 }
+
+// TestHelpKeyMap_ImplementsHelpKeyMap verifies HelpKeyMap implements help.KeyMap.
+func TestHelpKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.HelpKeyMap{}
+	short := keys.DefaultHelpKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultHelpKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestDiffKeyMap_ImplementsHelpKeyMap verifies DiffKeyMap implements help.KeyMap.
+func TestDiffKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.DiffKeyMap{}
+	short := keys.DefaultDiffKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultDiffKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestHealthKeyMap_ImplementsHelpKeyMap verifies HealthKeyMap implements help.KeyMap.
+func TestHealthKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.HealthKeyMap{}
+	short := keys.DefaultHealthKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultHealthKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestHistoryKeyMap_ImplementsHelpKeyMap verifies HistoryKeyMap implements help.KeyMap.
+func TestHistoryKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.HistoryKeyMap{}
+	short := keys.DefaultHistoryKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultHistoryKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestMetadataKeyMap_ImplementsHelpKeyMap verifies MetadataKeyMap implements help.KeyMap.
+func TestMetadataKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.MetadataKeyMap{}
+	short := keys.DefaultMetadataKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultMetadataKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestRecipientFormKeyMap_ImplementsHelpKeyMap verifies RecipientFormKeyMap implements help.KeyMap.
+func TestRecipientFormKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.RecipientFormKeyMap{}
+	short := keys.DefaultRecipientFormKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultRecipientFormKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestFileListSearchKeyMap_ImplementsHelpKeyMap verifies FileListSearchKeyMap implements help.KeyMap.
+func TestFileListSearchKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.FileListSearchKeyMap{}
+	short := keys.DefaultFileListSearchKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultFileListSearchKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestRecipientConfirmKeyMap_ImplementsHelpKeyMap verifies RecipientConfirmKeyMap implements help.KeyMap.
+func TestRecipientConfirmKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.RecipientConfirmKeyMap{}
+	short := keys.DefaultRecipientConfirmKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultRecipientConfirmKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestBulkReKeyConfirmKeyMap_ImplementsHelpKeyMap verifies BulkReKeyConfirmKeyMap implements help.KeyMap.
+func TestBulkReKeyConfirmKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.BulkReKeyConfirmKeyMap{}
+	short := keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultBulkReKeyConfirmKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestRecipientListKeyMap_ImplementsHelpKeyMap verifies RecipientListKeyMap implements help.KeyMap.
+func TestRecipientListKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.RecipientListKeyMap{}
+	short := keys.DefaultRecipientListKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultRecipientListKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
+
+// TestFormatMenuKeyMap_ImplementsHelpKeyMap verifies FormatMenuKeyMap implements help.KeyMap.
+func TestFormatMenuKeyMap_ImplementsHelpKeyMap(t *testing.T) {
+	var _ help.KeyMap = keys.FormatMenuKeyMap{}
+	short := keys.DefaultFormatMenuKeyMap.ShortHelp()
+	assert.NotEmpty(t, short, "ShortHelp must return at least one binding")
+	full := keys.DefaultFormatMenuKeyMap.FullHelp()
+	assert.NotEmpty(t, full, "FullHelp must return at least one group")
+}
