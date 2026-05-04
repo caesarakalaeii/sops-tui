@@ -281,34 +281,32 @@ func TestViewNoNewStyle(t *testing.T) {
 	}
 }
 
-// TestBenchmarkAppView_UnderBudget enforces UI-21 preview / D-24:
+// TestBenchmarkAppView_UnderBudget enforces UI-21 / D-24:
 // BenchmarkAppView must stay under the per-frame budget at 200×60 with full
 // Phase 7 chrome rendered. Runs the bench from inside a test (Pitfall 6) so it
 // executes under `go test ./...` without an opt-in flag.
 //
-// Phase 7.1 governance restoration: target reverted to 50 µs (CONTEXT.md D-24);
-// test t.Skipped pending Phase 11 SC2 D-18 caching fallback. Empirical
-// 2.4-2.8 ms/op measurement is the input to Phase 11's caching design.
+// Phase 7.1 governance restoration: target locked at 50 µs (CONTEXT.md D-24);
+// Phase 11 D-504 closure: gate flipped ACTIVE -- the deferral skip was removed
+// once Phase 11 wired the chrome cache (D-504); only the testing.Short() guard
+// remains. The D-18 model-level chrome cache (Phase 11 Plan 01 D-501..D-503)
+// brought ns/op under the 50,000 ns budget by amortising RenderChrome
+// (~622 µs) + RenderMenu (~394 µs) + JoinHorizontal cost across frames where
+// the (state, recipientAction, IsSearchActive, width) key is unchanged.
 //
-// Empirical profile (dev workstation, Ryzen 7 PRO 5850U, retained for Phase 11
-// SC2 caching design): every View() call rebuilds the chrome via
-// lipgloss/v2/table (RenderMenu 394 µs), JoinHorizontal across the info-panel
-// placeholder + menu + logo (RenderChrome 622 µs), then JoinVertical of chrome
-// + WrapTitled body (754 µs) + status bar (JoinVertical 683 µs). Total ~2.4-2.8
-// ms/op at 200×60 — already 48× over the locked 50 µs target before any
-// caching. D-18 explicitly anticipated this: "If a later palette pass regresses
-// the bench, caching can be bolted on without public API change." Phase 11 SC2
-// owns the resolution — typically a model-level chrome cache keyed on
-// (state, recipientAction, IsSearchActive, width) that amortises the table
-// rebuild across frames where chrome inputs are unchanged. Phase 11 may also
-// pursue allocation hygiene or lipgloss internal optimisations as long as the
-// 50 µs/op target is met.
+// Empirical pre-cache profile (dev workstation, Ryzen 7 PRO 5850U): every
+// View() call rebuilt the chrome via lipgloss/v2/table (RenderMenu 394 µs),
+// JoinHorizontal across the info-panel + menu + logo (RenderChrome 622 µs),
+// then JoinVertical of chrome + WrapTitled body (754 µs) + status bar
+// (683 µs). Total ~2.4-2.8 ms/op at 200×60 -- 48× over the locked target.
 //
-// The const budgetNs below is preserved at 50_000 (50 µs) so the contract is
-// captured in code form. The t.Skip below ensures the gate does not run today
-// while the empirical 2.4-2.8 ms reality is being addressed in Phase 11.
+// Post-cache: View() reads m.chromeCache + m.chromeCrumbsCache + m.wrappedCache
+// directly; the renderer call moves into refreshChromeCache() which is invoked
+// at the end of every Update branch via the Update() wrapper (Phase 8 D-213
+// mutate-on-event pattern, Phase 11 Rule 1 deviation extending coverage to
+// every Update return path). TestChromeCache_HitRateAtSteadyState locks the
+// value-receiver discipline trip wire (Pitfall A).
 func TestBenchmarkAppView_UnderBudget(t *testing.T) {
-	t.Skip("deferred to Phase 11 SC2 — D-18 caching fallback; original 50 µs target preserved per Phase 7.1 governance restoration")
 	if testing.Short() {
 		t.Skip("bench-budget skipped in -short mode")
 	}
