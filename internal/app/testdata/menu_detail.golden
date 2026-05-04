@@ -1,0 +1,6 @@
+[k/↑] move up                           [/] search
+[j/↓] move down                         [?] toggle help
+[r] reveal/hide value                   [q] quit
+[R] reveal/hide all values              [ctrl+y] copy to clipboard
+[e] edit value                          [a] add recipient
+[esc] back to file list                 [d] remove recipient
