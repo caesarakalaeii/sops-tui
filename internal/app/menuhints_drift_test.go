@@ -17,6 +17,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/require"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
@@ -178,7 +179,7 @@ func TestMenuGolden(t *testing.T) {
 				setup(&m)
 			}
 			hints := m.menuHints()
-			rendered := ui.RenderMenu(hints, width)
+			rendered := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), width)
 			testutil.RequireGoldenStructure(t, "menu_"+name, rendered)
 		})
 	}

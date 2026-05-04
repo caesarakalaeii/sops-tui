@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
+
 	"github.com/caesarakalaeii/sops-tui/internal/app"
 	"github.com/caesarakalaeii/sops-tui/internal/testutil"
 )
@@ -27,7 +29,7 @@ func setDeterministicAgeEnv(t *testing.T) {
 // narrow tier per D-216 (crumbsHeight is independent of chrome tier).
 func TestResize_40x12(t *testing.T) {
 	setDeterministicAgeEnv(t)
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 12})
 	m = updated.(app.AppModel)
 
@@ -40,7 +42,7 @@ func TestResize_40x12(t *testing.T) {
 // TestResize_80x24 — standard terminal baseline.
 func TestResize_80x24(t *testing.T) {
 	setDeterministicAgeEnv(t)
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = updated.(app.AppModel)
 
@@ -52,7 +54,7 @@ func TestResize_80x24(t *testing.T) {
 // TestResize_120x40 — mid-range wide terminal.
 func TestResize_120x40(t *testing.T) {
 	setDeterministicAgeEnv(t)
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m = updated.(app.AppModel)
 
@@ -64,7 +66,7 @@ func TestResize_120x40(t *testing.T) {
 // TestResize_200x60 — large terminal; matches BenchmarkAppView's dimensions.
 func TestResize_200x60(t *testing.T) {
 	setDeterministicAgeEnv(t)
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 200, Height: 60})
 	m = updated.(app.AppModel)
 

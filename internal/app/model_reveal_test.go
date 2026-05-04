@@ -4,17 +4,19 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/caesarakalaeii/sops-tui/internal/app"
 	"github.com/caesarakalaeii/sops-tui/internal/sops"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestDecryptKeyMsgAppliesCorrectNode verifies that DecryptKeyMsg with a matching
 // keyPath sets the correct TreeNode to Revealed=true.
 func TestDecryptKeyMsgAppliesCorrectNode(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Seed with a file
@@ -42,7 +44,7 @@ func TestDecryptKeyMsgAppliesCorrectNode(t *testing.T) {
 
 // TestDecryptKeyMsgWithError flashes error and does not reveal.
 func TestDecryptKeyMsgWithError(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	// Send DecryptKeyMsg with an error — should not panic
 	_, cmd := m.Update(app.DecryptKeyMsg{KeyPath: "token", Err: assert.AnError})
 	_ = cmd // cmd may be nil or flash timer
@@ -50,7 +52,7 @@ func TestDecryptKeyMsgWithError(t *testing.T) {
 
 // TestDecryptAllMsgRevealsAll verifies that DecryptAllMsg reveals all encrypted leaf nodes.
 func TestDecryptAllMsgRevealsAll(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	files := []sops.DiscoveredFile{
@@ -80,7 +82,7 @@ func TestDecryptAllMsgRevealsAll(t *testing.T) {
 
 // TestEscFromDetailClearsRevealed verifies that Esc from stateDetail calls ClearAllRevealed (D-04).
 func TestEscFromDetailClearsRevealed(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	files := []sops.DiscoveredFile{
@@ -110,7 +112,7 @@ func TestEscFromDetailClearsRevealed(t *testing.T) {
 // TestRevealRequestMsgReturnsCmd verifies that a RevealRequestMsg from DetailModel
 // is handled by AppModel and produces a decrypt command.
 func TestRevealRequestMsgReturnsCmd(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	files := []sops.DiscoveredFile{

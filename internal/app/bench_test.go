@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
+
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
 
@@ -20,7 +22,7 @@ func BenchmarkAppView(b *testing.B) {
 		SopsYamlAvailable: true,
 		GitAvailable:      true,
 	}
-	m := NewAppModel(env, "")
+	m := NewAppModel(env, "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 200, Height: 60})
 	m = updated.(AppModel)
 

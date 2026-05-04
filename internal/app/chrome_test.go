@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -341,7 +342,7 @@ func TestRenderChrome_FullTierWithInfoPanel(t *testing.T) {
 		{Mnemonic: "?", Description: "help", Visible: true},
 		{Mnemonic: "q", Description: "quit", Visible: true},
 	}
-	out := ui.RenderChrome(hints, ui.LogoInfo, info, 200)
+	out := ui.RenderChrome(hints, ui.LogoInfo, info, ui.PaletteFor(colorprofile.TrueColor), 200)
 	stripped := ansi.Strip(out)
 
 	for _, label := range []string{"cfg:", "age:", "rcp:", "git:", "fil:"} {
@@ -359,7 +360,7 @@ func TestRenderChrome_FullTierWithInfoPanel(t *testing.T) {
 // crumbsHeight=0 stub is gone; the real height is now lipgloss.Height
 // of RenderCrumbs output, typically 1 row.
 func TestCrumbsHeight_NonZero(t *testing.T) {
-	m := NewAppModel(ui.EnvStatus{}, "")
+	m := NewAppModel(ui.EnvStatus{}, "", colorprofile.TrueColor)
 	// First-frame guard requires width > 0 -- send WindowSizeMsg first.
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	am := updated.(AppModel)
@@ -373,7 +374,7 @@ func TestCrumbsHeight_NonZero(t *testing.T) {
 // reflects len(msg.Files) after the FilesDiscoveredMsg handler runs
 // (Phase 8 D-213 + D-219).
 func TestInfoPanelCacheRefresh_OnFilesDiscovered(t *testing.T) {
-	m := NewAppModel(ui.EnvStatus{}, "")
+	m := NewAppModel(ui.EnvStatus{}, "", colorprofile.TrueColor)
 	// First-frame guard
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	am := updated.(AppModel)

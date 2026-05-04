@@ -6,16 +6,18 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/caesarakalaeii/sops-tui/internal/app"
-	"github.com/caesarakalaeii/sops-tui/internal/ui"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/caesarakalaeii/sops-tui/internal/app"
+	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
 
 // setupDetailWithNodes puts the AppModel into stateDetail with the given nodes.
 func setupDetailWithNodes(t *testing.T, nodes []ui.TreeNode) tea.Model {
 	t.Helper()
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 	parsed := app.ParsedFileForTest(nodes)
 	return send(t, m2, app.FilesParsedMsg{Parsed: parsed})
@@ -108,7 +110,7 @@ func TestClipboardCopyMaskedLeafFlashesMessage(t *testing.T) {
 //
 // Test 3 from plan behavior spec.
 func TestClipboardCopyInFileListIsNoOp(t *testing.T) {
-	m := app.NewAppModel(defaultEnv(), "")
+	m := app.NewAppModel(defaultEnv(), "", colorprofile.TrueColor)
 	m2 := send(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// We are in stateFileList (no FilesParsedMsg sent)

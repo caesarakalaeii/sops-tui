@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/require"
 
 	"github.com/caesarakalaeii/sops-tui/internal/keys"
@@ -19,9 +20,12 @@ import (
 
 // buildAppModel constructs a sized AppModel for dispatcher tests —
 // mirrors the defaultEnvInternal + WindowSizeMsg pattern from layout_test.go.
+// Phase 10 D-419: passes colorprofile.TrueColor to match the lipgloss/v2
+// default test profile so SGR bytes in goldens stay byte-identical from
+// a render-time perspective.
 func buildAppModel(t *testing.T) AppModel {
 	t.Helper()
-	m := NewAppModel(defaultEnvInternal(), "")
+	m := NewAppModel(defaultEnvInternal(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return updated.(AppModel)
 }

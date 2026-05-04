@@ -30,6 +30,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/colorprofile"
 	yaml "github.com/goccy/go-yaml"
 
 	gitpkg "github.com/caesarakalaeii/sops-tui/internal/git"
@@ -268,13 +269,24 @@ type AppModel struct {
 	// GitStatusMsg). View() reads this cache only -- zero I/O at
 	// render time (Pitfall 15).
 	infoPanel ui.InfoPanelData
+
+	// Phase 10 D-419 + D-421: read-only profile + palette set at
+	// construction. profile is detected once in cmd/sops-tui/main.go via
+	// colorprofile.Detect and passed into NewAppModel. palette is computed
+	// once via ui.PaletteFor(profile) and reused on every View() — pure-
+	// function path, never re-detected.
+	profile colorprofile.Profile
+	palette ui.Palette
 }
 
 // NewAppModel constructs the initial AppModel.
 // env provides startup validation results for the status bar indicators.
 // sopsYamlPath is the path to the .sops.yaml file (may be empty if not found).
+// profile is the resolved color profile detected at process startup
+// (Phase 10 D-419). It drives palette selection — fallback variants apply
+// when profile <= colorprofile.ANSI per D-421.
 // The file list is initially empty — discovery runs asynchronously in Init.
-func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
+func NewAppModel(env ui.EnvStatus, sopsYamlPath string, profile colorprofile.Profile) AppModel {
 	m := AppModel{
 		state:         stateFileList,
 		fileList:      ui.NewFileListModel([]ui.FileItem{}, 0, 0),
@@ -287,6 +299,10 @@ func NewAppModel(env ui.EnvStatus, sopsYamlPath string) AppModel {
 		history:       ui.NewHistoryModel("", 0, 0),
 		metadata:      ui.NewMetadataModel(ui.MetadataContent{}, 0, 0),
 		recipientForm: ui.NewRecipientFormModel(0, 0),
+		// Phase 10 D-419 + D-421: profile detected once at startup; palette
+		// computed once via ui.PaletteFor(profile) — pure-function path.
+		profile: profile,
+		palette: ui.PaletteFor(profile),
 	}
 	m.status.SetBreadcrumb("files")
 	m.status.SetItemCount(0, "items")
@@ -1399,8 +1415,8 @@ func (m AppModel) View() tea.View {
 	// D-216) -- the conditional guard from Phase 7 D-17 is removed.
 	// Phase 10 D-403: logo severity is resolved per-frame from
 	// (env, flashSeverity, lastHealthResult) via resolveLogoState().
-	chrome := ui.RenderChrome(hints, m.resolveLogoState(), m.infoPanel, m.width)
-	crumbs := ui.RenderCrumbs(m.status.Segments(), m.width)
+	chrome := ui.RenderChrome(hints, m.resolveLogoState(), m.infoPanel, m.palette, m.width)
+	crumbs := ui.RenderCrumbs(m.status.Segments(), m.palette, m.width)
 	statusBar := m.status.View(m.width)
 	sections := []string{chrome, crumbs, wrapped, statusBar}
 	full := lipgloss.JoinVertical(lipgloss.Left, sections...)
@@ -1648,7 +1664,7 @@ func chromeHeight(m AppModel) int {
 	}
 	// Phase 10 D-403: severity-aware logo resolves per-frame; chromeHeight
 	// must use the same logo state as View() so the height calculation matches.
-	chrome := ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.width)
+	chrome := ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.palette, m.width)
 	return lipgloss.Height(chrome)
 }
 
@@ -1662,7 +1678,7 @@ func crumbsHeight(m AppModel) int {
 	if m.width == 0 {
 		return 0
 	}
-	return lipgloss.Height(ui.RenderCrumbs(m.status.Segments(), m.width))
+	return lipgloss.Height(ui.RenderCrumbs(m.status.Segments(), m.palette, m.width))
 }
 
 // populateCrossFileItems lazily populates the cross-file search item cache (GIT-03).

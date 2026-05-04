@@ -10,8 +10,10 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/caesarakalaeii/sops-tui/internal/ui"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/caesarakalaeii/sops-tui/internal/ui"
 )
 
 // defaultEnvInternal mirrors model_test.go:16-22 defaultEnv() for use
@@ -28,7 +30,7 @@ func defaultEnvInternal() ui.EnvStatus {
 // remaining height after the status bar, the live chrome (Phase 7), and
 // the crumbs stub (Phase 8 still 0) are subtracted.
 func TestBodyDims(t *testing.T) {
-	m := NewAppModel(defaultEnvInternal(), "")
+	m := NewAppModel(defaultEnvInternal(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = updated.(AppModel)
 	w, h := bodyDims(m)
@@ -40,7 +42,7 @@ func TestBodyDims(t *testing.T) {
 
 // TestBodyDimsClampsAtZero verifies bodyDims clamps negative heights to zero.
 func TestBodyDimsClampsAtZero(t *testing.T) {
-	m := NewAppModel(defaultEnvInternal(), "")
+	m := NewAppModel(defaultEnvInternal(), "", colorprofile.TrueColor)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 1})
 	m = updated.(AppModel)
 	_, h := bodyDims(m)
@@ -50,7 +52,7 @@ func TestBodyDimsClampsAtZero(t *testing.T) {
 
 // TestCrumbsHeightReturnsZero — Phase 6 stub invariant. Phase 8 flips this.
 func TestCrumbsHeightReturnsZero(t *testing.T) {
-	m := NewAppModel(defaultEnvInternal(), "")
+	m := NewAppModel(defaultEnvInternal(), "", colorprofile.TrueColor)
 	assert.Equal(t, 0, crumbsHeight(m),
 		"Phase 6: crumbsHeight is a stub returning 0 until Phase 8")
 }

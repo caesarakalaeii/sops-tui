@@ -11,6 +11,7 @@ package app_test
 import (
 	"testing"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/require"
 
 	"github.com/caesarakalaeii/sops-tui/internal/app"
@@ -20,6 +21,8 @@ import (
 
 // newCleanAppModel builds an AppModel with all-good env (sops + age + .sops.yaml
 // available) and no flash and no health findings — the LogoInfo baseline.
+// Phase 10 D-419: passes colorprofile.TrueColor to match the lipgloss/v2 default
+// test profile (zero render-time SGR delta vs. the pre-Plan-10 baseline).
 func newCleanAppModel(t *testing.T) app.AppModel {
 	t.Helper()
 	env := ui.EnvStatus{
@@ -27,7 +30,7 @@ func newCleanAppModel(t *testing.T) app.AppModel {
 		AgeAvailable:      true,
 		SopsYamlAvailable: true,
 	}
-	return app.NewAppModel(env, "")
+	return app.NewAppModel(env, "", colorprofile.TrueColor)
 }
 
 func TestResolveLogoState_DefaultIsInfo(t *testing.T) {
