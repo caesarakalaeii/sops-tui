@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
-status: executing
-stopped_at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
-last_updated: "2026-04-30T15:01:18.750Z"
-last_activity: 2026-04-30 -- Phase 09 planning complete
+status: verifying
+stopped_at: Phase 09 Plan 01 COMPLETE — 11 keymap types + HiddenFromMenu + all Hints() derive from keymaps + 5 inline vars deleted + dispatcher migrated; SC5 closed
+last_updated: "2026-05-04T07:31:19.020Z"
+last_activity: 2026-05-04
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 32
-  completed_plans: 30
-  percent: 94
+  completed_plans: 31
+  percent: 97
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 09 — keybinding-discoverability (context captured, planning pending)
+**Current focus:** Phase 09 — keybinding-discoverability
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 09 (keybinding-discoverability) — CONTEXT CAPTURED
-Plan: not yet planned
-Status: Ready to execute
-Last activity: 2026-04-30 -- Phase 09 planning complete
+Phase: 09 (keybinding-discoverability) — EXECUTING
+Plan: 2 of 2
+Status: Phase complete — ready for verification
+Last activity: 2026-05-04
 
-Progress (v1.1 only): [█████░░░] 65% (4/7 phases complete, 13/20 plans complete)
+Progress (v1.1 only): [██████░░] 70% (4/7 phases complete, 14/20 plans complete)
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress (v1.1 only): [█████░░░] 65% (4/7 phases complete, 13/20
 | Phase 07.1 P05 | 20m | 4 tasks | 10 files |
 | Phase 08 P01 | 5m | 3 tasks | 7 files |
 | Phase 08 P02 | 25m | 2 tasks | 4 files |
+| Phase 09 P01 | 10m 3s | 6 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 08 Plan 02]: Segments() value receiver returns nil for empty breadcrumb (not []string{""}). Callers can cleanly branch on len(segments) == 0. SetBreadcrumb sets "sops-tui" default so normal-path Segments() always returns non-nil.
 - [Phase 08 Plan 02]: View() spacer in clipboard-hot path uses StatusBarStyle.Render(" ") (package-level var) not lipgloss.NewStyle() — consistent with D-22 no-NewStyle() in View() reachables. renderEnvIndicators NewStyle() calls are pre-existing technical debt deferred per Pitfall C rule.
 - [Phase 08 Plan 02]: renderBreadcrumb private function deleted (was dead code after D-211 left-section removal). fmt import removed from statusbar.go (was only used by deleted fmt.Sprintf item-count rendering).
+- [Phase 09 Plan 01]: D-301 total derivation achieved — 11 new keymap types in bindings.go; all 8 sub-model Hints() derive from keymaps via HintsFromBindings(ShortHelp()); zero literal MenuHint slices in production code. SC5 closed: editing a binding's WithHelp description now auto-propagates to menu.
+- [Phase 09 Plan 01]: menuVisibilityOverrider unexported interface defined; DetailKeyMap, RecipientConfirmKeyMap, BulkReKeyConfirmKeyMap implement HiddenFromMenu(). Drift detector (Plan 2) will use type assertion to apply suppression in equality tests.
+- [Phase 09 Plan 01]: RecipientConfirmKeyMap and BulkReKeyConfirmKeyMap ShortHelp() include Quit (6 entries) so HiddenFromMenu() suppression is testable. The dispatcher returns 6-entry slices for those states; RenderMenu's Visible filter handles display suppression downstream.
+- [Phase 09 Plan 01]: Zero-value DiffModel/HistoryModel/MetadataModel had empty keys field — Rule 1 fix: initialized diff/history/metadata in NewAppModel so keymap Hints() works before first state transition.
+- [Phase 09 Plan 01]: D-309 recipientAction comment at model.go:1492 intentionally left for Plan 2 cleanup per plan instructions.
+- [Phase 09]: D-301 total derivation achieved: zero literal MenuHint slices remain in production code
+- [Phase 09]: D-307 HiddenFromMenu() method pattern on DetailKeyMap, RecipientConfirmKeyMap, BulkReKeyConfirmKeyMap
+- [Phase 09]: D-309 amendment deferred to Plan 2: recipientAction comment in model.go:1492 left intact
 
 ### Pending Todos
 
@@ -176,6 +185,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-04-28T11:12:49Z
-Stopped at: Phase 08 Plan 01 COMPLETE — primitives (RenderInfoPanel, RenderCrumbs, ParseAgeKeyFingerprint) + 8 style vars + 20 unit tests; zero AppModel coupling; ready for Plan 02 (git.GetBranch + statusbar shrink)
-Resume file: run /gsd-execute-phase 08 to continue with Plan 02
+Last session: 2026-05-04T07:31:19.014Z
+Stopped at: Phase 09 Plan 01 COMPLETE — 11 keymap types + HiddenFromMenu + all Hints() derive from keymaps + 5 inline vars deleted + dispatcher migrated; SC5 closed
+Resume file: None

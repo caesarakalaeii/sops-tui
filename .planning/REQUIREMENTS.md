@@ -72,9 +72,9 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ### Keybinding Discoverability
 
-- [ ] **UI-09**: Every interactive sub-model exposes a `Hints() []keys.MenuHint` method derived from its existing `key.Binding.ShortHelp()` definitions — single source of truth is the keymap
-- [ ] **UI-10**: The persistent menu re-hydrates from the active sub-model's `Hints()` on every `View()` call; modal states (diff, recipient confirm, bulk re-key) show their modal keybindings, not the underlying file-list ones
-- [ ] **UI-11**: The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys are discoverable without opening it
+- [x] **UI-09**: Every interactive sub-model exposes a `Hints() []keys.MenuHint` method derived from its existing `key.Binding.ShortHelp()` definitions — single source of truth is the keymap
+- [x] **UI-10**: The persistent menu re-hydrates from the active sub-model's `Hints()` on every `View()` call; modal states (diff, recipient confirm, bulk re-key) show their modal keybindings, not the underlying file-list ones
+- [x] **UI-11**: The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys are discoverable without opening it
 
 ### Theming & Accessibility
 
@@ -172,9 +172,9 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-05 | Phase 8 | Pending |
 | UI-07 | Phase 8 | Pending |
 | UI-08 | Phase 8 | Complete (Plan 02 — StatusBarModel.View() shrunk to right-aligned env+clipboard only; Segments() accessor; renderBreadcrumb deleted) |
-| UI-09 | Phase 9 | Pending |
-| UI-10 | Phase 9 | Pending |
-| UI-11 | Phase 9 | Pending |
+| UI-09 | Phase 9 | Complete |
+| UI-10 | Phase 9 | Complete |
+| UI-11 | Phase 9 | Complete |
 | UI-03 | Phase 10 | Pending |
 | UI-12 | Phase 10 | Pending |
 | UI-13 | Phase 10 | Pending |

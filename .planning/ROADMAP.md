@@ -249,7 +249,11 @@ Plans:
   3. Menu hint dispatch is a pure function of `(state, recipientAction, IsSearchActive)` — golden-file teatest covers every `(state, action)` tuple that shares a sub-model
   4. The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys remain discoverable in the persistent menu without opening it
   5. Changing a `key.Binding` value automatically updates the rendered menu — no second "also update the menu text" edit is ever required
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
+
+Plans:
+- [x] 09-01-PLAN.md — Keymap extraction + Hints() derivation: 11 new keymaps in internal/keys/bindings.go (6 sub-model + 5 stateless-state), HiddenFromMenu() formalization, FileList g/G into ShortHelp, 6 sub-model Hints() refactor to one-liners, delete 5 inline package vars, update 5 dispatcher arms + 5 app test assertions + 5 keys ExactCopy assertions **[COMPLETE 2026-04-30]**
+- [ ] 09-02-PLAN.md — Drift detector + 13-entry golden matrix + D-309 documentation amendment: TestMenuHints_Drift (runtime equality) + TestMenuGolden (13 RenderMenu goldens, ANSI-stripped) + TestMenuGoldenNoPII (T-09-01 grep-gate) + dispatcher comment cleanup (drop recipientAction)
 **UI hint**: yes
 
 ### Phase 10: Theming + Accessibility
@@ -294,6 +298,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 7. Chrome Skeleton | 3/3 | Complete | 2026-04-27 |
 | 7.1. Chrome Gap Closure (INSERTED) | 4/5 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
-| 9. Keybinding Discoverability | 0/2 | Planned | - |
+| 9. Keybinding Discoverability | 1/2 | In Progress|  |
 | 10. Theming + Accessibility | 0/3 | Planned | - |
 | 11. Regression + Perf Gates | 0/2 | Planned | - |
