@@ -387,6 +387,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.history.SetSize(w, h)
 		m.health.SetSize(w, h)
 		m.recipientForm.SetSize(w, h)
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -433,6 +434,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.status, _ = m.status.FlashErr("Error parsing file: " + msg.Err.Error())
 			m.state = stateFileList
+			m = m.refreshChromeCache()
 			return m, nil
 		}
 		w, h := bodyDims(m)
@@ -452,6 +454,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = stateDetail
 		m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 		m.status.SetItemCount(countLeafNodes(msg.Parsed.Nodes), "keys")
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case ui.RevealRequestMsg:
@@ -550,6 +553,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.editorEditedContent = edited // store for EncryptFile on confirm (T-03-12: cleared after use)
 		m.prevState = m.state
 		m.state = stateDiff
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case ui.EditConfirmMsg:
@@ -567,6 +571,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.editFilePath = m.currentFile.AbsPath
 		m.prevState = m.state
 		m.state = stateDiff
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case ui.EditBlockedMsg:
@@ -604,6 +609,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.state = stateDetail
+		m = m.refreshChromeCache()
 		// After write operations, refresh git status to reflect any new uncommitted changes (D-11).
 		if msg.Err == nil && m.sopsYamlPath != "" && m.gitRepoRoot != "" {
 			relPaths := make([]string, len(m.files))
@@ -630,6 +636,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rotateFormat = msg.Format
 		m.prevState = m.state
 		m.state = stateDiff
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case ui.RotateErrorMsg:
@@ -644,6 +651,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.formatMenuCursor = 0
 		m.prevState = m.state
 		m.state = stateFormatMenu
+		m = m.refreshChromeCache()
 		return m, nil
 
 	case ClipboardClearMsg:
@@ -716,6 +724,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.status, _ = m.status.FlashErr("Git history error: " + msg.Err.Error())
 			m.state = m.prevState
+			m = m.refreshChromeCache()
 			return m, nil
 		}
 		m.history.SetEntries(msg.Entries)
@@ -725,6 +734,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.status, _ = m.status.FlashErr("Health scan failed: " + msg.Err.Error())
 			m.state = stateFileList
+			m = m.refreshChromeCache()
 			return m, nil
 		}
 		m.health.SetResults(msg.Result)
@@ -745,6 +755,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.bulkReKey.completed++
 			}
 			m.advanceBulkReKey()
+			m = m.refreshChromeCache()
 			return m, nil
 		}
 		return m, nil
@@ -778,6 +789,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = m.prevState
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, nil
@@ -800,10 +812,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				w, h := bodyDims(m)
 				m.diff = ui.NewDiffModel("Confirm: Add Recipient", entries, w, h)
 				m.state = stateRecipientConfirm
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.recipientForm.Cancelled() {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, cmd
@@ -814,6 +828,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "esc":
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			default:
 				// Parse number key 1-9; bounds-check against recipient list (T-05-08).
@@ -834,6 +849,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						w, h := bodyDims(m)
 						m.diff = ui.NewDiffModel("Confirm: Remove Recipient", entries, w, h)
 						m.state = stateRecipientConfirm
+						m = m.refreshChromeCache()
 						return m, nil
 					}
 				}
@@ -852,6 +868,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = stateDetail
 				if action == "add" {
 					m.status, _ = m.status.Flash("Adding recipient...")
+					m = m.refreshChromeCache()
 					return m, func() tea.Msg {
 						ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
 						defer cancel()
@@ -860,6 +877,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else if action == "remove" {
 					m.status, _ = m.status.Flash("Removing recipient...")
+					m = m.refreshChromeCache()
 					return m, func() tea.Msg {
 						ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
 						defer cancel()
@@ -867,10 +885,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return RecipientDoneMsg{FilePath: filePath, Action: "removed", Err: err}
 					}
 				}
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.diff.Cancelled() {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, cmd
@@ -883,6 +903,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.diff.Confirmed() {
 				filePath := m.bulkReKey.currentFile.AbsPath
 				m.state = stateFileList
+				m = m.refreshChromeCache()
 				return m, func() tea.Msg {
 					ctx, cancel := context.WithTimeout(context.Background(), sops.SopsRotateTimeout)
 					defer cancel()
@@ -900,6 +921,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.bulkReKey.skipped++
 					m.advanceBulkReKey()
 				}
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, cmd
@@ -921,6 +943,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.status, _ = m.status.Flash("Decrypting all files for health scan...")
 					files := m.files
 					gitRoot := m.gitRepoRoot
+					m = m.refreshChromeCache()
 					return m, func() tea.Msg {
 						return runHealthCheck(files, gitRoot)
 					}
@@ -962,6 +985,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.editorEditedContent = nil // T-03-12: clear on cancel too
 				m.state = m.prevState
 				m.status, _ = m.status.Flash("Cancelled")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, nil
@@ -986,6 +1010,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err != nil {
 					m.state = m.prevState
 					m.status, _ = m.status.FlashErr("Generation failed: " + err.Error())
+					m = m.refreshChromeCache()
 					return m, nil
 				}
 				w, h := bodyDims(m)
@@ -997,10 +1022,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.editFilePath = m.currentFile.AbsPath
 				m.rotateFormat = selected
 				m.state = stateDiff
+				m = m.refreshChromeCache()
 				return m, nil
 			case "esc":
 				m.formatMenuActive = false
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			return m, nil
@@ -1014,11 +1041,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevState = m.state
 				m.state = stateHelp
 			}
+			m = m.refreshChromeCache()
 			return m, nil
 		}
 
 		// Global key: quit application
+		// Phase 11 D-512: set m.quitting = true BEFORE returning tea.Quit so the next
+		// (and final) View() call returns blank tea.View with AltScreen=true. The
+		// Cursed Renderer's last frame leaves no chrome residue in the user's shell.
+		// Pitfall C: ordering -- m.quitting must be set on the model BEFORE the cmd
+		// is returned; tea processes the new model before running the cmd, so the
+		// blank-frame View() runs before tea.Quit fires.
 		if key.Matches(msg, keys.DefaultGlobalKeyMap.Quit) {
+			m.quitting = true
 			return m, func() tea.Msg { return tea.Quit() }
 		}
 
@@ -1034,6 +1069,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 					m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
 				}
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if (m.state == stateFileList && !m.fileList.IsSearchActive()) ||
@@ -1072,6 +1108,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = stateMetadata
 					m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "metadata")
 					m.status.SetItemCount(0, "")
+					m = m.refreshChromeCache()
 				}
 				return m, nil
 			}
@@ -1088,11 +1125,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				cmd := m.fileList.ActivateCrossFileSearch(titles)
 				m.status.SetBreadcrumb("files", "search")
+				m = m.refreshChromeCache()
 				return m, cmd
 			}
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
 				cmd := m.detail.ActivateSearch()
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "search")
+				m = m.refreshChromeCache()
 				return m, cmd
 			}
 		}
@@ -1111,6 +1150,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Rule:        item.Rule,
 						GitStatus:   item.GitStatus,
 					}
+					m = m.refreshChromeCache()
 					return m, func() tea.Msg {
 						parsed, err := parser.ParseFile(item.AbsPath, item.Rule, item.IsEnc)
 						return FilesParsedMsg{Parsed: parsed, Err: err}
@@ -1140,6 +1180,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = m.prevState
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
@@ -1152,6 +1193,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevState = m.state
 				m.state = stateHistory
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb(), "history")
+				m = m.refreshChromeCache()
 				// Async fetch git history
 				relPath := m.currentFile.Name
 				repoRoot := m.gitRepoRoot
@@ -1171,6 +1213,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevState = m.state
 				m.state = stateRecipientForm
 				m.recipientAction = "add"
+				m = m.refreshChromeCache()
 				return m, cmd
 			}
 		}
@@ -1186,6 +1229,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.recipientList = recipients
 				m.prevState = m.state
 				m.state = stateRecipientList
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 		}
@@ -1197,12 +1241,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.fileList.DeactivateSearch()
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateDetail && m.detail.IsSearchActive() {
 				m.detail.DeactivateSearch()
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			// Priority 2: Close overlays.
@@ -1211,34 +1257,41 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// stateHelp and stateMetadata overlays.
 			if m.state == stateHelp {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateMetadata {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateHistory {
 				m.state = m.prevState
 				m.status.SetBreadcrumb("files", m.currentFileBreadcrumb())
 				m.status.SetItemCount(countLeafNodes(m.detail.Nodes()), "keys")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateHealth {
 				m.state = m.prevState
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateRecipientForm {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateRecipientConfirm {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateRecipientList {
 				m.state = m.prevState
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			if m.state == stateBulkReKeyConfirm {
@@ -1246,6 +1299,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.bulkReKey.skipped++
 					m.advanceBulkReKey()
 				}
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 			// Priority 3: Navigate back from detail to file list
@@ -1255,6 +1309,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = stateFileList
 				m.status.SetBreadcrumb("files")
 				m.status.SetItemCount(m.fileList.ItemCount(), "items")
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 		}
@@ -1285,6 +1340,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					total:       len(queue),
 				}
 				m.showBulkReKeyConfirm(first)
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 		}
@@ -1310,6 +1366,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevState = m.state
 				m.state = stateDiff
 				m.recipientAction = "healthcheck" // sentinel so stateDiff confirm dispatches health scan
+				m = m.refreshChromeCache()
 				return m, nil
 			}
 		}
@@ -1391,13 +1448,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // helper lambda. Every style is a package var in internal/ui/styles.go.
 // TestViewNoNewStyle (chrome_test.go) AST-walks this body to enforce.
 func (m AppModel) View() tea.View {
+	// Phase 11 D-512: alt-screen exit blank frame. m.quitting is set in the
+	// Quit handler before returning tea.Quit; this final View() returns
+	// blank with AltScreen=true so the Cursed Renderer's last frame leaves
+	// no chrome residue in the user's shell prompt area.
+	if m.quitting {
+		v := tea.NewView("")
+		v.AltScreen = true
+		return v
+	}
+
+	// Existing zero-state guard (Phase 7 Pitfall 5 first-frame safety).
 	if m.width == 0 || m.height == 0 {
 		v := tea.NewView("")
 		v.AltScreen = true
 		return v
 	}
 
-	hints := m.menuHints()
 	title := m.titleForState()
 
 	w, h := bodyDims(m)
@@ -1439,13 +1506,16 @@ func (m AppModel) View() tea.View {
 		wrapped = ui.WrapTitled(title, body, w, h)
 	}
 
-	// Phase 8 D-213 + D-216: chrome consumes m.infoPanel cache;
-	// crumbs row is unconditional (independent of chrome tier per
-	// D-216) -- the conditional guard from Phase 7 D-17 is removed.
-	// Phase 10 D-403: logo severity is resolved per-frame from
-	// (env, flashSeverity, lastHealthResult) via resolveLogoState().
-	chrome := ui.RenderChrome(hints, m.resolveLogoState(), m.infoPanel, m.palette, m.width)
-	crumbs := ui.RenderCrumbs(m.status.Segments(), m.palette, m.width)
+	// Phase 11 D-503: chrome + crumbs are cached on AppModel by
+	// refreshChromeCache() called at the end of every Update branch
+	// that mutates a chromeKey field. View() reads only -- never calls
+	// RenderChrome/RenderCrumbs directly (eliminates the ~2.4-2.8 ms
+	// hot path measured in Phase 7.1 chrome_test.go:294-298).
+	// Pitfall A: View() cannot mutate cache; assignments to m.chrome*
+	// here would be silently lost (value receiver). Audit gate:
+	// TestChromeCache_HitRateAtSteadyState locks the discipline.
+	chrome := m.chromeCache
+	crumbs := m.chromeCrumbsCache
 	statusBar := m.status.View(m.width)
 	sections := []string{chrome, crumbs, wrapped, statusBar}
 	full := lipgloss.JoinVertical(lipgloss.Left, sections...)
