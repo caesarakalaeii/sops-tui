@@ -29,30 +29,46 @@ const ellipsisSentinel = "…" // U+2026 HORIZONTAL ELLIPSIS
 // (D-208) so the chip budget is width - 2.
 //
 // Active chip (last segment) uses CrumbChipActiveStyle (accent bg +
-// body fg + bold). Inactive chips use CrumbChipStyle (surface bg + fg).
-// Overflow ellipsis chips use CrumbChipEllipsisStyle (muted fg, no bg).
+// body fg + bold) on Profile > colorprofile.ANSI. On Profile <= ANSI
+// (Ascii / ANSI -> palette.Fallback=true), the active chip switches to
+// CrumbChipActiveFallbackStyle (Underline + Bold, no bg fill) per D-422.
+// Inactive chips use CrumbChipStyle / CrumbChipFallbackStyle accordingly.
+// Overflow ellipsis chips always use CrumbChipEllipsisStyle (muted fg,
+// no bg) regardless of profile.
 //
 // Segments are normalised per D-207: strings.ToLower then strip spaces.
 // This matches k9s crumbs.go:70-71 verbatim.
 //
-// palette (Phase 10 D-421) is plumbed for Plan 3's bracket-fallback
-// rendering on palette.Fallback (D-422). Plan 2 keeps the Phase 8 D-206
-// pill-fill rendering for all profiles; the parameter is a forward-compat
-// seam. Plan 3 adds the `if palette.Fallback { ... bracket chips ... }`
-// branch reading the bool to switch to Underline+Bold SGR codes that
-// survive 16-color downsampling.
+// palette (Phase 10 D-421) gates Plan 3's bracket-fallback rendering via
+// palette.Fallback (D-422). On Ascii / ANSI the paired bg/fg pill style
+// collapses (Pitfall 5 section 2) so the chip switches to Underline+Bold SGR
+// codes that survive 16-color downsampling.
 func RenderCrumbs(segments []string, palette Palette, width int) string {
-	// palette is plumbed for Plan 3's bracket-fallback rendering on
-	// palette.Fallback (D-422). Plan 2 keeps Phase 8 D-206 pill-fill
-	// rendering for all profiles; remove this discard line in Plan 3.
-	_ = palette
-
 	if len(segments) == 0 {
 		// Defensive: empty row at least 1 cell tall (lipgloss.Height("") == 1).
 		return CrumbRowStyle.Width(width).Render("")
 	}
 	normalised := normaliseSegments(segments)
 	fitted := truncateSegmentsToWidth(normalised, width-2) // -2 for row pad
+
+	// Phase 10 D-422: select chip style variants based on palette.Fallback.
+	// Fallback=true (Profile <= colorprofile.ANSI) -> bracket rendering: no
+	// bg fill on either inactive or active chips; the active chip uses only
+	// Underline + Bold for the structural cue (both SGR attributes survive
+	// every profile downsample including monochrome per Pitfall 5 section 2).
+	// Fallback=false (Profile > ANSI) -> the Phase 8 D-206 pill rendering
+	// applies unchanged (bg=accent + fg=bg + bold on active; bg=surface +
+	// fg=fg on inactive).
+	// The ellipsis chip continues to use CrumbChipEllipsisStyle on both
+	// branches because muted-fg-on-default-bg downsamples cleanly under 4-bit.
+	var inactiveStyle, activeStyle lipgloss.Style
+	if palette.Fallback {
+		inactiveStyle = CrumbChipFallbackStyle
+		activeStyle = CrumbChipActiveFallbackStyle
+	} else {
+		inactiveStyle = CrumbChipStyle
+		activeStyle = CrumbChipActiveStyle
+	}
 
 	chips := make([]string, 0, len(fitted))
 	last := len(fitted) - 1
@@ -62,9 +78,9 @@ func RenderCrumbs(segments []string, palette Palette, width int) string {
 		case seg == ellipsisSentinel:
 			chips = append(chips, CrumbChipEllipsisStyle.Render(text))
 		case i == last:
-			chips = append(chips, CrumbChipActiveStyle.Render(text))
+			chips = append(chips, activeStyle.Render(text))
 		default:
-			chips = append(chips, CrumbChipStyle.Render(text))
+			chips = append(chips, inactiveStyle.Render(text))
 		}
 	}
 	joined := strings.Join(chips, " ") // D-208: single-space separator
