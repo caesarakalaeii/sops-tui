@@ -31,6 +31,24 @@ type FlashClearMsg struct {
 	Gen int
 }
 
+// FlashSeverity classifies the active flash message. Phase 10 D-411 +
+// D-412 use the enum to pick severity-tinted bg + redundant prefix at
+// View() render time. FlashSevInfo is the zero value so a freshly-
+// constructed StatusBarModel with no flash fired is safe (D-409).
+type FlashSeverity int
+
+const (
+	// FlashSevInfo is the default neutral severity. Renders unprefixed,
+	// surface-bg StatusBarStyle. Per D-409 the zero value is Info.
+	FlashSevInfo FlashSeverity = iota
+	// FlashSevWarn renders with "[W] " prefix + ColorWarning bg + ColorBg fg.
+	// Used for soft-validation failures and recoverable warnings (D-402).
+	FlashSevWarn
+	// FlashSevErr renders with "[E] " prefix + ColorError bg + ColorBg fg.
+	// Used for hard error paths (D-401).
+	FlashSevErr
+)
+
 // EnvStatus holds the availability of the three environment components
 // shown as indicators on the right side of the status bar.
 type EnvStatus struct {
@@ -51,11 +69,12 @@ type EnvStatus struct {
 // title is the canonical count display (Phase 7 D-15). SetItemCount is kept
 // as a no-op for backward compat with 14 model.go call-sites.
 type StatusBarModel struct {
-	breadcrumb   string
-	env          EnvStatus
-	flash        string
-	flashGen     int
-	clipboardHot bool // true when clipboard holds a secret
+	breadcrumb    string
+	env           EnvStatus
+	flash         string
+	flashSeverity FlashSeverity // Phase 10 D-409: zero value = FlashSevInfo
+	flashGen      int
+	clipboardHot  bool // true when clipboard holds a secret
 }
 
 // NewStatusBarModel creates a StatusBarModel with sensible defaults.
@@ -122,18 +141,60 @@ func (m StatusBarModel) IsClipboardHot() bool {
 	return m.clipboardHot
 }
 
-// Flash sets a flash message and schedules a clear after 2 seconds.
-// The generation counter is incremented so that only the matching FlashClearMsg
-// will clear this flash — earlier ticks are silently ignored.
-// Returns the updated model and the tea.Tick command.
-func (m StatusBarModel) Flash(msg string) (StatusBarModel, tea.Cmd) {
+// setFlash is the internal helper shared by Flash / FlashInfo / FlashWarn /
+// FlashErr. It increments flashGen, sets msg + severity, and returns the
+// tea.Tick clear cmd. Pattern mirrors the original Flash() body with one
+// extra severity field. Per Pitfall 6 the gen-counter is captured BEFORE
+// the closure so stale ticks are silently ignored on Update.
+func (m StatusBarModel) setFlash(msg string, sev FlashSeverity) (StatusBarModel, tea.Cmd) {
 	m.flashGen++
 	gen := m.flashGen
 	m.flash = msg
+	m.flashSeverity = sev
 	cmd := tea.Tick(2*time.Second, func(_ time.Time) tea.Msg {
 		return FlashClearMsg{Gen: gen}
 	})
 	return m, cmd
+}
+
+// FlashInfo sets a neutral flash message (no prefix, no bg tint).
+// Phase 10 D-406 typed-API entrypoint. Returns the updated model and
+// the tea.Tick clear command.
+func (m StatusBarModel) FlashInfo(msg string) (StatusBarModel, tea.Cmd) {
+	return m.setFlash(msg, FlashSevInfo)
+}
+
+// FlashWarn sets a warn-severity flash (renders with "[W] " prefix +
+// ColorWarning bg + ColorBg fg per D-411 + D-412). Used for soft-validation
+// failures and recoverable warnings (D-402).
+func (m StatusBarModel) FlashWarn(msg string) (StatusBarModel, tea.Cmd) {
+	return m.setFlash(msg, FlashSevWarn)
+}
+
+// FlashErr sets an error-severity flash (renders with "[E] " prefix +
+// ColorError bg + ColorBg fg per D-411 + D-412). Used for hard error
+// paths (D-401).
+func (m StatusBarModel) FlashErr(msg string) (StatusBarModel, tea.Cmd) {
+	return m.setFlash(msg, FlashSevErr)
+}
+
+// Flash is the legacy Info-severity entrypoint, preserved as a thin alias
+// for FlashInfo so the neutral call-sites that don't move during the
+// Phase 10 typed-API migration (D-407) keep compiling without per-callsite
+// edits. Equivalent to FlashInfo.
+func (m StatusBarModel) Flash(msg string) (StatusBarModel, tea.Cmd) {
+	return m.setFlash(msg, FlashSevInfo)
+}
+
+// FlashSeverity returns the severity of the active flash. When no flash
+// is active (m.flash == ""), returns FlashSevInfo (zero value) so the
+// AppModel.resolveLogoState() classifier short-circuits to env-derived
+// severity. Per D-410 the empty-flash case is treated as Info.
+func (m StatusBarModel) FlashSeverity() FlashSeverity {
+	if m.flash == "" {
+		return FlashSevInfo
+	}
+	return m.flashSeverity
 }
 
 // Update handles incoming messages. Only FlashClearMsg is handled; all other
@@ -142,8 +203,10 @@ func (m StatusBarModel) Flash(msg string) (StatusBarModel, tea.Cmd) {
 func (m StatusBarModel) Update(msg tea.Msg) (StatusBarModel, tea.Cmd) {
 	if clearMsg, ok := msg.(FlashClearMsg); ok {
 		// Only clear if the generation matches — stale ticks are ignored (Pitfall 6).
+		// Phase 10: clear severity to baseline on the same ack.
 		if clearMsg.Gen == m.flashGen {
 			m.flash = ""
+			m.flashSeverity = FlashSevInfo
 		}
 		return m, nil
 	}
@@ -159,10 +222,24 @@ func (m StatusBarModel) Update(msg tea.Msg) (StatusBarModel, tea.Cmd) {
 // gone. Flash branch is unchanged per D-212.
 func (m StatusBarModel) View(width int) string {
 	if m.flash != "" {
-		return StatusBarStyle.
+		// Phase 10 D-411 + D-412: severity-aware flash bar. Prefix is
+		// added at render time (not stored) so test fixtures of m.flash
+		// stay stable; severity-tinted bg is applied via package-level
+		// FlashWarnBarStyle / FlashErrBarStyle (no NewStyle() in View()).
+		style := StatusBarStyle
+		text := m.flash
+		switch m.flashSeverity {
+		case FlashSevWarn:
+			style = FlashWarnBarStyle
+			text = "[W] " + m.flash
+		case FlashSevErr:
+			style = FlashErrBarStyle
+			text = "[E] " + m.flash
+		}
+		return style.
 			Width(width).
 			Align(lipgloss.Center).
-			Render(m.flash)
+			Render(text)
 	}
 
 	right := renderEnvIndicators(m.env)

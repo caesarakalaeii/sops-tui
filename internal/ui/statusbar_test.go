@@ -170,3 +170,157 @@ var _ = time.Second
 
 // Ensure tea.Tick signature is exercised.
 var _ = tea.Tick
+
+// Phase 10 Plan 1: typed flash severity tests (D-406 .. D-412).
+
+// TestStatusBar_FlashSeverityZeroValue verifies D-409: a freshly-constructed
+// StatusBarModel with no flash fired returns FlashSevInfo from the accessor.
+func TestStatusBar_FlashSeverityZeroValue(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	require.Equal(t, ui.FlashSevInfo, m.FlashSeverity(),
+		"zero-value StatusBarModel must return FlashSevInfo (D-409)")
+}
+
+// TestStatusBar_FlashWarnSetsSeverity verifies D-406: FlashWarn sets the
+// severity field accessible via FlashSeverity().
+func TestStatusBar_FlashWarnSetsSeverity(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashWarn("test msg")
+	require.Equal(t, ui.FlashSevWarn, m.FlashSeverity())
+}
+
+// TestStatusBar_FlashErrSetsSeverity verifies D-406: FlashErr sets the
+// severity field accessible via FlashSeverity().
+func TestStatusBar_FlashErrSetsSeverity(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashErr("oops")
+	require.Equal(t, ui.FlashSevErr, m.FlashSeverity())
+}
+
+// TestStatusBar_FlashInfoExplicitlySetsInfo verifies D-406: FlashInfo
+// explicitly sets the severity to Info (same as the zero value).
+func TestStatusBar_FlashInfoExplicitlySetsInfo(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashInfo("hi")
+	require.Equal(t, ui.FlashSevInfo, m.FlashSeverity())
+}
+
+// TestStatusBar_LegacyFlashAliasesInfo verifies D-406: the legacy
+// Flash(msg) method remains a thin alias for FlashInfo so backward-
+// compat is preserved for the unmoved neutral callsites.
+func TestStatusBar_LegacyFlashAliasesInfo(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.Flash("legacy")
+	require.Equal(t, ui.FlashSevInfo, m.FlashSeverity(),
+		"Flash must remain a thin alias for FlashInfo")
+}
+
+// TestStatusBar_FlashWarnRendersBracketWPrefix verifies D-411: Warn flash
+// renders with "[W] " prefix at render time (prefix added at View(), not
+// stored on m.flash).
+func TestStatusBar_FlashWarnRendersBracketWPrefix(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashWarn("disk low")
+	rendered := m.View(40)
+	stripped := ansi.Strip(rendered)
+	assert.Contains(t, stripped, "[W] disk low",
+		"Warn flash must render with [W] prefix per D-411")
+}
+
+// TestStatusBar_FlashErrRendersBracketEPrefix verifies D-411: Err flash
+// renders with "[E] " prefix at render time.
+func TestStatusBar_FlashErrRendersBracketEPrefix(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashErr("decrypt failed")
+	rendered := m.View(40)
+	stripped := ansi.Strip(rendered)
+	assert.Contains(t, stripped, "[E] decrypt failed",
+		"Err flash must render with [E] prefix per D-411")
+}
+
+// TestStatusBar_FlashInfoNoPrefix verifies D-411: Info flash renders
+// raw (no [I] prefix). Avoids day-to-day status message clutter.
+func TestStatusBar_FlashInfoNoPrefix(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashInfo("decrypted")
+	rendered := m.View(40)
+	stripped := ansi.Strip(rendered)
+	assert.Contains(t, stripped, "decrypted")
+	assert.NotContains(t, stripped, "[I]",
+		"Info flash must NOT have prefix per D-411")
+	assert.NotContains(t, stripped, "[W]",
+		"Info flash must NOT have W prefix")
+	assert.NotContains(t, stripped, "[E]",
+		"Info flash must NOT have E prefix")
+}
+
+// TestStatusBar_FlashWarnPaintsBgTint verifies D-412: Warn paints with
+// ColorWarning bg + ColorBg fg. Plan 1 uses the existing pre-flip hex
+// values; Plan 2 will refresh the SGR expectation via golden update.
+func TestStatusBar_FlashWarnPaintsBgTint(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashWarn("warn")
+	rendered := m.View(40)
+	// Pre-Plan-2: bg is ColorWarning hex #f9e2af → 24-bit SGR "48;2;249;226;175".
+	// Plan 2 flips to #fab387 → "48;2;250;179;135".
+	assert.Contains(t, rendered, "48;2;249;226;175",
+		"Warn must paint warning bg per D-412")
+	// fg is ColorBg #1e1e2e → "38;2;30;30;46".
+	assert.Contains(t, rendered, "38;2;30;30;46",
+		"Warn must paint dark foreground (ColorBg) per D-412")
+}
+
+// TestStatusBar_FlashErrPaintsBgTint verifies D-412: Err paints with
+// ColorError bg + ColorBg fg.
+func TestStatusBar_FlashErrPaintsBgTint(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashErr("err")
+	rendered := m.View(40)
+	// Pre-Plan-2: bg is ColorError hex #f38ba8 → "48;2;243;139;168".
+	// Plan 2 flips to #eba0ac → "48;2;235;160;172".
+	assert.Contains(t, rendered, "48;2;243;139;168",
+		"Err must paint error bg per D-412")
+	assert.Contains(t, rendered, "38;2;30;30;46",
+		"Err must paint dark foreground (ColorBg) per D-412")
+}
+
+// TestStatusBar_FlashInfoUsesSurfaceBg verifies D-412: Info renders on
+// the existing StatusBarStyle surface bg (no peach/maroon SGR).
+func TestStatusBar_FlashInfoUsesSurfaceBg(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashInfo("decrypted")
+	rendered := m.View(40)
+	// Info must NOT use warning bg (#f9e2af) or error bg (#f38ba8).
+	assert.NotContains(t, rendered, "48;2;249;226;175",
+		"Info flash must NOT use warning bg per D-412")
+	assert.NotContains(t, rendered, "48;2;243;139;168",
+		"Info flash must NOT use error bg per D-412")
+	// Should use ColorSurface bg #313244 → "48;2;49;50;68".
+	assert.Contains(t, rendered, "48;2;49;50;68",
+		"Info flash must use surface bg via StatusBarStyle")
+}
+
+// TestStatusBar_FlashClearMsgClearsSeverity verifies D-410: FlashClearMsg
+// ack clears severity to baseline (FlashSevInfo) on the same tick that
+// clears m.flash.
+func TestStatusBar_FlashClearMsgClearsSeverity(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashErr("oops")
+	require.Equal(t, ui.FlashSevErr, m.FlashSeverity())
+	// First flash → flashGen incremented to 1; matching ack.
+	m, _ = m.Update(ui.FlashClearMsg{Gen: 1})
+	assert.Equal(t, ui.FlashSevInfo, m.FlashSeverity(),
+		"FlashClearMsg ack must clear severity to baseline (D-410)")
+}
+
+// TestStatusBar_StaleFlashClearMsgPreservesSeverity verifies Pitfall 6:
+// stale FlashClearMsg with mismatched Gen does NOT clear severity.
+func TestStatusBar_StaleFlashClearMsgPreservesSeverity(t *testing.T) {
+	m := ui.NewStatusBarModel(ui.EnvStatus{})
+	m, _ = m.FlashErr("first")  // flashGen → 1
+	m, _ = m.FlashWarn("second") // flashGen → 2; severity now Warn
+	// Stale tick from gen=1 must NOT clear.
+	m, _ = m.Update(ui.FlashClearMsg{Gen: 1})
+	assert.Equal(t, ui.FlashSevWarn, m.FlashSeverity(),
+		"Stale FlashClearMsg must NOT alter severity (Pitfall 6)")
+}

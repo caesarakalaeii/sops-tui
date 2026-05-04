@@ -88,6 +88,14 @@ var (
 			Background(ColorSurface).
 			Foreground(ColorFg)
 
+	// Phase 10 D-412: severity-tinted flash bar styles. Used by
+	// StatusBarModel.View() when m.flashSeverity is Warn or Err. The
+	// background is the matching warning/error color; foreground is dark
+	// (ColorBg) for high contrast. Plan 1 uses the existing ColorWarning
+	// and ColorError values — the hex constants are flipped in Plan 2.
+	FlashWarnBarStyle = lipgloss.NewStyle().Background(ColorWarning).Foreground(ColorBg)
+	FlashErrBarStyle  = lipgloss.NewStyle().Background(ColorError).Foreground(ColorBg)
+
 	// BreadcrumbActive highlights the active breadcrumb segment in accent color.
 	BreadcrumbActive = lipgloss.NewStyle().
 				Foreground(ColorAccent)
