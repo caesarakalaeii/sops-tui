@@ -54,24 +54,31 @@ func TestRenderLogo_ReturnsSixRows(t *testing.T) {
 // render without panic and embed the expected RGB triplet for the chosen
 // foreground color (lipgloss emits TrueColor SGR sequences containing the
 // raw r;g;b values — stable across terminal output).
+//
+// Phase 10 D-417: triplets derived from ColorAccentHex / ColorWarningHex /
+// ColorErrorHex via hexToRGBTriplet so future palette tunes auto-update.
 func TestRenderLogo_AllStatusVariants(t *testing.T) {
-	// ColorAccent #89b4fa -> rgb(137, 180, 250) -> "137;180;250"
+	accentTriplet := hexToRGBTriplet(ui.ColorAccentHex)
+	warningTriplet := hexToRGBTriplet(ui.ColorWarningHex)
+	errorTriplet := hexToRGBTriplet(ui.ColorErrorHex)
+
 	infoRendered := ui.RenderLogo(ui.LogoInfo, 26)
 	require.NotEmpty(t, infoRendered, "Info render must be non-empty")
-	assert.Contains(t, infoRendered, "137;180;250",
-		"LogoInfo must embed ColorAccent RGB triplet (#89b4fa)")
+	assert.Containsf(t, infoRendered, accentTriplet,
+		"LogoInfo must embed ColorAccent RGB triplet (%s) derived from ColorAccentHex %s",
+		accentTriplet, ui.ColorAccentHex)
 
-	// ColorWarning #f9e2af -> rgb(249, 226, 175) -> "249;226;175"
 	warnRendered := ui.RenderLogo(ui.LogoWarn, 26)
 	require.NotEmpty(t, warnRendered, "Warn render must be non-empty")
-	assert.Contains(t, warnRendered, "249;226;175",
-		"LogoWarn must embed ColorWarning RGB triplet (#f9e2af)")
+	assert.Containsf(t, warnRendered, warningTriplet,
+		"LogoWarn must embed ColorWarning RGB triplet (%s) derived from ColorWarningHex %s",
+		warningTriplet, ui.ColorWarningHex)
 
-	// ColorError #f38ba8 -> rgb(243, 139, 168) -> "243;139;168"
 	errorRendered := ui.RenderLogo(ui.LogoError, 26)
 	require.NotEmpty(t, errorRendered, "Error render must be non-empty")
-	assert.Contains(t, errorRendered, "243;139;168",
-		"LogoError must embed ColorError RGB triplet (#f38ba8)")
+	assert.Containsf(t, errorRendered, errorTriplet,
+		"LogoError must embed ColorError RGB triplet (%s) derived from ColorErrorHex %s",
+		errorTriplet, ui.ColorErrorHex)
 }
 
 // TestRenderLogo_Width0NoPanic verifies degenerate width input does not

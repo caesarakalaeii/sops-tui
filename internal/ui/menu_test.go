@@ -230,14 +230,16 @@ func TestRenderMenu_ASCIIOnlyBody(t *testing.T) {
 }
 
 // TestRenderMenu_AccentAppliedToMnemonic verifies D-05 — MenuKeyStyle
-// (foreground ColorAccent #89b4fa) is applied to the bracketed mnemonic.
+// (foreground ColorAccent) is applied to the bracketed mnemonic.
 // lipgloss emits TrueColor SGR sequences containing the raw r;g;b values.
+// Phase 10 D-417: triplet derived from ColorAccentHex via hexToRGBTriplet.
 func TestRenderMenu_AccentAppliedToMnemonic(t *testing.T) {
 	hints := []keys.MenuHint{
 		visHint("j", "move down"),
 	}
+	accentTriplet := hexToRGBTriplet(ui.ColorAccentHex)
 	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
-	// ColorAccent #89b4fa -> rgb(137, 180, 250) -> "137;180;250"
-	assert.Contains(t, out, "137;180;250",
-		"MenuKeyStyle (ColorAccent) must apply RGB triplet to the rendered mnemonic")
+	assert.Containsf(t, out, accentTriplet,
+		"MenuKeyStyle (ColorAccent) must apply RGB triplet (%s) derived from ColorAccentHex %s",
+		accentTriplet, ui.ColorAccentHex)
 }

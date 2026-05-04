@@ -255,49 +255,58 @@ func TestStatusBar_FlashInfoNoPrefix(t *testing.T) {
 }
 
 // TestStatusBar_FlashWarnPaintsBgTint verifies D-412: Warn paints with
-// ColorWarning bg + ColorBg fg. Plan 1 uses the existing pre-flip hex
-// values; Plan 2 will refresh the SGR expectation via golden update.
+// ColorWarning bg + ColorBg fg.
+// Phase 10 D-417: SGR substrings derived from ColorWarningHex / ColorBgHex
+// via hexBgSGR / hexFgSGR — the palette flip from #f9e2af to #fab387
+// (Catppuccin Peach) auto-propagates without test edits.
 func TestStatusBar_FlashWarnPaintsBgTint(t *testing.T) {
 	m := ui.NewStatusBarModel(ui.EnvStatus{})
 	m, _ = m.FlashWarn("warn")
 	rendered := m.View(40)
-	// Pre-Plan-2: bg is ColorWarning hex #f9e2af → 24-bit SGR "48;2;249;226;175".
-	// Plan 2 flips to #fab387 → "48;2;250;179;135".
-	assert.Contains(t, rendered, "48;2;249;226;175",
-		"Warn must paint warning bg per D-412")
-	// fg is ColorBg #1e1e2e → "38;2;30;30;46".
-	assert.Contains(t, rendered, "38;2;30;30;46",
-		"Warn must paint dark foreground (ColorBg) per D-412")
+	warnBgSGR := hexBgSGR(ui.ColorWarningHex)
+	bgFgSGR := hexFgSGR(ui.ColorBgHex)
+	assert.Containsf(t, rendered, warnBgSGR,
+		"Warn must paint warning bg (%s derived from ColorWarningHex %s) per D-412",
+		warnBgSGR, ui.ColorWarningHex)
+	assert.Containsf(t, rendered, bgFgSGR,
+		"Warn must paint dark foreground (ColorBg %s) per D-412", bgFgSGR)
 }
 
 // TestStatusBar_FlashErrPaintsBgTint verifies D-412: Err paints with
 // ColorError bg + ColorBg fg.
+// Phase 10 D-417: SGR substrings derived from ColorErrorHex / ColorBgHex
+// — the palette flip from #f38ba8 to #eba0ac (Catppuccin Maroon)
+// auto-propagates without test edits.
 func TestStatusBar_FlashErrPaintsBgTint(t *testing.T) {
 	m := ui.NewStatusBarModel(ui.EnvStatus{})
 	m, _ = m.FlashErr("err")
 	rendered := m.View(40)
-	// Pre-Plan-2: bg is ColorError hex #f38ba8 → "48;2;243;139;168".
-	// Plan 2 flips to #eba0ac → "48;2;235;160;172".
-	assert.Contains(t, rendered, "48;2;243;139;168",
-		"Err must paint error bg per D-412")
-	assert.Contains(t, rendered, "38;2;30;30;46",
-		"Err must paint dark foreground (ColorBg) per D-412")
+	errBgSGR := hexBgSGR(ui.ColorErrorHex)
+	bgFgSGR := hexFgSGR(ui.ColorBgHex)
+	assert.Containsf(t, rendered, errBgSGR,
+		"Err must paint error bg (%s derived from ColorErrorHex %s) per D-412",
+		errBgSGR, ui.ColorErrorHex)
+	assert.Containsf(t, rendered, bgFgSGR,
+		"Err must paint dark foreground (ColorBg %s) per D-412", bgFgSGR)
 }
 
 // TestStatusBar_FlashInfoUsesSurfaceBg verifies D-412: Info renders on
 // the existing StatusBarStyle surface bg (no peach/maroon SGR).
+// Phase 10 D-417: SGR substrings derived from constants so the negative
+// assertions auto-track the palette tune.
 func TestStatusBar_FlashInfoUsesSurfaceBg(t *testing.T) {
 	m := ui.NewStatusBarModel(ui.EnvStatus{})
 	m, _ = m.FlashInfo("decrypted")
 	rendered := m.View(40)
-	// Info must NOT use warning bg (#f9e2af) or error bg (#f38ba8).
-	assert.NotContains(t, rendered, "48;2;249;226;175",
-		"Info flash must NOT use warning bg per D-412")
-	assert.NotContains(t, rendered, "48;2;243;139;168",
-		"Info flash must NOT use error bg per D-412")
-	// Should use ColorSurface bg #313244 → "48;2;49;50;68".
-	assert.Contains(t, rendered, "48;2;49;50;68",
-		"Info flash must use surface bg via StatusBarStyle")
+	warnBgSGR := hexBgSGR(ui.ColorWarningHex)
+	errBgSGR := hexBgSGR(ui.ColorErrorHex)
+	surfaceBgSGR := hexBgSGR(ui.ColorSurfaceHex)
+	assert.NotContainsf(t, rendered, warnBgSGR,
+		"Info flash must NOT use warning bg (%s) per D-412", warnBgSGR)
+	assert.NotContainsf(t, rendered, errBgSGR,
+		"Info flash must NOT use error bg (%s) per D-412", errBgSGR)
+	assert.Containsf(t, rendered, surfaceBgSGR,
+		"Info flash must use surface bg (%s) via StatusBarStyle", surfaceBgSGR)
 }
 
 // TestStatusBar_FlashClearMsgClearsSeverity verifies D-410: FlashClearMsg

@@ -22,13 +22,15 @@ func TestRenderCrumbs_KnsExactPills(t *testing.T) {
 
 func TestRenderCrumbs_ActiveBoldBg(t *testing.T) {
 	// D-206: active chip = Background(ColorAccent) + Foreground(ColorBg) + Bold(true).
-	// ColorAccent #89b4fa -> RGB 137;180;250
-	// ColorBg     #1e1e2e -> RGB 30;30;46
+	// Phase 10 D-417: triplets derived from ColorAccentHex / ColorBgHex via
+	// hexToRGBTriplet so the palette flip propagates automatically.
 	// Bold SGR 1 -> lipgloss/v2 encodes bold as "1;" at the start of the
-	// combined SGR sequence: e.g. \x1b[1;38;2;30;30;46;48;2;137;180;250m
+	// combined SGR sequence: e.g. \x1b[1;38;2;30;30;46;48;2;203;166;247m
+	accentTriplet := hexToRGBTriplet(ui.ColorAccentHex)
+	bgTriplet := hexToRGBTriplet(ui.ColorBgHex)
 	out := ui.RenderCrumbs([]string{"sops-tui", "files", "metadata"}, ui.PaletteFor(colorprofile.TrueColor), 80)
-	assert.Contains(t, out, "137;180;250", "active chip must apply ColorAccent bg (D-206)")
-	assert.Contains(t, out, "30;30;46", "active chip must invert fg to ColorBg (D-206)")
+	assert.Containsf(t, out, accentTriplet, "active chip must apply ColorAccent bg (%s) (D-206)", accentTriplet)
+	assert.Containsf(t, out, bgTriplet, "active chip must invert fg to ColorBg (%s) (D-206)", bgTriplet)
 	// Bold SGR appears as "[1;" (combined) or "[1m" (standalone) in ANSI sequences.
 	assert.True(t, strings.Contains(out, "[1;") || strings.Contains(out, "[1m"),
 		"active chip MUST include bold SGR (Pitfall 9 redundancy channel; D-206); got: %q", out)
@@ -64,15 +66,22 @@ func TestRenderCrumbs_EmptySafe(t *testing.T) {
 
 func TestRenderCrumbs_SingleSegmentIsActive(t *testing.T) {
 	// Edge case: a single segment is "last" so renders with active style.
+	// Phase 10 D-417: derive accent triplet from ColorAccentHex.
+	accentTriplet := hexToRGBTriplet(ui.ColorAccentHex)
 	out := ui.RenderCrumbs([]string{"sops-tui"}, ui.PaletteFor(colorprofile.TrueColor), 80)
-	assert.Contains(t, out, "137;180;250", "single segment must be active (D-206)")
+	assert.Containsf(t, out, accentTriplet, "single segment must be active with accent bg (%s) (D-206)", accentTriplet)
 }
 
 func TestRenderCrumbs_InactiveChipColors(t *testing.T) {
-	// D-206 inactive: bg ColorSurface #313244 -> 49;50;68; fg ColorFg #cdd6f4 -> 205;214;244.
+	// D-206 inactive: bg ColorSurface, fg ColorFg.
+	// Phase 10 D-417: derive triplets from ColorSurfaceHex / ColorFgHex
+	// (defense-in-depth — these constants are unchanged in D-415 but the
+	// constant-derived pattern protects against future palette tunes).
+	surfaceTriplet := hexToRGBTriplet(ui.ColorSurfaceHex)
+	fgTriplet := hexToRGBTriplet(ui.ColorFgHex)
 	out := ui.RenderCrumbs([]string{"sops-tui", "files"}, ui.PaletteFor(colorprofile.TrueColor), 80)
-	assert.Contains(t, out, "49;50;68", "inactive chip must apply ColorSurface bg (D-206)")
-	assert.Contains(t, out, "205;214;244", "inactive chip must apply ColorFg fg (D-206)")
+	assert.Containsf(t, out, surfaceTriplet, "inactive chip must apply ColorSurface bg (%s) (D-206)", surfaceTriplet)
+	assert.Containsf(t, out, fgTriplet, "inactive chip must apply ColorFg fg (%s) (D-206)", fgTriplet)
 }
 
 // Verify normaliseSegments via observable behaviour rather than direct
