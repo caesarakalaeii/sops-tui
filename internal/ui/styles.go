@@ -496,6 +496,32 @@ var (
 	// (bg-filled) and active (bg+bold) chips.
 	CrumbChipEllipsisStyle = lipgloss.NewStyle().Foreground(ColorMuted)
 
+	// Phase 10 D-422: bracket-fallback chip styles for Profile <= colorprofile.ANSI.
+	//
+	// On 16-color terminals + monochrome (Ascii / ANSI), paired bg/fg color
+	// channels can collapse under downsample (Pitfall 5 §2). The bracket-
+	// fallback styles drop the bg fill entirely and rely on text decoration
+	// (Underline SGR 4 + Bold SGR 1) for the active-vs-inactive distinction.
+	// Both decoration attributes survive every profile downsample including
+	// monochrome (verified in 10-RESEARCH.md §"lipgloss.Style.Underline(true)
+	// behavior") -- they are not colors, so colorprofile.Writer.Write passes
+	// the SGR params through verbatim.
+	//
+	// CrumbChipFallbackStyle is the inactive chip on the Ascii/ANSI path:
+	// no Background, no decoration, only Foreground(ColorFgANSI) so the chip
+	// text reads in the terminal's default fg color band on monochrome.
+	CrumbChipFallbackStyle = lipgloss.NewStyle().Foreground(ColorFgANSI)
+
+	// CrumbChipActiveFallbackStyle is the active chip on the Ascii/ANSI path:
+	// no Background, no Foreground recolor (per D-422 -- recoloring fg under
+	// 4-bit downsample risks bg/fg collision against the terminal's bg, which
+	// the user controls), only Underline + Bold so the structural cue is
+	// the decoration channel that survives every downsample including
+	// monochrome. Pairs with CrumbChipFallbackStyle for inactive chips.
+	CrumbChipActiveFallbackStyle = lipgloss.NewStyle().
+					Underline(true).
+					Bold(true)
+
 	// CrumbRowStyle is the row container for the joined chips (D-208).
 	// PaddingLeft(SpaceXS) + PaddingRight(SpaceXS) mirrors k9s
 	// crumbs.go:32 SetBorderPadding(0,0,1,1).

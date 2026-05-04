@@ -8,6 +8,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
 	"github.com/stretchr/testify/assert"
@@ -279,4 +280,112 @@ func TestPaletteFor_AsciiReturnsANSIVariants(t *testing.T) {
 func TestPaletteFor_NoTTYReturnsANSIVariants(t *testing.T) {
 	p := ui.PaletteFor(colorprofile.NoTTY)
 	assert.True(t, p.Fallback, "NoTTY profile MUST be flagged as fallback (gate is <= ANSI)")
+}
+
+// containsAnySGR reports whether any of the alternative SGR substrings
+// appears in s. lipgloss/v2 may encode combined attributes in different
+// orderings (e.g. "[1;4m" vs "[4;1m") so SGR-presence assertions match a set.
+func containsAnySGR(s string, alts ...string) bool {
+	for _, a := range alts {
+		if strings.Contains(s, a) {
+			return true
+		}
+	}
+	return false
+}
+
+// Phase 10 Plan 3 (D-422): bracket-fallback chip styles for Profile <=
+// colorprofile.ANSI. CrumbChipFallbackStyle is the inactive chip variant
+// (Foreground(ColorFgANSI) only, no bg fill). CrumbChipActiveFallbackStyle
+// is the active chip variant (Underline + Bold only, no bg fill, no fg
+// recolor — the decoration channel survives every profile downsample
+// including monochrome per 10-RESEARCH.md §lipgloss.Style.Underline).
+
+// TestCrumbChipFallbackStyle_NoBg asserts the inactive bracket-fallback
+// chip has NO background set — the design rule is "bracket fallback drops
+// bg fill entirely" per D-422.
+func TestCrumbChipFallbackStyle_NoBg(t *testing.T) {
+	zero := lipgloss.NewStyle().GetBackground()
+	got := ui.CrumbChipFallbackStyle.GetBackground()
+	assert.Equal(t, zero, got,
+		"CrumbChipFallbackStyle MUST have no Background set (D-422 bracket fallback drops bg fill)")
+}
+
+// TestCrumbChipFallbackStyle_FgIsColorFgANSI asserts the inactive
+// bracket-fallback chip uses ColorFgANSI (lipgloss.ANSIColor(15) — bright
+// white) so the chip text reads in the terminal's default fg color band
+// on monochrome.
+func TestCrumbChipFallbackStyle_FgIsColorFgANSI(t *testing.T) {
+	got := ui.CrumbChipFallbackStyle.GetForeground()
+	assert.Equal(t, ui.ColorFgANSI, got,
+		"CrumbChipFallbackStyle MUST use Foreground(ColorFgANSI) per D-422")
+}
+
+// TestCrumbChipActiveFallbackStyle_NoBg asserts the active bracket-fallback
+// chip has NO background set — recoloring bg under 4-bit downsample risks
+// chip-vs-terminal collision (D-422).
+func TestCrumbChipActiveFallbackStyle_NoBg(t *testing.T) {
+	zero := lipgloss.NewStyle().GetBackground()
+	got := ui.CrumbChipActiveFallbackStyle.GetBackground()
+	assert.Equal(t, zero, got,
+		"CrumbChipActiveFallbackStyle MUST have no Background set (D-422)")
+}
+
+// TestCrumbChipActiveFallbackStyle_NoFg asserts the active bracket-fallback
+// chip has NO foreground set — recoloring fg under 4-bit downsample risks
+// bg/fg collision against the terminal-default bg the user controls. The
+// active-vs-inactive distinction is carried by Underline + Bold instead.
+func TestCrumbChipActiveFallbackStyle_NoFg(t *testing.T) {
+	zero := lipgloss.NewStyle().GetForeground()
+	got := ui.CrumbChipActiveFallbackStyle.GetForeground()
+	assert.Equal(t, zero, got,
+		"CrumbChipActiveFallbackStyle MUST have no Foreground set (D-422 — decoration carries the cue)")
+}
+
+// TestCrumbChipActiveFallbackStyle_HasUnderline asserts the active
+// bracket-fallback chip has Underline(true). Underline emits SGR 4 which
+// survives every profile downsample including monochrome.
+func TestCrumbChipActiveFallbackStyle_HasUnderline(t *testing.T) {
+	assert.True(t, ui.CrumbChipActiveFallbackStyle.GetUnderline(),
+		"CrumbChipActiveFallbackStyle MUST have Underline(true) per D-422")
+}
+
+// TestCrumbChipActiveFallbackStyle_HasBold asserts the active
+// bracket-fallback chip has Bold(true). Bold emits SGR 1, redundant
+// channel for colorblind safety per Pitfall 9.
+func TestCrumbChipActiveFallbackStyle_HasBold(t *testing.T) {
+	assert.True(t, ui.CrumbChipActiveFallbackStyle.GetBold(),
+		"CrumbChipActiveFallbackStyle MUST have Bold(true) per D-422")
+}
+
+// TestCrumbChipFallbackStyle_RendersBracketContent asserts the rendered
+// inactive chip retains the literal "<files>" content (visible after
+// ansi.Strip).
+func TestCrumbChipFallbackStyle_RendersBracketContent(t *testing.T) {
+	rendered := ui.CrumbChipFallbackStyle.Render("<files>")
+	stripped := ansi.Strip(rendered)
+	assert.Contains(t, stripped, "<files>",
+		"CrumbChipFallbackStyle.Render must preserve <segment> literal (D-422 + D-205)")
+}
+
+// TestCrumbChipActiveFallbackStyle_EmitsUnderlineSGR asserts the rendered
+// active chip's raw output contains the SGR 4 (underline) byte sequence
+// in either standalone "[4m" or combined ";4;" / ";4m" / "[4;" form.
+// lipgloss/v2 may emit duplicate SGR params (e.g. "\x1b[1;4;4m") and may
+// vary attribute ordering; the matcher set covers all observed shapes.
+func TestCrumbChipActiveFallbackStyle_EmitsUnderlineSGR(t *testing.T) {
+	rendered := ui.CrumbChipActiveFallbackStyle.Render("<prod.yaml>")
+	assert.True(t,
+		containsAnySGR(rendered, "\x1b[4m", "\x1b[4;", ";4m", ";4;"),
+		"CrumbChipActiveFallbackStyle.Render MUST emit SGR 4 (underline) per D-422; got: %q", rendered)
+}
+
+// TestCrumbChipActiveFallbackStyle_EmitsBoldSGR asserts the rendered
+// active chip's raw output contains the SGR 1 (bold) byte sequence in
+// either standalone "[1m" or combined "[1;" / ";1m" / ";1;" form.
+func TestCrumbChipActiveFallbackStyle_EmitsBoldSGR(t *testing.T) {
+	rendered := ui.CrumbChipActiveFallbackStyle.Render("<prod.yaml>")
+	assert.True(t,
+		containsAnySGR(rendered, "\x1b[1m", "\x1b[1;", ";1m", ";1;"),
+		"CrumbChipActiveFallbackStyle.Render MUST emit SGR 1 (bold) per D-422; got: %q", rendered)
 }
