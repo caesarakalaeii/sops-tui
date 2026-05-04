@@ -289,7 +289,7 @@ Plans:
 Plans:
 
 **Wave 1 — Chrome cache (SC2 closure)**
-- [ ] 11-01-PLAN.md — Chrome cache wiring (chromeKey + chromeCache + chromeCrumbsCache + refreshChromeCache helper) + Update branch instrumentation across 41 m.state mutation sites + recipientAction sites + Quit branch + WindowSizeMsg + View read-cache rewrite + bench gate flip (delete t.Skip on chrome_test.go:311) + TestChromeCache_HitRateAtSteadyState (100/100 key stability) + m.quitting flag wiring (folded in per RESEARCH §Open Questions #3)
+- [x] 11-01-PLAN.md — Chrome cache wiring (chromeKey + chromeCache + chromeCrumbsCache + refreshChromeCache helper) + Update branch instrumentation across 41 m.state mutation sites + recipientAction sites + Quit branch + WindowSizeMsg + View read-cache rewrite + bench gate flip (delete t.Skip on chrome_test.go:311) + TestChromeCache_HitRateAtSteadyState (100/100 key stability) + m.quitting flag wiring (folded in per RESEARCH §Open Questions #3) (SUMMARY: 11-01-SUMMARY.md)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 11-02-PLAN.md — 3 chrome-interaction sanity tests in regression_test.go (clipboard auto-clear, recipient form menu hints, health overlay narrow width via Update-loop pattern, NOT teatest) + 4-combo Linux manual sweep checkpoint with PNG screenshots (alacritty, ghostty, tmux-nested, vscode-integrated) + README "Verified Terminals" H2 + .github/ISSUE_TEMPLATE/terminal-bug.yml (GitHub Forms YAML) + final gate sweep
@@ -318,4 +318,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 2/2 | Complete   | 2026-05-04 |
 | 10. Theming + Accessibility | 3/3 | Complete | 2026-05-04 |
-| 11. Regression + Perf Gates | 0/2 | Planned | - |
+| 11. Regression + Perf Gates | 1/2 | Executing | - |

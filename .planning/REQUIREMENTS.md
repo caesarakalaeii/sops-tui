@@ -181,7 +181,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-14 | Phase 10 | Complete (Plan 01 + Plan 03 — Plan 01: [W]/[E] prefix at flash render-time + bg-tinted FlashWarnBarStyle/FlashErrBarStyle = redundant text+color encoding; Plan 03: Underline+Bold redundant active-chip encoding on bracket-fallback path survives 16-color downsample where bg colors collapse) |
 | UI-16 | Phase 10 | Complete (Plan 03 — 6-width golden matrix at 40×12 / 60×24 / 80×24 / 100×30 / 120×40 / 200×60; TestRenderCrumbs_FirstAndLastSegmentsPreserved locks D-425 critical-data-survival regression in CI) |
 | UI-20 | Phase 11 | Pending |
-| UI-21 | Phase 11 | Pending |
+| UI-21 | Phase 11 | SC2 closed by Plan 11-01 — chrome cache wired (chromeKey + chromeCache + chromeCrumbsCache + wrappedCache + Update wrapper Rule 1 deviation); BenchmarkAppView reports 39-46 µs/op (60× improvement from 2.4-2.8 ms baseline); TestBenchmarkAppView_UnderBudget gate ACTIVE; TestChromeCache_HitRateAtSteadyState locks value-receiver discipline; TestViewNoNewStyle still green. Awaiting `/gsd-verify-work` to mark Complete. |
 
 **Coverage:**
 - v1 requirements: 26 total, mapped: 26, unmapped: 0 ✓
@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-05-04 — Phase 10 complete (Plan 03 lands bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + first+last preservation regression); UI-13/UI-14/UI-16 closed; UI-21 still deferred to Phase 11 SC2 (50µs target preserved via t.Skip)*
+*Last updated: 2026-05-04 — Phase 11 Plan 01 lands chrome cache + bench gate flip; UI-21 SC2 closed (TestBenchmarkAppView_UnderBudget gate ACTIVE; bench at ~42 µs/op); awaiting `/gsd-verify-work` for Complete mark*

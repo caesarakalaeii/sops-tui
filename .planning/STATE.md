@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 11 PLANNED — 11-01-PLAN.md (SC2 closure: chrome cache + bench gate flip + cache hit-rate test, 3 tasks, wave 1) and 11-02-PLAN.md (SC1+SC3+SC4+SC5 closure: 3 chrome-interaction sanity tests + Linux 4-combo manual sweep + README "Verified Terminals" + GitHub issue template, 4 tasks, wave 2 depends_on 11-01). Plan checker passed iteration 2 (1 BLOCKER + 4 WARNINGs found in iteration 1, all addressed). Planner-discretion choices: m.quitting folded into Plan 11-01 (Quit branch already audited); split chromeCache + chromeCrumbsCache; no stateUnknown sentinel; 100/100 cache key stability assertion. RESEARCH.md heading "## Open Questions (RESOLVED)". Ready for /gsd-execute-phase 11.
-last_updated: "2026-05-04T15:50:00.000Z"
+stopped_at: Phase 11 Plan 01 EXECUTED — chrome cache + bench gate flip wired in 4 atomic commits (39c1291 + 9925d59 + 689f18f + 4313a19). SC2 closed — TestBenchmarkAppView_UnderBudget gate ACTIVE; bench reports 39-46 µs/op (60× improvement from 2.4-2.8 ms baseline; ~16% headroom under 50 µs/op budget). 4 Rule 1 deviations applied to close the gap (chromeHeight cache fast path, wrappedCache, Update wrapper, manual JoinVertical) — all documented in 11-01-SUMMARY.md. m.quitting flag wired (D-512 alt-screen exit cleanup). TestChromeCache_HitRateAtSteadyState locks value-receiver discipline. Full repo test suite green across 9 packages. Plan 11-02 ready to execute (wave 2; SC1+SC3+SC4+SC5 closure: 3 regression sanity teatests + Linux 4-combo manual sweep + README "Verified Terminals" + GitHub issue template).
+last_updated: "2026-05-04T14:55:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 11 — regression + perf gates (PLANNED 2026-05-04, ready to execute)
+**Current focus:** Phase 11 — regression + perf gates (Plan 01 EXECUTED 2026-05-04; Plan 02 pending)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 11 (PLANNED — 2 plans, 2 waves, ready to execute)
-Plan: 11-01 (next — chrome cache wiring + bench gate flip + cache hit-rate test; SC2 closure)
-Status: Phase 11 PLANNED. RESEARCH (Validation Architecture for Nyquist + 7 pitfalls + 6 technical patterns + 3-test fixtures), PATTERNS (6 in-repo analogs found; teatest deliberately NOT used — Update-loop pattern from model_clipboard_test.go), VALIDATION (9 verify entries across 2 plans, Wave 0 = regression_test.go + README + issue template + 4 PNGs), and 2 PLANs landed. Plan checker passed iteration 2: BLOCKER (Task 3 grep-vs-comment contradiction) + WARNINGs (mutation-site enumeration off-by-one + caller-site list missing + RESEARCH heading marker + infoPanel staleness flag) all addressed. Plan 11-01 = wave 1 (3 tasks: cache fields + helpers + cache test, 25-site Update audit + View rewrite + m.quitting flag, t.Skip removal + bench doc); Plan 11-02 = wave 2 depends_on 11-01 (4 tasks: 3 regression tests in NEW regression_test.go, README + .github/ISSUE_TEMPLATE/terminal-bug.yml, manual Linux 4-combo sweep checkpoint, final test pass).
+Phase: 11 (Executing — 1/2 plans complete)
+Plan: 11-02 (next — wave 2 depends_on 11-01; SC1+SC3+SC4+SC5 closure)
+Status: Plan 11-01 EXECUTED with 4 atomic commits (39c1291 Task 1 cache fields + helpers + cache hit-rate test; 9925d59 Task 2 ~25 chromeKey-mutation sites instrumented + View rewrite + m.quitting wiring; 689f18f Rule 1 deviations: wrappedCache + Update wrapper + manual JoinVertical + chromeHeight/crumbsHeight fast path; 4313a19 Task 3 t.Skip removal + bench doc updates). 11-01-SUMMARY.md captures pre/post bench (2.4-2.8 ms → ~42 µs/op = 60× improvement), pprof snippet (StatusBarModel.View dominant remaining cost at 66%; RenderChrome / RenderMenu / WrapTitled gone from hot path), 51 refreshChromeCache call sites (≥25 audit threshold), m.quitting single-mutation/single-read pattern, 4 deviations documented. Full repo test suite green across 9 packages.
 Last activity: 2026-05-04
 
-Progress (v1.1 only): [██████████] 86% (5/6 phases complete, 17/19 plans complete; Phase 11 = 2 plans remaining)
+Progress (v1.1 only): [███████████] 90% (5/6 phases complete, 18/19 plans complete; Phase 11 = 1 plan remaining)
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress (v1.1 only): [██████████] 86% (5/6 phases complete,
 | Phase 10 P01 | 35m | 3 tasks | 9 files |
 | Phase 10 P02 | 25m | 6 tasks | 26 files |
 | Phase 10 P03 | 16m | 5 tasks | 32 files |
+| Phase 11 P01 | 23m | 3 tasks (+1 deviation commit) | 3 files |
 
 ## Accumulated Context
 
@@ -186,6 +187,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 10 Plan 03]: TestRenderCrumbs_FirstAndLastSegmentsPreserved (D-425) — relaxed from plan's stricter form because truncateSegmentsToWidth's `sentinelIdx <= 1` break condition can leave one middle on a wrapped line at width=30. Test now asserts D-425's actual contract: first+last+ellipsis preservation, plus NotContains on the leftmost middle "metadata" which is always dropped on the algorithm's first iteration. Pure CI lock-in; no implementation change to truncateSegmentsToWidth. Rule 1 deviation #2.
 - [Phase 10 Plan 03]: TestChromeASCIIOnly UI-15 allowlist regression caught U+A7 section-sign in two doc-comment locations (`Pitfall 5 §2`); replaced with literal "section" word — same fix Phase 7.1 / Phase 8 / Plan 7 Plan 03 hit. Rule 1 deviation #3.
 - [Phase 10]: Phase 10 COMPLETE. All 5 SC closed: SC1 logo severity (Plan 1+2), SC2 k9s palette (Plan 2), SC3 16-color fallback + bracket chip (Plan 2+3), SC4 redundant encoding ([W]/[E] + Underline+Bold) (Plan 1+3), SC5 narrow-terminal survival + first+last preservation (Plan 3). Ready for /gsd-verifier and Phase 11 (Regression + Perf Gates).
+- [Phase 11 Plan 01]: Chrome cache + bench gate flip COMPLETE — chromeKey struct (4 fields per D-501..D-502), chromeCache + chromeCrumbsCache fields populated by refreshChromeCache mutate-on-event helper (Phase 8 D-213 pattern), 51 explicit refreshChromeCache call sites in model.go covering all chromeKey-mutating Update branches (≥25 audit threshold), m.quitting flag wired (D-512: Quit branch sets, View top branch returns blank), TestChromeCache_HitRateAtSteadyState locks value-receiver discipline (Pitfall A), TestBenchmarkAppView_UnderBudget gate ACTIVE (D-504 closure: t.Skip removed, doc comment updated). Bench: 39-46 µs/op (60× improvement from 2.4-2.8 ms baseline; ~16% headroom under 50 µs/op locked target).
+- [Phase 11 Plan 01]: Four Rule 1 deviations applied to close the 50 µs gap (chrome-only cache hit ~1.2 ms — pprof showed WrapTitled 70% + JoinVertical 41% dominated post-cache cost): (1) wrappedCache + wrappedCacheBody + wrappedCacheTitle fields refreshed alongside chromeCache when body/title changes; (2) Update() restructured as thin wrapper around updateInner(), wrapper always calls refreshChromeCache before returning — eliminates fan-out audit for non-chromeKey-mutating branches (DecryptKeyMsg, ClipboardClearMsg, sub-model j/k routes); (3) lipgloss.JoinVertical replaced with manual `\n` concat in View (~500 µs saved per frame; sections are known-width); (4) chromeHeight + crumbsHeight gain cache-hit fast paths (lipgloss.Height(m.chromeCache) when computeChromeKey == m.chromeCacheKey), slow path retained for Update branches that call bodyDims before refreshChromeCache. All deviations documented in 11-01-SUMMARY.md.
+- [Phase 11 Plan 01]: Status bar deliberately NOT cached — flash timer + clipboard-hot indicator must update per frame; ~80 µs/frame fixed cost is the dominant remaining View cost (renderEnvIndicators 28.6% cumulative). pprof confirms RenderChrome / RenderMenu / WrapTitled gone from hot path — only StatusBarModel.View remains (66% cumulative).
+- [Phase 11 Plan 01]: Forward-deviation note for Plan 11-02 — m.quitting wiring is COMPLETE in Plan 11-01 (Quit branch + View top branch); Plan 11-02 manual sweep can verify alt-screen exit cleanliness empirically. Update wrapper means regression sanity teatests in Plan 11-02 will see automatic cache refresh on every Update without explicit refreshChromeCache wiring. infoPanel staleness vector (CONTEXT D-502 trade-off): chromeKey omits infoPanel; mitigation = Plan 11-01 Update wrapper deviation propagates infoPanel updates immediately because Update wrapper always refreshes cache.
 
 ### Pending Todos
 
@@ -219,6 +224,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-04T13:00:00.000Z
-Stopped at: Phase 10 COMPLETE + VERIFIED — gsd-verifier passed 5/5 must-haves; full suite green across 9 packages. Phase 10 closure tally: SC1 logo severity (Plan 1+2), SC2 k9s palette (Plan 2), SC3 16-color fallback (Plan 2+3), SC4 redundant encoding (Plan 1+3), SC5 40×12-200×60 survival (Plan 3). Ready for Phase 11.
-Resume file: .planning/phases/11-regression-perf-gates/ (Phase 11 not yet planned)
+Last session: 2026-05-04T14:55:00.000Z
+Stopped at: Phase 11 Plan 01 EXECUTED — chrome cache + bench gate flip wired in 4 atomic commits (39c1291 + 9925d59 + 689f18f + 4313a19). SC2 closed (UI-21 ready for `/gsd-verify-work` Complete mark). 11-01-SUMMARY.md captures bench numbers (~42 µs/op, 60× improvement) + pprof + 4 Rule 1 deviations. Plan 11-02 ready to execute (wave 2 SC1+SC3+SC4+SC5 closure: 3 regression sanity teatests + Linux 4-combo manual sweep + README + GitHub issue template).
+Resume file: .planning/phases/11-regression-perf-gates/11-02-PLAN.md (next plan to execute)
