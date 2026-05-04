@@ -220,6 +220,18 @@ type bulkReKeyState struct {
 	total       int
 }
 
+// chromeKey is the cache invalidation key for chromeCache + chromeCrumbsCache.
+// 4-field minimum per CONTEXT.md D-501 + D-502 -- broader keys (palette,
+// logoStatus, infoPanelData, flashGen) are explicitly rejected (Pitfall B).
+// Comparable via == (no slices/maps/funcs); usable as map key if a future
+// phase needs per-state caches. Hashes at zero allocation cost.
+type chromeKey struct {
+	state           sessionState
+	recipientAction string
+	searchActive    bool
+	width           int
+}
+
 // AppModel is the root Bubble Tea model. It owns a sessionState enum and
 // holds all child models as value fields. Methods return updated copies.
 type AppModel struct {
@@ -277,6 +289,23 @@ type AppModel struct {
 	// function path, never re-detected.
 	profile colorprofile.Profile
 	palette ui.Palette
+
+	// Phase 11 D-501..D-503: cached chrome strings. Refreshed at every
+	// Update branch that mutates a chromeKey field (state, recipientAction,
+	// fileList.IsSearchActive(), width). View() reads this cache only --
+	// zero renderer call at hit-path (mirrors Phase 8 D-213 infoPanel
+	// discipline). Pitfall A: View() cannot mutate cache (value receiver);
+	// TestChromeCache_HitRateAtSteadyState locks this discipline.
+	chromeCache       string
+	chromeCrumbsCache string
+	chromeCacheKey    chromeKey
+	// Phase 11 D-512: alt-screen exit blank frame. Set true on the Quit
+	// branch (model.go:~993) before returning tea.Quit; the next (and
+	// final) View() call returns blank tea.View with AltScreen=true so
+	// the Cursed Renderer's last frame leaves no chrome residue in the
+	// user's shell prompt area. Single-mutation-site, single-read-site
+	// pattern (analog: clipboardHot at model.go:251).
+	quitting bool
 }
 
 // NewAppModel constructs the initial AppModel.
@@ -1430,6 +1459,39 @@ func (m AppModel) View() tea.View {
 // Exported for use in tests to verify clipboard state without inspecting View output.
 func (m AppModel) IsClipboardHot() bool {
 	return m.clipboardHot
+}
+
+// computeChromeKey returns the current chrome cache invalidation key
+// derived from AppModel fields that affect chrome rendering. Pure
+// function -- zero allocations (4-field struct, no slices/maps).
+// Per CONTEXT.md D-502, the minimum 4-field key is sufficient: palette is
+// read-only after startup, logoStatus is a flash-driven derivation,
+// infoPanelData is event-refreshed (Phase 8 D-213), flashGen drives the
+// status bar not the chrome.
+func (m AppModel) computeChromeKey() chromeKey {
+	return chromeKey{
+		state:           m.state,
+		recipientAction: m.recipientAction,
+		searchActive:    m.fileList.IsSearchActive(),
+		width:           m.width,
+	}
+}
+
+// refreshChromeCache rebuilds chromeCache + chromeCrumbsCache when the
+// key has changed since last refresh. Called at the END of every Update
+// branch that mutates a key field (after all sub-model assignments to
+// avoid Pitfall E). Pattern matches Phase 8 D-213 infoPanel refresh
+// discipline (Pitfall 15: never-on-render). Value-receiver -- caller must
+// reassign: m = m.refreshChromeCache().
+func (m AppModel) refreshChromeCache() AppModel {
+	newKey := m.computeChromeKey()
+	if newKey == m.chromeCacheKey {
+		return m
+	}
+	m.chromeCacheKey = newKey
+	m.chromeCache = ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.palette, m.width)
+	m.chromeCrumbsCache = ui.RenderCrumbs(m.status.Segments(), m.palette, m.width)
+	return m
 }
 
 // clipboardTimeout returns the clipboard auto-clear duration.

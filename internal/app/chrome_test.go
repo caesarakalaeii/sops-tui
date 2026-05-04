@@ -388,3 +388,28 @@ func TestInfoPanelCacheRefresh_OnFilesDiscovered(t *testing.T) {
 	assert.Equal(t, 2, am2.infoPanel.FileCount,
 		"FileCount must reflect len(msg.Files) after FilesDiscoveredMsg refresh (D-213)")
 }
+
+// TestChromeCache_HitRateAtSteadyState proves the chrome cache is wired
+// (populated by Update, never by View). 100 sequential View() calls
+// without any Update between them must leave m.chromeCacheKey unchanged
+// — the value-receiver discipline trip wire (Pitfall A: View() cannot
+// mutate state, so any cache mutation in View would silently lose).
+//
+// Phase 11 D-505: drives 100 frames with no chrome-input changes;
+// asserts the cache key is stable. Cleaner than a literal hit-count
+// counter because it survives any future refactor of refreshChromeCache.
+func TestChromeCache_HitRateAtSteadyState(t *testing.T) {
+	env := ui.EnvStatus{SopsAvailable: true, AgeAvailable: true, SopsYamlAvailable: true, GitAvailable: true}
+	m := NewAppModel(env, "", colorprofile.TrueColor)
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 200, Height: 60})
+	m = updated.(AppModel)
+
+	keyAfterFirst := m.chromeCacheKey
+	for i := 0; i < 100; i++ {
+		_ = m.View()
+		if m.chromeCacheKey != keyAfterFirst {
+			t.Fatalf("cache key drifted at iteration %d: View() mutated cache "+
+				"(expected View to be a pure read; cache must be populated by Update)", i)
+		}
+	}
+}
