@@ -19,6 +19,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/caesarakalaeii/sops-tui/internal/app"
 	"github.com/caesarakalaeii/sops-tui/internal/ui"
@@ -65,10 +66,29 @@ func main() {
 		SopsYamlAvailable: !hasResultWithMessage(results, ".sops.yaml not found"),
 	}
 
-	// Step 6: Create and run the root TUI program (View().AltScreen = true in AppModel)
+	// Step 5.5 (Phase 10 D-419): Detect color profile once at startup.
+	// colorprofile.Detect consumes NO_COLOR, CLICOLOR, CLICOLOR_FORCE, COLORTERM,
+	// TERM env vars and returns one of: NoTTY / Ascii / ANSI / ANSI256 / TrueColor.
+	// Pure-function detection: never re-checked, never per-frame (Pitfall 15 spirit).
+	profile := colorprofile.Detect(os.Stdout, os.Environ())
+
+	// Phase 10 Claude's-Discretion (CONTEXT.md): SOPSTUI_FORCE_ASCII env var override
+	// for users on terminals that mis-detect color capability. Cheap (4 lines) and
+	// answers "16-color goldens look great but my fancy terminal still mis-detects"
+	// support questions. Recognised values: any non-empty string forces fallback.
+	if os.Getenv("SOPSTUI_FORCE_ASCII") != "" {
+		profile = colorprofile.Ascii
+	}
+
+	// Step 6: Create and run the root TUI program (View().AltScreen = true in AppModel).
+	// NewAppModel stores the profile on a read-only field; ui.PaletteFor(profile) is
+	// computed once at construction. tea.WithColorProfile(profile) ensures Bubble Tea's
+	// Cursed Renderer downsamples SGR bytes to the same profile AppModel uses for
+	// variant selection — eliminates any chance of disagreement between render-time
+	// variant choice and write-time downsample (Phase 10 RESEARCH.md §5).
 	sopsYamlPath, _ := validator.FindSopsYaml(opts.StartDir)
-	model := app.NewAppModel(env, sopsYamlPath)
-	p := tea.NewProgram(model)
+	model := app.NewAppModel(env, sopsYamlPath, profile)
+	p := tea.NewProgram(model, tea.WithColorProfile(profile))
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running sops-tui: %v\n", err)
 		os.Exit(1)
