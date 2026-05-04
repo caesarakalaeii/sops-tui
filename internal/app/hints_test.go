@@ -88,19 +88,28 @@ func TestMenuHints_StateDiff(t *testing.T) {
 }
 
 // TestMenuHints_StateRecipientConfirm — inline package-var dispatch.
+// Quit suppressed via RecipientConfirmKeyMap.HiddenFromMenu() per D-313:
+// Quit is Visible=false so RenderMenu skips it from the persistent menu.
 func TestMenuHints_StateRecipientConfirm(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateRecipientConfirm
 	hints := m.menuHints()
-	require.Equal(t, keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp()), hints)
+	// 6 entries: y/n/Esc/j/k/q — Quit is Visible=false per D-313 HiddenFromMenu suppression.
+	require.Equal(t, 6, len(hints), "RecipientConfirm returns 6 entries including suppressed Quit")
+	require.False(t, hints[5].Visible, "Quit (index 5) must be Visible=false per D-313")
+	require.Equal(t, "q", hints[5].Mnemonic, "index 5 must be the Quit mnemonic")
 }
 
 // TestMenuHints_StateBulkReKeyConfirm — inline package-var dispatch.
+// Quit suppressed via BulkReKeyConfirmKeyMap.HiddenFromMenu() per D-313.
 func TestMenuHints_StateBulkReKeyConfirm(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateBulkReKeyConfirm
 	hints := m.menuHints()
-	require.Equal(t, keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp()), hints)
+	// 6 entries: y/n/Esc/j/k/q — Quit is Visible=false per D-313 HiddenFromMenu suppression.
+	require.Equal(t, 6, len(hints), "BulkReKeyConfirm returns 6 entries including suppressed Quit")
+	require.False(t, hints[5].Visible, "Quit (index 5) must be Visible=false per D-313")
+	require.Equal(t, "q", hints[5].Mnemonic, "index 5 must be the Quit mnemonic")
 }
 
 // TestMenuHints_StateHelp — delegation.

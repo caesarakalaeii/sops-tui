@@ -1491,6 +1491,24 @@ func bodyDims(m AppModel) (w, h int) {
 	return w, h
 }
 
+// suppressHiddenFromMenu applies Visible=false to any hint whose Mnemonic
+// matches a binding returned by a keymap's HiddenFromMenu() method. Used by
+// menuHints() dispatcher arms that own keymaps implementing the visibility
+// suppression contract (D-307, D-313 — RecipientConfirmKeyMap and
+// BulkReKeyConfirmKeyMap suppress Quit from the persistent menu).
+// The hints slice is mutated in-place and returned.
+func suppressHiddenFromMenu(hidden []key.Binding, hints []keys.MenuHint) []keys.MenuHint {
+	for _, h := range hidden {
+		for i := range hints {
+			if hints[i].Mnemonic == h.Help().Key {
+				hints[i].Visible = false
+				break
+			}
+		}
+	}
+	return hints
+}
+
 // menuHints returns the persistent-menu hint set for the current
 // (state, recipientAction, IsSearchActive) tuple per D-10 / Pitfall 3.
 // Search-active override per D-11 takes precedence over the default
@@ -1513,13 +1531,16 @@ func (m AppModel) menuHints() []keys.MenuHint {
 		return m.diff.Hints()
 	// Quit suppressed deliberately during recipient action confirm flows so
 	// the user resolves the y/n decision before exiting (UI-SPEC §confirm-flow-quit-suppression).
-	// RecipientConfirmKeyMap.HiddenFromMenu() returns Quit per D-313.
+	// RecipientConfirmKeyMap.HiddenFromMenu() returns Quit per D-313; suppression
+	// applied here so RenderMenu renders 5 visible hints (Quit Visible=false).
 	case stateRecipientConfirm:
-		return keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp())
+		return suppressHiddenFromMenu(keys.DefaultRecipientConfirmKeyMap.HiddenFromMenu(),
+			keys.HintsFromBindings(keys.DefaultRecipientConfirmKeyMap.ShortHelp()))
 	// Same intentional quit suppression as RecipientConfirm —
 	// BulkReKeyConfirmKeyMap.HiddenFromMenu() returns Quit per D-313.
 	case stateBulkReKeyConfirm:
-		return keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp())
+		return suppressHiddenFromMenu(keys.DefaultBulkReKeyConfirmKeyMap.HiddenFromMenu(),
+			keys.HintsFromBindings(keys.DefaultBulkReKeyConfirmKeyMap.ShortHelp()))
 	case stateHelp:
 		return m.help.Hints()
 	case stateHistory:
