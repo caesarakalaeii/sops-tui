@@ -22,6 +22,23 @@ Early development. Not yet functional.
 - **Go** + [Bubble Tea](https://github.com/charmbracelet/bubbletea) (Elm architecture TUI framework)
 - **SOPS** + **age** encryption backend
 
+## Verified Terminals
+
+The chrome (k9s-style header, info panel, breadcrumb chips) was visually verified during the v1.1 release on the following Linux terminal emulators. Other terminals are expected to work — community-contributed reports welcome.
+
+| Terminal | Version Tested | OS | Status | Notes |
+|----------|----------------|----|--------|-------|
+| Alacritty | latest | Linux | Verified | Reference TrueColor combo. |
+| Ghostty | latest | Linux | Verified | Different rendering pipeline; chrome behaves identically. |
+| tmux (nested in Alacritty) | latest | Linux | Verified | Double alt-screen interaction confirmed clean. |
+| VSCode integrated terminal | latest | Linux | Verified | xterm.js; no 1-row offset on chrome enter/exit. |
+| macOS Terminal | — | macOS | Community-contributed reports welcome | [Open a terminal-bug issue](.github/ISSUE_TEMPLATE/terminal-bug.yml) |
+| iTerm2 | — | macOS | Community-contributed reports welcome | [Open a terminal-bug issue](.github/ISSUE_TEMPLATE/terminal-bug.yml) |
+| Windows Terminal | — | Windows | Community-contributed reports welcome | [Open a terminal-bug issue](.github/ISSUE_TEMPLATE/terminal-bug.yml) |
+| WSL2 (any terminal) | — | Linux/Windows | Community-contributed reports welcome | [Open a terminal-bug issue](.github/ISSUE_TEMPLATE/terminal-bug.yml) |
+
+If you hit a chrome rendering issue on a terminal not yet verified, file a terminal bug using the [terminal-bug template](.github/ISSUE_TEMPLATE/terminal-bug.yml) — include terminal name, version, OS, expected behaviour, observed behaviour, and a screenshot.
+
 ## Requirements
 
 - Go 1.22+

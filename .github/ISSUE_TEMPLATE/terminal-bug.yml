@@ -1,0 +1,83 @@
+name: Terminal Bug Report
+description: Report a chrome rendering issue on a specific terminal emulator
+title: "[Terminal] <short summary>"
+labels: ["terminal-bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a terminal bug. Please fill in as much detail as possible so we can reproduce the issue.
+
+        Note: this template is for **chrome rendering issues** (header, info panel, breadcrumb chips, menu, logo, status bar). For functional bugs (decrypt, edit, clipboard, git, recipient management) please use the standard bug-report template.
+  - type: input
+    id: terminal-name
+    attributes:
+      label: Terminal name
+      description: e.g. Alacritty, Ghostty, iTerm2, Windows Terminal, VSCode integrated terminal
+      placeholder: e.g. iTerm2
+    validations:
+      required: true
+  - type: input
+    id: terminal-version
+    attributes:
+      label: Terminal version
+      description: Run the terminal's "About" or `--version` command
+      placeholder: e.g. 3.5.10
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - WSL2
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What did you expect the chrome to look like or do?
+      placeholder: |
+        e.g. The header should show the info panel on the left, the menu in the middle, and the ASCII logo on the right at width 200.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+      description: What did you actually see? Include any visual artifacts, residual content after exit, or layout corruption.
+      placeholder: |
+        e.g. The logo overlapped the menu by 4 columns; resizing to 80x24 left a row of garbage at the top.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Open <terminal> at size 200x60
+        2. Run `sops-tui` from a directory with a .sops.yaml
+        3. Press / to activate search
+        4. Observe garbled menu hints
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag a PNG / PNGs into this field to attach. Optional but very helpful.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Any other context — TERM env var value, locale, font in use, color profile, etc.
+    validations:
+      required: false
