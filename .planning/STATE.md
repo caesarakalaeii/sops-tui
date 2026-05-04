@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 10 COMPLETE + VERIFIED — gsd-verifier passed 5/5 must-haves; VERIFICATION.md committed (fc61497). All 5 Phase 10 SC closed; UI-03/UI-12/UI-13/UI-14/UI-16 marked complete in REQUIREMENTS.md. Ready for Phase 11 (Regression + Perf Gates).
-last_updated: "2026-05-04T13:00:00.000Z"
+stopped_at: Phase 11 CONTEXT gathered — 11-CONTEXT.md committed (48c8039); 4 areas discussed (cache shape SC2, regression suite SC1, compat sweep + alt-screen SC3+SC4, sign-off SC5). Locked decisions D-501..D-518: full chrome string cache on AppModel keyed on (state, recipientAction, IsSearchActive, width); flip TestBenchmarkAppView_UnderBudget t.Skip; 9-cap inventory matrix + 3 chrome-prone sanity teatests; 4-combo Linux self-sweep + community for the rest; tea.View{} blank on m.quitting flag; 15-row sign-off table in 11-VERIFICATION.md SC5. 2-plan split: Plan 1 = SC2 cache + bench gate flip; Plan 2 = SC1 + SC3 + SC4 + SC5 closure. Ready for /gsd-plan-phase 11.
+last_updated: "2026-05-04T14:45:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 11 — regression + perf gates (Phase 10 COMPLETE 2026-05-04)
+**Current focus:** Phase 11 — regression + perf gates (CONTEXT gathered 2026-05-04, Plan 1 next)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 10 (complete) → 11 (next)
-Plan: 11-01 (next)
-Status: Phase 10 COMPLETE — bracket-fallback chip rendering + 4-profile teatest matrix (24 goldens) + 60×24/100×30 narrow-terminal goldens + first+last preservation regression test landed in 4 atomic signed commits. All 5 Phase 10 SC closed.
+Phase: 11 (CONTEXT gathered)
+Plan: 11-01 (next — chrome cache wiring + bench gate flip)
+Status: Phase 11 CONTEXT.md captures 18 decisions (D-501..D-518) across 4 gray areas. SC2 owns the biggest technical lift (cache the full chrome string on AppModel keyed on D-18 minimum 4-field key, flip the TestBenchmarkAppView_UnderBudget t.Skip, 48× lift from ~2.4-2.8 ms baseline to ≤50 µs). SC1 = 9-capability inventory matrix + 3 chrome-prone sanity teatests (clipboard race, recipient form, health overlay). SC3+SC4 = 4-combo Linux self-sweep + tea.View{} blank on m.quitting flag. SC5 = 15-row sign-off table in 11-VERIFICATION.md re-running gates + citing prior phase evidence. Plan 1 = SC2 only; Plan 2 = SC1+SC3+SC4+SC5 closure.
 Last activity: 2026-05-04
 
 Progress (v1.1 only): [██████████] 86% (5/6 phases complete, 17/19 plans complete; Phase 11 = 2 plans remaining)
