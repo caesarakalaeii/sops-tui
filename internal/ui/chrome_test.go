@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/require"
 
@@ -157,8 +158,9 @@ func TestWrapTitled(t *testing.T) {
 // widths >= 41. Test widths below were bumped accordingly.
 func TestRenderChrome(t *testing.T) {
 	t.Run("returns exactly 6 rows at any non-narrow width", func(t *testing.T) {
+		palette := PaletteFor(colorprofile.TrueColor)
 		for _, w := range []int{50, 80, 120, 200} {
-			chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, w)
+			chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, palette, w)
 			require.Equal(t, 6, lipgloss.Height(chrome),
 				"chrome height must be 6 at width %d, got %d",
 				w, lipgloss.Height(chrome))
@@ -166,7 +168,7 @@ func TestRenderChrome(t *testing.T) {
 	})
 
 	t.Run("contains logo art at right-anchored position", func(t *testing.T) {
-		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, 200)
+		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{}, PaletteFor(colorprofile.TrueColor), 200)
 		stripped := ansi.Strip(chrome)
 		// Logo Candidate A signature markers (logo.go LogoSmall): the row
 		// 4 baseline contains "|____/" twice and row 5 contains "tui".
@@ -181,7 +183,7 @@ func TestRenderChrome(t *testing.T) {
 			{Mnemonic: "?", Description: "help", Visible: true},
 			{Mnemonic: "q", Description: "quit", Visible: true},
 		}
-		chrome := RenderChrome(hints, LogoInfo, InfoPanelData{}, 200)
+		chrome := RenderChrome(hints, LogoInfo, InfoPanelData{}, PaletteFor(colorprofile.TrueColor), 200)
 		stripped := ansi.Strip(chrome)
 		for _, mnem := range []string{"[j]", "[k]", "[?]", "[q]"} {
 			require.Contains(t, stripped, mnem,
@@ -193,7 +195,7 @@ func TestRenderChrome(t *testing.T) {
 		// Phase 8: the info-panel slot is now live. With an empty InfoPanelData
 		// (all sentinels), the leftmost 38 cols render the "-" empty markers
 		// rather than blank whitespace. We verify the slot is non-blank.
-		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{RecipientCount: -1, FileCount: -1}, 200)
+		chrome := RenderChrome(nil, LogoInfo, InfoPanelData{RecipientCount: -1, FileCount: -1}, PaletteFor(colorprofile.TrueColor), 200)
 		stripped := ansi.Strip(chrome)
 		lines := strings.Split(strings.TrimRight(stripped, "\n"), "\n")
 		require.GreaterOrEqual(t, len(lines), 6,
@@ -223,7 +225,7 @@ func fullHintsFixture() []keys.MenuHint {
 // Closes WR-03 / 07-VERIFICATION.md Anti-Pattern 4 (chrome overflows at
 // narrow widths, body unreachable at 40x12).
 func TestRenderChrome_NarrowFallback(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 30)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, PaletteFor(colorprofile.TrueColor), 30)
 
 	// Single line — narrow tier produces a one-row stub.
 	require.Equal(t, 1, lipgloss.Height(out),
@@ -247,7 +249,7 @@ func TestRenderChrome_NarrowFallback(t *testing.T) {
 // content (first column of the menu), NOT the 38-col blank info-panel
 // placeholder that the full-tier reserves.
 func TestRenderChrome_DropsInfoPanel(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 60)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, PaletteFor(colorprofile.TrueColor), 60)
 
 	// 6-row chrome (max(menuRows, logo rows) = 6).
 	require.LessOrEqual(t, lipgloss.Height(out), 6,
@@ -282,7 +284,7 @@ func TestRenderChrome_DropsInfoPanel(t *testing.T) {
 // 6 rows tall. This is the existing Phase 7 behaviour preserved by the
 // 7.1 width-fallback addition.
 func TestRenderChrome_FullChrome(t *testing.T) {
-	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, 200)
+	out := RenderChrome(fullHintsFixture(), LogoInfo, InfoPanelData{}, PaletteFor(colorprofile.TrueColor), 200)
 
 	// Full chrome is exactly 6 rows per D-16 (Phase 7).
 	require.Equal(t, 6, lipgloss.Height(out),
@@ -301,7 +303,7 @@ func TestRenderChrome_FullChrome(t *testing.T) {
 // width=60 due to per-cell text wrapping (the root cause of WR-03 at
 // 80x24).
 func TestRenderMenu_NoCellWrap(t *testing.T) {
-	out := RenderMenu(fullHintsFixture(), 60)
+	out := RenderMenu(fullHintsFixture(), PaletteFor(colorprofile.TrueColor), 60)
 	require.Equal(t, 6, lipgloss.Height(out),
 		"manual-columns RenderMenu must always produce exactly 6 rows; "+
 			"vertical cell wrapping is forbidden by D-117")

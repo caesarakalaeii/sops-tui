@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 
@@ -19,7 +20,7 @@ func TestRenderInfoPanel_AllRowsAligned(t *testing.T) {
 		GitDirty:        true,
 		FileCount:       12,
 	}
-	out := ui.RenderInfoPanel(d)
+	out := ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor))
 	stripped := ansi.Strip(out)
 	lines := strings.Split(stripped, "\n")
 	// 5 rows in fixed order per D-201
@@ -42,7 +43,7 @@ func TestRenderInfoPanel_EmptyMarkers(t *testing.T) {
 		GitBranch:       "",
 		FileCount:       -1,
 	}
-	stripped := ansi.Strip(ui.RenderInfoPanel(d))
+	stripped := ansi.Strip(ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor)))
 	// Each row must contain ": -" (label colon, space, hyphen-minus).
 	for _, label := range []string{"cfg:", "age:", "rcp:", "git:", "fil:"} {
 		line := findLine(t, stripped, label)
@@ -53,7 +54,7 @@ func TestRenderInfoPanel_EmptyMarkers(t *testing.T) {
 func TestRenderInfoPanel_TruncatesAge(t *testing.T) {
 	// 30-char fingerprint -> must middle-truncate to <=10 cells with U+2026 (D-203).
 	d := ui.InfoPanelData{AgeFingerprint: "age1abcdefghijklmnopqrstuvwxyz"}
-	stripped := ansi.Strip(ui.RenderInfoPanel(d))
+	stripped := ansi.Strip(ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor)))
 	ageLine := findLine(t, stripped, "age:")
 	// Strip "age:" + spaces from front.
 	value := strings.TrimSpace(strings.TrimPrefix(ageLine, "age:"))
@@ -64,7 +65,7 @@ func TestRenderInfoPanel_TruncatesAge(t *testing.T) {
 func TestRenderInfoPanel_TruncatesPath(t *testing.T) {
 	// 80-char path -> middle-truncates to 32 cells with U+2026 (D-203).
 	d := ui.InfoPanelData{SopsYamlRelPath: strings.Repeat("a/", 40) + "prod.yaml"}
-	stripped := ansi.Strip(ui.RenderInfoPanel(d))
+	stripped := ansi.Strip(ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor)))
 	cfgLine := findLine(t, stripped, "cfg:")
 	value := strings.TrimSpace(strings.TrimPrefix(cfgLine, "cfg:"))
 	assert.LessOrEqual(t, len([]rune(value)), 32, "cfg value must be <=32 cells (D-203); got %q", value)
@@ -73,14 +74,14 @@ func TestRenderInfoPanel_TruncatesPath(t *testing.T) {
 
 func TestRenderInfoPanel_GitDirtyMarker(t *testing.T) {
 	d := ui.InfoPanelData{GitBranch: "main", GitDirty: true}
-	stripped := ansi.Strip(ui.RenderInfoPanel(d))
+	stripped := ansi.Strip(ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor)))
 	gitLine := findLine(t, stripped, "git:")
 	assert.Contains(t, gitLine, "main *", "dirty branch must trail with ' *' per D-215 (Claude's Discretion recommendation)")
 }
 
 func TestRenderInfoPanel_GitDetachedHead(t *testing.T) {
 	d := ui.InfoPanelData{GitBranch: "abc1234", GitDetached: true, GitDirty: true}
-	stripped := ansi.Strip(ui.RenderInfoPanel(d))
+	stripped := ansi.Strip(ui.RenderInfoPanel(d, ui.PaletteFor(colorprofile.TrueColor)))
 	gitLine := findLine(t, stripped, "git:")
 	assert.Contains(t, gitLine, "HEAD@abc1234", "detached HEAD must render as 'HEAD@<hash>' per D-215")
 	assert.NotContains(t, gitLine, " *", "detached HEAD must NOT show dirty marker (mid-rebase too transient per D-215)")

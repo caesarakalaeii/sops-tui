@@ -54,7 +54,18 @@ const menuSlots = menuRows * menuCols // 12
 // wrap. Side benefit: removes the ~394 us lipgloss/v2/table contribution
 // to BenchmarkAppView (CONTEXT D-117 / WR-03 path forward for UI-21
 // post-cache).
-func RenderMenu(hints []keys.MenuHint, width int) string {
+//
+// palette (Phase 10 D-421) is accepted for forward-compat plumbing; the
+// body uses MenuKeyStyle / MenuDescStyle (which auto-flip with the hex
+// constants) so palette is a pass-through in Plan 2. Future profile-aware
+// menu styling (e.g., per-tier accent demotion) can read palette.Accent
+// / palette.Fg directly.
+func RenderMenu(hints []keys.MenuHint, palette Palette, width int) string {
+	// palette is plumbed for forward-compat profile-aware styling; the
+	// body uses package-var styles (MenuKeyStyle / MenuDescStyle) that
+	// auto-flip with the Color* constants.
+	_ = palette
+
 	// D-06 + D-118: filter to visible hints only, cap at menuSlots (12).
 	visible := make([]keys.MenuHint, 0, menuSlots)
 	for _, h := range hints {

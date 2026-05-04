@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,7 @@ func TestRenderMenu_ReturnsNonEmpty(t *testing.T) {
 		visHint("q", "quit"),
 		visHint("enter", "open"),
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	stripped := ansi.Strip(out)
 	require.NotEmpty(t, stripped)
 	assert.Contains(t, stripped, "[j/↓]")
@@ -64,7 +65,7 @@ func TestRenderMenu_ColumnMajorFill(t *testing.T) {
 		visHint("k", "kilo"),
 		visHint("l", "lima"),
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	stripped := ansi.Strip(out)
 	lines := strings.Split(stripped, "\n")
 	require.GreaterOrEqual(t, len(lines), 6, "expected at least 6 content rows")
@@ -111,7 +112,7 @@ func TestRenderMenu_InvisibleHintsSkipped(t *testing.T) {
 		visHint("h", "hotel"),
 		visHint("i", "india"),
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	stripped := ansi.Strip(out)
 
 	// All visible descriptions must appear.
@@ -133,7 +134,7 @@ func TestRenderMenu_CapsAt12Hints(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		hints = append(hints, visHint(string(rune('a'+i)), "desc-"+string(rune('a'+i))))
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	stripped := ansi.Strip(out)
 	// First 12 (a..l) must appear.
 	for i := 0; i < 12; i++ {
@@ -149,14 +150,15 @@ func TestRenderMenu_CapsAt12Hints(t *testing.T) {
 
 // TestRenderMenu_EmptyHints verifies safe handling of nil and empty input.
 func TestRenderMenu_EmptyHints(t *testing.T) {
+	p := ui.PaletteFor(colorprofile.TrueColor)
 	t.Run("nil input no panic", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			_ = ui.RenderMenu(nil, 80)
+			_ = ui.RenderMenu(nil, p, 80)
 		})
 	})
 	t.Run("empty input no panic", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			_ = ui.RenderMenu([]keys.MenuHint{}, 80)
+			_ = ui.RenderMenu([]keys.MenuHint{}, p, 80)
 		})
 	})
 }
@@ -177,14 +179,15 @@ func TestRenderMenu_NarrowTerminalSafe(t *testing.T) {
 		visHint("i", "india"),
 		visHint("j", "juliett"),
 	}
+	p := ui.PaletteFor(colorprofile.TrueColor)
 	t.Run("width 40", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			_ = ui.RenderMenu(hints, 40)
+			_ = ui.RenderMenu(hints, p, 40)
 		})
 	})
 	t.Run("width 10", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			_ = ui.RenderMenu(hints, 10)
+			_ = ui.RenderMenu(hints, p, 10)
 		})
 	})
 }
@@ -201,7 +204,7 @@ func TestRenderMenu_ASCIIOnlyBody(t *testing.T) {
 		visHint("?", "toggle help"),
 		visHint("q", "quit"),
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	stripped := ansi.Strip(out)
 
 	// Allowlist mirrors internal/app/chrome_test.go:46-54 (TestChromeASCIIOnly,
@@ -233,7 +236,7 @@ func TestRenderMenu_AccentAppliedToMnemonic(t *testing.T) {
 	hints := []keys.MenuHint{
 		visHint("j", "move down"),
 	}
-	out := ui.RenderMenu(hints, 80)
+	out := ui.RenderMenu(hints, ui.PaletteFor(colorprofile.TrueColor), 80)
 	// ColorAccent #89b4fa -> rgb(137, 180, 250) -> "137;180;250"
 	assert.Contains(t, out, "137;180;250",
 		"MenuKeyStyle (ColorAccent) must apply RGB triplet to the rendered mnemonic")

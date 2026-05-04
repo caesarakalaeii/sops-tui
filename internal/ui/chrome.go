@@ -103,7 +103,14 @@ const (
 // added in Phase 7.1 D-116 to close WR-03 / 07-VERIFICATION.md
 // Anti-Pattern 4 (chrome overflows at narrow widths, body unreachable
 // at 40x12).
-func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelData, width int) string {
+//
+// palette (Phase 10 D-421) is the resolved color set (24-bit on
+// TrueColor/ANSI256; 16-color ANSI fallback on Ascii/ANSI). RenderChrome
+// forwards it into RenderMenu / RenderInfoPanel / (eventually)
+// RenderCrumbs so chrome renderers do not import colorprofile directly.
+// RenderLogo signature is intentionally unchanged — LogoStyle{Info,Warn,
+// Error} package vars rebuild from the new hex constants automatically.
+func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelData, palette Palette, width int) string {
 	// Narrow tier: width below logoWidth + 2*minMenuCol (~41 cols).
 	// Render a single-line muted stub; no border. Info parameter ignored.
 	if width < logoWidth+menuCols*minMenuCol {
@@ -117,7 +124,7 @@ func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelDa
 		menuWidth := width - logoWidth
 		// menuWidth is guaranteed >= 2*minMenuCol because the narrow-tier
 		// check above caught width < logoWidth + 2*minMenuCol.
-		menu := RenderMenu(hints, menuWidth)
+		menu := RenderMenu(hints, palette, menuWidth)
 		logo := RenderLogo(logoStatus, logoWidth)
 		return lipgloss.JoinHorizontal(lipgloss.Top, menu, logo)
 	}
@@ -126,12 +133,12 @@ func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelDa
 	// 38x6 slot with the live info panel. RenderInfoPanel produces 5 rows
 	// of label+value content; the InfoPanelPlaceholderStyle wrapper enforces
 	// the 38x6 envelope per Phase 7 D-16 (unchanged in Phase 8).
-	infoSlot := InfoPanelPlaceholderStyle.Render(RenderInfoPanel(info))
+	infoSlot := InfoPanelPlaceholderStyle.Render(RenderInfoPanel(info, palette))
 	menuWidth := width - infoPanelWidth - logoWidth
 	if menuWidth < 1 {
 		menuWidth = 1
 	}
-	menu := RenderMenu(hints, menuWidth)
+	menu := RenderMenu(hints, palette, menuWidth)
 	logo := RenderLogo(logoStatus, logoWidth)
 	return lipgloss.JoinHorizontal(lipgloss.Top, infoSlot, menu, logo)
 }

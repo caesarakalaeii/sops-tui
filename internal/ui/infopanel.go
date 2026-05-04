@@ -38,7 +38,15 @@ type InfoPanelData struct {
 //
 // Row order is LOCKED: cfg, age, rcp, git, fil (D-201). Any executor
 // reordering is a contract violation.
-func RenderInfoPanel(d InfoPanelData) string {
+//
+// palette (Phase 10 D-421) is accepted for forward-compat plumbing; the
+// body uses InfoPanelLabelStyle / InfoPanelValueStyle (which auto-flip
+// with the Color* constants) so palette is a pass-through in Plan 2.
+func RenderInfoPanel(d InfoPanelData, palette Palette) string {
+	// palette is plumbed for forward-compat profile-aware styling; the
+	// body uses package-var styles that auto-flip with Color* constants.
+	_ = palette
+
 	rows := []string{
 		infoPanelRow("cfg:", sopsYamlDisplay(d.SopsYamlRelPath)),
 		infoPanelRow("age:", ageDisplay(d.AgeFingerprint)),

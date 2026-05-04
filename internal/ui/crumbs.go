@@ -34,7 +34,19 @@ const ellipsisSentinel = "…" // U+2026 HORIZONTAL ELLIPSIS
 //
 // Segments are normalised per D-207: strings.ToLower then strip spaces.
 // This matches k9s crumbs.go:70-71 verbatim.
-func RenderCrumbs(segments []string, width int) string {
+//
+// palette (Phase 10 D-421) is plumbed for Plan 3's bracket-fallback
+// rendering on palette.Fallback (D-422). Plan 2 keeps the Phase 8 D-206
+// pill-fill rendering for all profiles; the parameter is a forward-compat
+// seam. Plan 3 adds the `if palette.Fallback { ... bracket chips ... }`
+// branch reading the bool to switch to Underline+Bold SGR codes that
+// survive 16-color downsampling.
+func RenderCrumbs(segments []string, palette Palette, width int) string {
+	// palette is plumbed for Plan 3's bracket-fallback rendering on
+	// palette.Fallback (D-422). Plan 2 keeps Phase 8 D-206 pill-fill
+	// rendering for all profiles; remove this discard line in Plan 3.
+	_ = palette
+
 	if len(segments) == 0 {
 		// Defensive: empty row at least 1 cell tall (lipgloss.Height("") == 1).
 		return CrumbRowStyle.Width(width).Render("")
