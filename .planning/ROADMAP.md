@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7.1: Chrome Gap Closure (INSERTED)** - Restore SC5 governance (revert unauthorized ROADMAP/test-gate amendments; defer perf to Phase 11), strip nested sub-model RoundedBorder boxes, clamp narrow-terminal chrome overflow, extend View() AST walker into helpers, align menu test allowlist
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [x] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained (completed 2026-05-04)
-- [ ] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival
+- [x] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival (completed 2026-05-04)
 - [ ] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep
 
 ## Phase Details
@@ -271,7 +271,7 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — Severity classifier + flash typed-API + flash bg tint + redundant prefix (SUMMARY: 10-01-SUMMARY.md)
 - [x] 10-02-PLAN.md — Palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback variants + Palette accessor + renderer signature cascade (SUMMARY: 10-02-SUMMARY.md)
-- [ ] 10-03-PLAN.md — Bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + critical-data-survival regression
+- [x] 10-03-PLAN.md — Bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + critical-data-survival regression (SUMMARY: 10-03-SUMMARY.md)
 **UI hint**: yes
 
 ### Phase 11: Regression + Perf Gates
@@ -304,5 +304,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 7.1. Chrome Gap Closure (INSERTED) | 4/5 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 2/2 | Complete   | 2026-05-04 |
-| 10. Theming + Accessibility | 2/3 | Executing | - |
+| 10. Theming + Accessibility | 3/3 | Complete | 2026-05-04 |
 | 11. Regression + Perf Gates | 0/2 | Planned | - |

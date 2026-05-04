@@ -79,10 +79,10 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 ### Theming & Accessibility
 
 - [x] **UI-12**: Default palette is tuned to k9s conventions (accent shifts toward hot-pink/purple typical of k9s skins) while keeping the AdaptiveColor ban from v1.0
-- [ ] **UI-13**: On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible
+- [x] **UI-13**: On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible
 - [x] **UI-14**: Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (prefix like `[I]` / `[W]` / `[E]`, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
 - [x] **UI-15**: Persistent chrome content is ASCII-only; `lipgloss.NormalBorder()` is the only border style used in chrome (grep-gated in CI to prevent regressions to fancy borders or emoji)
-- [ ] **UI-16**: The app survives rendering at 40×12 through 200×60 without layout corruption; narrow-terminal rendering may be ugly but must not truncate critical data or overflow the viewport
+- [x] **UI-16**: The app survives rendering at 40×12 through 200×60 without layout corruption; narrow-terminal rendering may be ugly but must not truncate critical data or overflow the viewport
 
 ### Layout Safety (groundwork)
 
@@ -177,9 +177,9 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-11 | Phase 9 | Complete |
 | UI-03 | Phase 10 | Complete (Plan 01 — resolveLogoState classifier wired into both RenderChrome callsites; severity drives Logo{Info,Warn,Error}) |
 | UI-12 | Phase 10 | Complete (Plan 02 — Catppuccin Mauve/Peach/Maroon hex flips landed; AdaptiveColor ban preserved; named-var indirection auto-flips all 8 derived Color* vars) |
-| UI-13 | Phase 10 | Partial (Plan 02 — palette infrastructure shipped: 8 Color*ANSI variants + Palette/PaletteFor + profile detection + tea.WithColorProfile; Plan 03 wires bracket-fallback chip rendering body via palette.Fallback) |
-| UI-14 | Phase 10 | Complete (Plan 01 — [W]/[E] prefix at flash render-time + bg-tinted FlashWarnBarStyle/FlashErrBarStyle = redundant text+color encoding) |
-| UI-16 | Phase 10 | Pending |
+| UI-13 | Phase 10 | Complete (Plan 02 + Plan 03 — Plan 02: 8 Color*ANSI variants + Palette/PaletteFor + profile detection + tea.WithColorProfile; Plan 03: CrumbChipFallbackStyle + CrumbChipActiveFallbackStyle bracket-fallback chip rendering wired in RenderCrumbs body via palette.Fallback gate; 4-profile teatest matrix proves SGR downsample correctness across Ascii/ANSI/ANSI256/TrueColor) |
+| UI-14 | Phase 10 | Complete (Plan 01 + Plan 03 — Plan 01: [W]/[E] prefix at flash render-time + bg-tinted FlashWarnBarStyle/FlashErrBarStyle = redundant text+color encoding; Plan 03: Underline+Bold redundant active-chip encoding on bracket-fallback path survives 16-color downsample where bg colors collapse) |
+| UI-16 | Phase 10 | Complete (Plan 03 — 6-width golden matrix at 40×12 / 60×24 / 80×24 / 100×30 / 120×40 / 200×60; TestRenderCrumbs_FirstAndLastSegmentsPreserved locks D-425 critical-data-survival regression in CI) |
 | UI-20 | Phase 11 | Pending |
 | UI-21 | Phase 11 | Pending |
 
@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-28 — Phase 7.1 complete (chrome-gap-closure); UI-15 governance hardened; UI-16 partial coverage closed (40×12 + 80×24 narrow-tier survival), broader matrix stays Phase 10; UI-21 deferred to Phase 11 SC2 (50µs target preserved via t.Skip)*
+*Last updated: 2026-05-04 — Phase 10 complete (Plan 03 lands bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + first+last preservation regression); UI-13/UI-14/UI-16 closed; UI-21 still deferred to Phase 11 SC2 (50µs target preserved via t.Skip)*
