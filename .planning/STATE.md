@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 11 CONTEXT gathered — 11-CONTEXT.md committed (48c8039); 4 areas discussed (cache shape SC2, regression suite SC1, compat sweep + alt-screen SC3+SC4, sign-off SC5). Locked decisions D-501..D-518: full chrome string cache on AppModel keyed on (state, recipientAction, IsSearchActive, width); flip TestBenchmarkAppView_UnderBudget t.Skip; 9-cap inventory matrix + 3 chrome-prone sanity teatests; 4-combo Linux self-sweep + community for the rest; tea.View{} blank on m.quitting flag; 15-row sign-off table in 11-VERIFICATION.md SC5. 2-plan split: Plan 1 = SC2 cache + bench gate flip; Plan 2 = SC1 + SC3 + SC4 + SC5 closure. Ready for /gsd-plan-phase 11.
-last_updated: "2026-05-04T14:45:00.000Z"
+stopped_at: Phase 11 PLANNED — 11-01-PLAN.md (SC2 closure: chrome cache + bench gate flip + cache hit-rate test, 3 tasks, wave 1) and 11-02-PLAN.md (SC1+SC3+SC4+SC5 closure: 3 chrome-interaction sanity tests + Linux 4-combo manual sweep + README "Verified Terminals" + GitHub issue template, 4 tasks, wave 2 depends_on 11-01). Plan checker passed iteration 2 (1 BLOCKER + 4 WARNINGs found in iteration 1, all addressed). Planner-discretion choices: m.quitting folded into Plan 11-01 (Quit branch already audited); split chromeCache + chromeCrumbsCache; no stateUnknown sentinel; 100/100 cache key stability assertion. RESEARCH.md heading "## Open Questions (RESOLVED)". Ready for /gsd-execute-phase 11.
+last_updated: "2026-05-04T15:50:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 11 — regression + perf gates (CONTEXT gathered 2026-05-04, Plan 1 next)
+**Current focus:** Phase 11 — regression + perf gates (PLANNED 2026-05-04, ready to execute)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 11 (CONTEXT gathered)
-Plan: 11-01 (next — chrome cache wiring + bench gate flip)
-Status: Phase 11 CONTEXT.md captures 18 decisions (D-501..D-518) across 4 gray areas. SC2 owns the biggest technical lift (cache the full chrome string on AppModel keyed on D-18 minimum 4-field key, flip the TestBenchmarkAppView_UnderBudget t.Skip, 48× lift from ~2.4-2.8 ms baseline to ≤50 µs). SC1 = 9-capability inventory matrix + 3 chrome-prone sanity teatests (clipboard race, recipient form, health overlay). SC3+SC4 = 4-combo Linux self-sweep + tea.View{} blank on m.quitting flag. SC5 = 15-row sign-off table in 11-VERIFICATION.md re-running gates + citing prior phase evidence. Plan 1 = SC2 only; Plan 2 = SC1+SC3+SC4+SC5 closure.
+Phase: 11 (PLANNED — 2 plans, 2 waves, ready to execute)
+Plan: 11-01 (next — chrome cache wiring + bench gate flip + cache hit-rate test; SC2 closure)
+Status: Phase 11 PLANNED. RESEARCH (Validation Architecture for Nyquist + 7 pitfalls + 6 technical patterns + 3-test fixtures), PATTERNS (6 in-repo analogs found; teatest deliberately NOT used — Update-loop pattern from model_clipboard_test.go), VALIDATION (9 verify entries across 2 plans, Wave 0 = regression_test.go + README + issue template + 4 PNGs), and 2 PLANs landed. Plan checker passed iteration 2: BLOCKER (Task 3 grep-vs-comment contradiction) + WARNINGs (mutation-site enumeration off-by-one + caller-site list missing + RESEARCH heading marker + infoPanel staleness flag) all addressed. Plan 11-01 = wave 1 (3 tasks: cache fields + helpers + cache test, 25-site Update audit + View rewrite + m.quitting flag, t.Skip removal + bench doc); Plan 11-02 = wave 2 depends_on 11-01 (4 tasks: 3 regression tests in NEW regression_test.go, README + .github/ISSUE_TEMPLATE/terminal-bug.yml, manual Linux 4-combo sweep checkpoint, final test pass).
 Last activity: 2026-05-04
 
 Progress (v1.1 only): [██████████] 86% (5/6 phases complete, 17/19 plans complete; Phase 11 = 2 plans remaining)

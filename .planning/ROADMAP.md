@@ -285,6 +285,19 @@ Plans:
   4. Alt-screen cleanup is explicit: paint fill frame on enter, blank frame on exit; no residual chrome survives in the user's shell prompt area after TUI exit
   5. The full 15-item "Looks Done But Isn't" checklist from `research/PITFALLS.md` is signed off
 **Plans:** 2 plans
+
+Plans:
+
+**Wave 1 — Chrome cache (SC2 closure)**
+- [ ] 11-01-PLAN.md — Chrome cache wiring (chromeKey + chromeCache + chromeCrumbsCache + refreshChromeCache helper) + Update branch instrumentation across 41 m.state mutation sites + recipientAction sites + Quit branch + WindowSizeMsg + View read-cache rewrite + bench gate flip (delete t.Skip on chrome_test.go:311) + TestChromeCache_HitRateAtSteadyState (100/100 key stability) + m.quitting flag wiring (folded in per RESEARCH §Open Questions #3)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 11-02-PLAN.md — 3 chrome-interaction sanity tests in regression_test.go (clipboard auto-clear, recipient form menu hints, health overlay narrow width via Update-loop pattern, NOT teatest) + 4-combo Linux manual sweep checkpoint with PNG screenshots (alacritty, ghostty, tmux-nested, vscode-integrated) + README "Verified Terminals" H2 + .github/ISSUE_TEMPLATE/terminal-bug.yml (GitHub Forms YAML) + final gate sweep
+
+**Cross-cutting constraints:**
+- Cache key locked to D-502 4-field minimum (state, recipientAction, IsSearchActive, width) — no palette / logoStatus / infoPanelData / flashGen
+- View() never mutates cache (value-receiver discipline); refreshChromeCache called only from Update branches
+- 50 µs/op target preserved per Phase 7.1 governance lock — no looser budget accepted; fallback escalation to "cache + manual menu columns" if cache alone misses on dev hardware
 **UI hint**: yes
 
 ## Progress

@@ -495,7 +495,7 @@ stripped := ansi.Strip(m.View().Content)
 
 `ansi.Strip` removes all CSI/OSC/SGR sequences but preserves printable text + box-drawing runes + newlines. Perfect for "does the menu contain X" assertions.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 > CONTEXT.md is exhaustive. Most discretionary points are flagged in `<decisions>` "Claude's Discretion". The questions below are the small remaining ones.
 
