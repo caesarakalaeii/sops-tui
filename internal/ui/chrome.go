@@ -108,7 +108,7 @@ const (
 // TrueColor/ANSI256; 16-color ANSI fallback on Ascii/ANSI). RenderChrome
 // forwards it into RenderMenu / RenderInfoPanel / (eventually)
 // RenderCrumbs so chrome renderers do not import colorprofile directly.
-// RenderLogo signature is intentionally unchanged — LogoStyle{Info,Warn,
+// RenderLogo signature is intentionally unchanged - LogoStyle{Info,Warn,
 // Error} package vars rebuild from the new hex constants automatically.
 func RenderChrome(hints []keys.MenuHint, logoStatus LogoStatus, info InfoPanelData, palette Palette, width int) string {
 	// Narrow tier: width below logoWidth + 2*minMenuCol (~41 cols).
