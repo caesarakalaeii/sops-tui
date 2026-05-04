@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 10 Plan 01 complete — severity classifier + flash typed-API + 42-callsite re-classification landed; resolveLogoState wired into both RenderChrome callsites. Ready for Plan 02 (palette tune + profile detection + 16-color fallback).
-last_updated: "2026-05-04T11:30:00.000Z"
+stopped_at: Phase 10 Plan 02 complete — palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback infrastructure + renderer signature cascade landed in 6 atomic commits; goldens unchanged (structural-only fixtures). Ready for Plan 03 (bracket-fallback chip rendering + 4-profile teatest matrix + narrow-terminal goldens).
+last_updated: "2026-05-04T13:50:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 35
-  completed_plans: 33
-  percent: 94
+  completed_plans: 34
+  percent: 97
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v1.1 — k9s visual parity
 Phase: 10
-Plan: 02 (next)
-Status: Phase 10 Plan 01 complete — severity classifier + flash typed-API shipped; ready to execute Plan 02 palette tune + profile detection.
+Plan: 03 (next)
+Status: Phase 10 Plan 02 complete — Catppuccin Mauve/Peach/Maroon palette tune + profile detection + 16-color fallback infrastructure + renderer signature cascade shipped; ready to execute Plan 03 bracket-fallback chip rendering + 4-profile teatest matrix.
 Last activity: 2026-05-04
 
-Progress (v1.1 only): [███████░] 75% (4/7 phases complete, 15/20 plans complete)
+Progress (v1.1 only): [████████░] 80% (4/7 phases complete, 16/20 plans complete)
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress (v1.1 only): [███████░] 75% (4/7 phases complete, 15/20
 | Phase 09 P01 | 10m 3s | 6 tasks | 14 files |
 | Phase 09 P02 | 8m | 4 tasks | 15 files |
 | Phase 10 P01 | 35m | 3 tasks | 9 files |
+| Phase 10 P02 | 25m | 6 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,19 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 10 Plan 01]: 42-callsite flash sweep applied per D-407 — 15 FlashErr (decrypt/edit/rotate/git history/health scan/re-key/generation/clipboard/metadata error paths), 12 FlashWarn (Read error/Diff error/No changes/Reveal first/git/recipient/file selection/clipboard-not-available soft validations), 15 Flash kept as Info alias (success/progress/Cancelled/Copied/Re-keying status). Tally matches canonical migration map exactly. Zero goldens churn — palette flip is Plan 2.
 - [Phase 10 Plan 01]: Test-only shims pattern landed — internal/app/export_test.go with ResolveLogoStateForTest + StatusForTest + WithStatusForTest + HealthForTest + WithHealthForTest. _test.go suffix keeps shims out of production binary.
 - [Phase 10 Plan 01]: Forward-deviations for Plan 2 — FlashWarnBarStyle/FlashErrBarStyle wired through ColorWarning/ColorError named-vars so Plan 2 hex flips propagate automatically; the 13 statusbar tests assert pre-flip hex SGR substrings (48;2;249;226;175 / 48;2;243;139;168) which Plan 2 must update to Peach/Maroon SGR substrings; NewAppModel(env, sopsYamlPath) signature unchanged in Plan 1; severity_test.go's newCleanAppModel helper will need profile param when Plan 2 adds it.
+- [Phase 10 Plan 02]: Three Catppuccin hex flips landed (D-415) — ColorAccentHex #89b4fa→#cba6f7 (Mauve), ColorWarningHex #f9e2af→#fab387 (Peach), ColorErrorHex #f38ba8→#eba0ac (Maroon). The 5 unchanged constants (Bg/Surface/Success/Muted/Fg) are byte-identical. Named-var indirection means all 8 derived Color* vars + every named style auto-pick-up the new hex (FlashWarnBarStyle, FlashErrBarStyle, BreadcrumbActive, MenuKeyStyle, BadgeUnencrypted, LogoStyleInfo/Warn/Error all flip automatically).
+- [Phase 10 Plan 02]: 8 Color*ANSI lipgloss.ANSIColor fallback variants declared (D-420) — Accent=13 (bright magenta), Bg=0, Surface=8, Fg=15, Muted=7, Success=10, Warning=11, Error=9. Each index hand-verified in 10-RESEARCH.md §"ANSI 16-Color Verification Table" so paired bg/fg combinations stay distinct under 4-bit downsampling.
+- [Phase 10 Plan 02]: Palette struct + PaletteFor(profile) accessor (D-421) — single switch on profile <= colorprofile.ANSI returns ANSI variants with Fallback=true; otherwise returns 24-bit Catppuccin Mocha variants with Fallback=false. Field type is image/color.Color (the standard library interface that lipgloss.Color and lipgloss.ANSIColor both satisfy) — single struct holds either variant set without conversion.
+- [Phase 10 Plan 02]: PaletteFor (verb form) accessor name avoids collision with the Palette struct type — D-421 in CONTEXT.md said "Palette(profile)" which would shadow the type. Pattern-mapper deviation #4.
+- [Phase 10 Plan 02]: Renderer signature cascade landed — RenderChrome / RenderCrumbs / RenderMenu accept palette before width; RenderInfoPanel appends palette. RenderLogo signature intentionally unchanged (LogoStyle{Info,Warn,Error} package vars rebuild from new hex). RenderCrumbs / RenderMenu / RenderInfoPanel bodies have `_ = palette` forward-compat seam — Plan 3 removes when wiring fallback rendering body.
+- [Phase 10 Plan 02]: Profile detection at startup (D-419) — colorprofile.Detect(os.Stdout, os.Environ()) called once after env build; SOPSTUI_FORCE_ASCII env var override (any non-empty string forces colorprofile.Ascii); tea.WithColorProfile(profile) passed to tea.NewProgram so Bubble Tea Cursed Renderer downsample agrees with AppModel variant selection.
+- [Phase 10 Plan 02]: AppModel gains profile colorprofile.Profile + palette ui.Palette fields; palette computed once via ui.PaletteFor(profile) at construction; pure-function path, never re-detected (Pitfall 15 spirit). NewAppModel signature gains profile parameter; 38 test callsites cascade including buildAppModel(t)/newCleanAppModel(t) helper updates that close 30+ tests via single-point indirection.
+- [Phase 10 Plan 02]: go.mod promotes github.com/charmbracelet/colorprofile v0.4.3 from indirect to direct require via go mod tidy. Version unchanged (already pulled transitively); zero go.sum churn.
+- [Phase 10 Plan 02]: D-417 hex literal migration — internal/ui/hex_helpers_test.go provides hexToRGBTriplet / hexBgSGR / hexFgSGR helpers. 5 hex-literal-using tests in logo_test/crumbs_test/menu_test plus 3 SGR-byte assertions in statusbar_test (closing Plan 1 forward deviation #1) all migrated to constant-derived triplets. Acceptance grep gate passes: zero remaining hex literal RGB triplets in test code.
+- [Phase 10 Plan 02]: D-416 atomic GOLDEN_UPDATE pass produced ZERO golden file modifications — testutil/golden.go uses ansi.Strip (structural-only); palette flip changes only color SGR bytes; resize_test.go RequireGoldenColors callsites all pass nil for wantColors. The intended outcome of "color-SGR-bytes-only diff" is met because there are no SGR bytes in the goldens to begin with. Plan 3's bracket-fallback rendering will change golden bytes (structural delta).
+- [Phase 10 Plan 02]: Auto-fix Rule 1 — em-dash (U+2014) in chrome.go RenderChrome doc-comment violated TestChromeASCIIOnly UI-15 allowlist; replaced with hyphen-minus. styles.go em-dashes in doc comments remain (styles.go is NOT in chrome ASCII allowlist scope).
+- [Phase 10 Plan 02]: Auto-fix Rule 3 — lipgloss.Color is a function (not a type) in lipgloss/v2; PLAN.md interfaces section incorrectly quoted it as a type. Fix: use image/color.Color (the standard library interface) as Palette field type. Both lipgloss.Color() and lipgloss.ANSIColor() are assignable to color.Color.
+- [Phase 10 Plan 02]: Forward-deviations for Plan 3 — palette.Fallback exposed but not yet consumed in RenderCrumbs body; the `_ = palette` discard line is the cleanup target. 4-profile teatest matrix (D-423) does not exist yet; hexBgSGR/hexFgSGR helpers are TrueColor-only and Plan 3's matrix needs a parallel mechanism. Goldens refresh expected in Plan 3 (bracket rendering changes printable chars).
 
 ### Pending Todos
 
@@ -197,6 +211,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-04T11:30:00.000Z
-Stopped at: Phase 10 Plan 01 complete — severity classifier + flash typed-API + 42-callsite re-classification landed (3 commits a3fe389/3f9cf98/8381a11). Ready for Plan 02 (palette tune + profile detection + 16-color fallback).
-Resume file: .planning/phases/10-theming-accessibility/10-02-PLAN.md
+Last session: 2026-05-04T13:50:00.000Z
+Stopped at: Phase 10 Plan 02 complete — Catppuccin Mauve/Peach/Maroon palette tune + 8 ANSI variants + Palette/PaletteFor + colorprofile.Detect + tea.WithColorProfile + renderer signature cascade landed (6 commits 74dc324/b6b6688/69931f9/3db3e77/9d5f92e/00d02fe). Goldens unchanged (structural-only fixtures). Ready for Plan 03 (bracket-fallback chip rendering + 4-profile teatest matrix + narrow-terminal goldens).
+Resume file: .planning/phases/10-theming-accessibility/10-03-PLAN.md

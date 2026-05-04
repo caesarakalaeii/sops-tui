@@ -270,7 +270,7 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — Severity classifier + flash typed-API + flash bg tint + redundant prefix (SUMMARY: 10-01-SUMMARY.md)
-- [ ] 10-02-PLAN.md — Palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback variants + Palette accessor + renderer signature cascade
+- [x] 10-02-PLAN.md — Palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback variants + Palette accessor + renderer signature cascade (SUMMARY: 10-02-SUMMARY.md)
 - [ ] 10-03-PLAN.md — Bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + critical-data-survival regression
 **UI hint**: yes
 
@@ -304,5 +304,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 7.1. Chrome Gap Closure (INSERTED) | 4/5 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
 | 9. Keybinding Discoverability | 2/2 | Complete   | 2026-05-04 |
-| 10. Theming + Accessibility | 0/3 | Planned | - |
+| 10. Theming + Accessibility | 2/3 | Executing | - |
 | 11. Regression + Perf Gates | 0/2 | Planned | - |

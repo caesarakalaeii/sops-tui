@@ -60,7 +60,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 - [x] **UI-01**: User sees a persistent multi-column keybinding menu in the header on every view — no `?` press required to discover hotkeys
 - [x] **UI-02**: User sees a 6-row ASCII logo anchored to the top-right of the header, ~26 columns wide
-- [ ] **UI-03**: Logo recolors to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and health aggregate
+- [x] **UI-03**: Logo recolors to reflect aggregate app status (info / warn / error) derived from env checks, flash severity, and health aggregate
 - [x] **UI-04**: User sees a header info panel (top-left) with five rows: `.sops.yaml` relative path, age key fingerprint, recipient count, git branch + clean/dirty marker, file count
 - [ ] **UI-05**: Info-panel fields are truncated and de-PII'd before render: age fingerprint ≤10 chars with ellipsis, paths are repo-relative, no copy bindings ever target chrome content
 
@@ -78,9 +78,9 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ### Theming & Accessibility
 
-- [ ] **UI-12**: Default palette is tuned to k9s conventions (accent shifts toward hot-pink/purple typical of k9s skins) while keeping the AdaptiveColor ban from v1.0
+- [x] **UI-12**: Default palette is tuned to k9s conventions (accent shifts toward hot-pink/purple typical of k9s skins) while keeping the AdaptiveColor ban from v1.0
 - [ ] **UI-13**: On 16-color terminals (`TERM=xterm` / Ascii profile) a safe fallback palette is applied so paired bg/fg chips and menu cells remain legible
-- [ ] **UI-14**: Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (prefix like `[I]` / `[W]` / `[E]`, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
+- [x] **UI-14**: Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (prefix like `[I]` / `[W]` / `[E]`, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
 - [x] **UI-15**: Persistent chrome content is ASCII-only; `lipgloss.NormalBorder()` is the only border style used in chrome (grep-gated in CI to prevent regressions to fancy borders or emoji)
 - [ ] **UI-16**: The app survives rendering at 40×12 through 200×60 without layout corruption; narrow-terminal rendering may be ugly but must not truncate critical data or overflow the viewport
 
@@ -175,10 +175,10 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-09 | Phase 9 | Complete |
 | UI-10 | Phase 9 | Complete |
 | UI-11 | Phase 9 | Complete |
-| UI-03 | Phase 10 | Pending |
-| UI-12 | Phase 10 | Pending |
-| UI-13 | Phase 10 | Pending |
-| UI-14 | Phase 10 | Pending |
+| UI-03 | Phase 10 | Complete (Plan 01 — resolveLogoState classifier wired into both RenderChrome callsites; severity drives Logo{Info,Warn,Error}) |
+| UI-12 | Phase 10 | Complete (Plan 02 — Catppuccin Mauve/Peach/Maroon hex flips landed; AdaptiveColor ban preserved; named-var indirection auto-flips all 8 derived Color* vars) |
+| UI-13 | Phase 10 | Partial (Plan 02 — palette infrastructure shipped: 8 Color*ANSI variants + Palette/PaletteFor + profile detection + tea.WithColorProfile; Plan 03 wires bracket-fallback chip rendering body via palette.Fallback) |
+| UI-14 | Phase 10 | Complete (Plan 01 — [W]/[E] prefix at flash render-time + bg-tinted FlashWarnBarStyle/FlashErrBarStyle = redundant text+color encoding) |
 | UI-16 | Phase 10 | Pending |
 | UI-20 | Phase 11 | Pending |
 | UI-21 | Phase 11 | Pending |
