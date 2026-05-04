@@ -1,0 +1,6 @@
+cfg: secrets/.sops.yaml               [?] help                                                                                                                                  ____   ___  ____  ____
+age: age1…lmnop                       [q] quit                                                                                                                                 / ___| / _ \|  _ \/ ___|
+rcp: 4                                [/] search                                                                                                                               \___ \| | | | |_) \___ \
+git: main *                           [r] reveal                                                                                                                                ___) | |_| |  __/ ___) |
+fil: 12                                                                                                                                                                        |____/ \___/|_|   |____/
+                                                                                                                                                                                                    tui
