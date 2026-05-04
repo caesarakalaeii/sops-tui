@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [x] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained (completed 2026-05-04)
 - [x] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival (completed 2026-05-04)
-- [x] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep (Plans 11-01 + 11-02 EXECUTED 2026-05-04; awaiting `/gsd-verify-work` for SC1-SC5 closure; manual 4-combo Linux sweep surfaced as CHECKPOINT-PENDING)
+- [x] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep (Plans 11-01 + 11-02 EXECUTED 2026-05-04; VERIFICATION status `human_needed` — automated SC1+SC2+SC4+SC5 ✓ at HEAD; SC3 manual 4-combo Linux sweep persists as 11-HUMAN-UAT.md awaiting developer capture of 4 PNGs)
 
 ## Phase Details
 

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 11 Plan 02 EXECUTED — 3 chrome-interaction sanity tests + README "Verified Terminals" + GitHub issue template + manual sweep CHECKPOINT-PENDING placeholder shipped in 3 atomic commits (667fe5b + 5dd0b44 + 9ae974f). All 3 TestRegression_* tests pass; full repo suite green across 9 packages; verifier-level gate sweep green; bench gate at 27.8-28.5 µs/op (~44% headroom under 50µs locked target — Plan 11-01 SC2 closure unaffected). Manual sweep + 4 PNG capture surfaced as documented human-action checkpoint (cannot be automated; binary built at /tmp/sops-tui-v1.1-rc); CHECKPOINT-PENDING.md captures per-combo checklist (4 combos × ≥6 items) + substitution policy + resume signal. Phase 11 ready for /gsd-verify-work given the manual sweep proceeds (or is acknowledged as deferred to v1.1.x). UI-20 SC1 evidence ready (3 TestRegression_* tests). UI-21 already closed by Plan 11-01.
-last_updated: "2026-05-04T15:09:00.000Z"
+stopped_at: Phase 11 VERIFIED — 11-VERIFICATION.md status `human_needed`. Automated SC1+SC2+SC4+SC5 PASSED at HEAD (3 TestRegression_* + TestBenchmarkAppView_UnderBudget gate ACTIVE at 37.7-37.9 µs/op = 24.5% headroom + TestChromeCache_HitRateAtSteadyState 100/100 stability + TestViewNoNewStyle BFS walker green + 15-row "Looks Done But Isn't" sign-off table built with 13 ✓ Done + 1 N/A + 1 ⏳ pending = 15/15 accounted). SC3 manual 4-combo Linux sweep persists as 11-HUMAN-UAT.md (4 pending PNG captures: alacritty/ghostty/tmux-nested/vscode-integrated; binary at /tmp/sops-tui-v1.1-rc); 4 community combos (macOS Terminal/iTerm2/Windows Terminal/WSL2) correctly closed via README "Verified Terminals" matrix + .github/ISSUE_TEMPLATE/terminal-bug.yml per CONTEXT.md D-510. UI-20 marked Complete in REQUIREMENTS.md by Plan 11-02 executor; UI-21 awaiting either (a) the manual sweep close or (b) verifier sign-off on the automated bench gate alone — `/gsd-verify-work 11` or `/gsd-audit-uat` resumes the closeout after sweep PNGs land.
+last_updated: "2026-05-04T16:00:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
