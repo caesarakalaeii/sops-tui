@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Chrome Skeleton** - ASCII logo, persistent keybinding menu, titled bordered content regions
 - [x] **Phase 7.1: Chrome Gap Closure (INSERTED)** - Restore SC5 governance (revert unauthorized ROADMAP/test-gate amendments; defer perf to Phase 11), strip nested sub-model RoundedBorder boxes, clamp narrow-terminal chrome overflow, extend View() AST walker into helpers, align menu test allowlist
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
-- [ ] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained
+- [x] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained (completed 2026-05-04)
 - [ ] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival
 - [ ] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep
 
@@ -249,11 +249,11 @@ Plans:
   3. Menu hint dispatch is a pure function of `(state, recipientAction, IsSearchActive)` — golden-file teatest covers every `(state, action)` tuple that shares a sub-model
   4. The `?` full-screen help overlay is retained as the complete reference; day-to-day hotkeys remain discoverable in the persistent menu without opening it
   5. Changing a `key.Binding` value automatically updates the rendered menu — no second "also update the menu text" edit is ever required
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — Keymap extraction + Hints() derivation: 11 new keymaps in internal/keys/bindings.go (6 sub-model + 5 stateless-state), HiddenFromMenu() formalization, FileList g/G into ShortHelp, 6 sub-model Hints() refactor to one-liners, delete 5 inline package vars, update 5 dispatcher arms + 5 app test assertions + 5 keys ExactCopy assertions **[COMPLETE 2026-04-30]**
-- [ ] 09-02-PLAN.md — Drift detector + 13-entry golden matrix + D-309 documentation amendment: TestMenuHints_Drift (runtime equality) + TestMenuGolden (13 RenderMenu goldens, ANSI-stripped) + TestMenuGoldenNoPII (T-09-01 grep-gate) + dispatcher comment cleanup (drop recipientAction)
+- [x] 09-02-PLAN.md — Drift detector + 13-entry golden matrix + D-309 documentation amendment: TestMenuHints_Drift (runtime equality) + TestMenuGolden (13 RenderMenu goldens, ANSI-stripped) + TestMenuGoldenNoPII (T-09-01 grep-gate) + dispatcher comment cleanup (drop recipientAction)
 **UI hint**: yes
 
 ### Phase 10: Theming + Accessibility
@@ -298,6 +298,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 7.1 -> 8 -> 
 | 7. Chrome Skeleton | 3/3 | Complete | 2026-04-27 |
 | 7.1. Chrome Gap Closure (INSERTED) | 4/5 | Executing | - |
 | 8. Header Info Panel + Crumb Chips | 0/3 | Planned | - |
-| 9. Keybinding Discoverability | 1/2 | In Progress|  |
+| 9. Keybinding Discoverability | 2/2 | Complete   | 2026-05-04 |
 | 10. Theming + Accessibility | 0/3 | Planned | - |
 | 11. Regression + Perf Gates | 0/2 | Planned | - |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: verifying
-stopped_at: Phase 09 Plan 01 COMPLETE — 11 keymap types + HiddenFromMenu + all Hints() derive from keymaps + 5 inline vars deleted + dispatcher migrated; SC5 closed
-last_updated: "2026-05-04T07:31:19.020Z"
+stopped_at: Phase 09 Plan 02 COMPLETE — drift detector + 13 golden files + D-309 amendment + Quit-suppression bug fixed; Phase 9 fully closed
+last_updated: "2026-05-04T07:44:38.729Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 32
-  completed_plans: 31
-  percent: 97
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State
@@ -73,6 +73,7 @@ Progress (v1.1 only): [██████░░] 70% (4/7 phases complete, 14/20
 | Phase 08 P01 | 5m | 3 tasks | 7 files |
 | Phase 08 P02 | 25m | 2 tasks | 4 files |
 | Phase 09 P01 | 10m 3s | 6 tasks | 14 files |
+| Phase 09 P02 | 8m | 4 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 09]: D-301 total derivation achieved: zero literal MenuHint slices remain in production code
 - [Phase 09]: D-307 HiddenFromMenu() method pattern on DetailKeyMap, RecipientConfirmKeyMap, BulkReKeyConfirmKeyMap
 - [Phase 09]: D-309 amendment deferred to Plan 2: recipientAction comment in model.go:1492 left intact
+- [Phase 09 Plan 02]: Drift detector (TestMenuHints_Drift) catches menuHints() vs keymap equality with HiddenFromMenu() suppression applied. 13 sub-tests all pass.
+- [Phase 09 Plan 02]: Rule 1 bug fixed — menuHints() dispatcher for stateRecipientConfirm and stateBulkReKeyConfirm was not applying HiddenFromMenu() suppression; Quit was Visible=true (rendered) contradicting D-313. suppressHiddenFromMenu() helper added.
+- [Phase 09 Plan 02]: D-309 amendment applied — menuHints() doc-block now documents (state, IsSearchActive) and cites D-309 as supersession of Phase 7 D-10's recipientAction triple.
+- [Phase 09 Plan 02]: 13 ANSI-stripped golden files (1496 bytes total) lock per-state RenderMenu output. PII-free (TestMenuGoldenNoPII passes, T-09-01 mitigated).
+- [Phase 09]: Phase 9 COMPLETE — SC1-SC5 closed. All 2 plans shipped. Ready for /gsd-verify-work.
 
 ### Pending Todos
 
@@ -185,6 +191,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-04T07:31:19.014Z
-Stopped at: Phase 09 Plan 01 COMPLETE — 11 keymap types + HiddenFromMenu + all Hints() derive from keymaps + 5 inline vars deleted + dispatcher migrated; SC5 closed
+Last session: 2026-05-04T08:05:00.000Z
+Stopped at: Phase 09 Plan 02 COMPLETE — drift detector + 13 golden files + D-309 amendment + Quit-suppression bug fixed; Phase 9 fully closed
 Resume file: None
