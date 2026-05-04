@@ -299,6 +299,17 @@ type AppModel struct {
 	chromeCache       string
 	chromeCrumbsCache string
 	chromeCacheKey    chromeKey
+	// Phase 11 Rule 1 deviation: cached WrapTitled body so View() does not
+	// pay the per-frame lipgloss border-rendering cost (pprof: ~70% of post-
+	// chrome-cache hot path was WrapTitled at 200x60). Refreshed in
+	// refreshChromeCache() alongside chromeCache when (chromeKey, body,
+	// title) changes. Status bar is intentionally NOT cached -- it must
+	// re-render per-frame for flash timer and clipboard-hot indicator.
+	// wrappedCacheBody / wrappedCacheTitle store the body+title fingerprint
+	// used to compute wrappedCache; the cache hits when both match.
+	wrappedCache      string
+	wrappedCacheBody  string
+	wrappedCacheTitle string
 	// Phase 11 D-512: alt-screen exit blank frame. Set true on the Quit
 	// branch (model.go:~993) before returning tea.Quit; the next (and
 	// final) View() call returns blank tea.View with AltScreen=true so
@@ -371,7 +382,27 @@ func (m AppModel) Init() tea.Cmd {
 //  2. FilesDiscoveredMsg / FilesParsedMsg: async results
 //  3. KeyPressMsg: global keys first (?, q, esc, i, /), then route to active child
 //  4. All other messages: update status bar (for flash timer), then route to child
+//
+// Phase 11 D-503: Update is a thin wrapper that always finishes by calling
+// refreshChromeCache() so chromeCache + chromeCrumbsCache + wrappedCache stay
+// fresh for View(). The inner branches no longer need explicit refreshChromeCache
+// calls -- the wrapper guarantees the post-Update cache invariant. The explicit
+// calls inside updateInner() are kept as no-op safety nets (refreshChromeCache
+// is idempotent when nothing changed) and document the chromeKey-mutation
+// audit per CONTEXT.md D-503.
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	updated, cmd := m.updateInner(msg)
+	if am, ok := updated.(AppModel); ok {
+		am = am.refreshChromeCache()
+		return am, cmd
+	}
+	return updated, cmd
+}
+
+// updateInner contains the actual Update dispatch. Wrapped by Update() so the
+// returned model always has a fresh cache (Phase 11 Rule 1 deviation). See
+// Update doc comment for rationale.
+func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
@@ -1395,18 +1426,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var statusCmd tea.Cmd
 	m.status, statusCmd = m.status.Update(msg)
 
+	// Phase 11 Rule 1: refreshChromeCache must run on EVERY Update branch
+	// that potentially mutates body content (sub-model views). The chrome
+	// cache key may not change here (state/searchActive/recipientAction/
+	// width unchanged on j/k cursor movement), but refreshChromeCache also
+	// invalidates m.viewCache (full-frame cache) on body content drift via
+	// the body-equality probe. Cheap when chrome key unchanged: chrome and
+	// crumbs strings are reused; only the wrapped body and full output are
+	// recomputed when the body string differs from m.viewCacheBody.
+
 	// Route remaining messages to active child model
 	switch m.state {
 	case stateFileList:
 		var cmd tea.Cmd
 		m.fileList, cmd = m.fileList.Update(msg)
+		m = m.refreshChromeCache()
 		return m, tea.Batch(cmd, statusCmd)
 	case stateDetail:
 		var cmd tea.Cmd
 		m.detail, cmd = m.detail.Update(msg)
+		m = m.refreshChromeCache()
 		return m, tea.Batch(cmd, statusCmd)
 	case stateHelp:
 		// Help is display-only; no child update needed
+		m = m.refreshChromeCache()
 		return m, statusCmd
 	case stateMetadata:
 		// Handle j/k scrolling in metadata overlay
@@ -1417,6 +1460,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.metadata.ScrollUp()
 			}
 		}
+		m = m.refreshChromeCache()
 		return m, statusCmd
 	case stateHistory:
 		// Handle j/k scrolling in history overlay
@@ -1427,9 +1471,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.history.ScrollUp()
 			}
 		}
+		m = m.refreshChromeCache()
 		return m, statusCmd
 	}
 
+	m = m.refreshChromeCache()
 	return m, statusCmd
 }
 
@@ -1465,61 +1511,18 @@ func (m AppModel) View() tea.View {
 		return v
 	}
 
-	title := m.titleForState()
-
-	w, h := bodyDims(m)
-
-	var body string
-	switch m.state {
-	case stateFileList:
-		body = m.fileList.View()
-	case stateDetail:
-		body = m.detail.View()
-	case stateHelp:
-		body = m.help.View(ui.ViewState(m.prevState))
-	case stateMetadata:
-		body = m.metadata.View()
-	case stateDiff:
-		body = m.diff.View()
-	case stateFormatMenu:
-		body = renderFormatMenu(m.formatMenuCursor, w, h)
-	case stateHistory:
-		body = m.history.View()
-	case stateHealth:
-		body = m.health.View()
-	case stateRecipientForm:
-		body = m.recipientForm.View()
-	case stateRecipientConfirm:
-		body = m.diff.View()
-	case stateRecipientList:
-		body = m.renderRecipientList()
-	case stateBulkReKeyConfirm:
-		body = m.diff.View()
-	}
-
-	// stateFormatMenu renders its own bordered overlay (legacy Phase 3 modal);
-	// wrapping it in WrapTitled would double-border the content.
-	var wrapped string
-	if m.state == stateFormatMenu {
-		wrapped = body
-	} else {
-		wrapped = ui.WrapTitled(title, body, w, h)
-	}
-
-	// Phase 11 D-503: chrome + crumbs are cached on AppModel by
-	// refreshChromeCache() called at the end of every Update branch
-	// that mutates a chromeKey field. View() reads only -- never calls
-	// RenderChrome/RenderCrumbs directly (eliminates the ~2.4-2.8 ms
-	// hot path measured in Phase 7.1 chrome_test.go:294-298).
-	// Pitfall A: View() cannot mutate cache; assignments to m.chrome*
-	// here would be silently lost (value receiver). Audit gate:
-	// TestChromeCache_HitRateAtSteadyState locks the discipline.
-	chrome := m.chromeCache
-	crumbs := m.chromeCrumbsCache
+	// Phase 11 D-503: chrome, crumbs, and WrapTitled body are cached on
+	// AppModel by refreshChromeCache() called at the end of every Update
+	// branch. View() reads only -- zero RenderChrome / RenderCrumbs /
+	// WrapTitled work in the hot path. Status bar is rendered per-frame
+	// because flash timer + clipboard-hot indicator must update each tick.
+	// Pitfall A: View() cannot mutate state (value receiver); assignments
+	// here would be silently lost. Trip wire: TestChromeCache_HitRateAtSteadyState
+	// locks the discipline.
 	statusBar := m.status.View(m.width)
-	sections := []string{chrome, crumbs, wrapped, statusBar}
-	full := lipgloss.JoinVertical(lipgloss.Left, sections...)
-
+	// Manual concat skips lipgloss.JoinVertical's per-frame ANSI grapheme-
+	// cluster width walk. All four sections are known-width (m.width).
+	full := m.chromeCache + "\n" + m.chromeCrumbsCache + "\n" + m.wrappedCache + "\n" + statusBar
 	v := tea.NewView(full)
 	v.AltScreen = true
 	return v
@@ -1547,20 +1550,86 @@ func (m AppModel) computeChromeKey() chromeKey {
 	}
 }
 
-// refreshChromeCache rebuilds chromeCache + chromeCrumbsCache when the
-// key has changed since last refresh. Called at the END of every Update
-// branch that mutates a key field (after all sub-model assignments to
-// avoid Pitfall E). Pattern matches Phase 8 D-213 infoPanel refresh
-// discipline (Pitfall 15: never-on-render). Value-receiver -- caller must
-// reassign: m = m.refreshChromeCache().
+// renderBody returns the active sub-model's view body for the current state.
+// Pure function (read-only on m); used by refreshChromeCache to capture the
+// body string for the full-frame cache (Phase 11 Rule 1 deviation).
+func (m AppModel) renderBody() string {
+	w, h := bodyDims(m)
+	switch m.state {
+	case stateFileList:
+		return m.fileList.View()
+	case stateDetail:
+		return m.detail.View()
+	case stateHelp:
+		return m.help.View(ui.ViewState(m.prevState))
+	case stateMetadata:
+		return m.metadata.View()
+	case stateDiff:
+		return m.diff.View()
+	case stateFormatMenu:
+		return renderFormatMenu(m.formatMenuCursor, w, h)
+	case stateHistory:
+		return m.history.View()
+	case stateHealth:
+		return m.health.View()
+	case stateRecipientForm:
+		return m.recipientForm.View()
+	case stateRecipientConfirm:
+		return m.diff.View()
+	case stateRecipientList:
+		return m.renderRecipientList()
+	case stateBulkReKeyConfirm:
+		return m.diff.View()
+	}
+	return ""
+}
+
+// refreshChromeCache rebuilds chromeCache + chromeCrumbsCache + wrappedCache
+// when their respective inputs have changed since the last refresh. Called
+// at the END of every Update branch (Phase 11 Rule 1: extended to cover body-
+// content changes from sub-model routes too). Pattern matches Phase 8 D-213
+// infoPanel refresh discipline (Pitfall 15: never-on-render). Value-receiver
+// -- caller must reassign: m = m.refreshChromeCache().
+//
+// Two-tier cache invalidation:
+//  1. chromeKey changed -> rebuild chrome strings (RenderChrome / RenderCrumbs)
+//  2. body or title changed -> rebuild wrappedCache (WrapTitled).
+//
+// Status bar is intentionally NOT cached because it changes per-frame
+// (flash timer + clipboard-hot indicator). View() pays a small fixed cost
+// (~80 us at 200x60) to render status bar each frame.
 func (m AppModel) refreshChromeCache() AppModel {
 	newKey := m.computeChromeKey()
-	if newKey == m.chromeCacheKey {
+	if newKey != m.chromeCacheKey {
+		m.chromeCacheKey = newKey
+		m.chromeCache = ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.palette, m.width)
+		m.chromeCrumbsCache = ui.RenderCrumbs(m.status.Segments(), m.palette, m.width)
+	}
+
+	// First-frame guard mirrors View() zero-state guard. Don't build
+	// wrappedCache before width/height are known (WrapTitled would clamp
+	// to its own minimum and produce a degenerate box).
+	if m.width == 0 || m.height == 0 {
 		return m
 	}
-	m.chromeCacheKey = newKey
-	m.chromeCache = ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.palette, m.width)
-	m.chromeCrumbsCache = ui.RenderCrumbs(m.status.Segments(), m.palette, m.width)
+
+	// Compute new body + title; reuse cached wrapped if both match.
+	title := m.titleForState()
+	body := m.renderBody()
+	if body == m.wrappedCacheBody && title == m.wrappedCacheTitle && m.wrappedCache != "" {
+		return m
+	}
+	m.wrappedCacheBody = body
+	m.wrappedCacheTitle = title
+
+	w, h := bodyDims(m)
+	if m.state == stateFormatMenu {
+		// stateFormatMenu renders its own bordered overlay (legacy Phase 3
+		// modal); wrapping it in WrapTitled would double-border the content.
+		m.wrappedCache = body
+	} else {
+		m.wrappedCache = ui.WrapTitled(title, body, w, h)
+	}
 	return m
 }
 
@@ -1790,9 +1859,19 @@ func (m AppModel) resolveLogoState() ui.LogoStatus {
 //
 // First-frame safety: returns 0 when m.width == 0 so bodyDims doesn't
 // over-subtract before the first WindowSizeMsg arrives.
+//
+// Phase 11 D-503: fast path reads the cached chrome string when the
+// computed cache key matches m.chromeCacheKey (i.e. the cache is fresh).
+// Slow path (cache miss) falls back to ui.RenderChrome -- this happens
+// inside Update branches that call bodyDims BEFORE refreshChromeCache
+// runs. Both paths produce identical heights; the cache hit eliminates
+// the per-frame renderer cost in View() (Pitfall A).
 func chromeHeight(m AppModel) int {
 	if m.width == 0 {
 		return 0
+	}
+	if m.computeChromeKey() == m.chromeCacheKey && m.chromeCache != "" {
+		return lipgloss.Height(m.chromeCache)
 	}
 	// Phase 10 D-403: severity-aware logo resolves per-frame; chromeHeight
 	// must use the same logo state as View() so the height calculation matches.
@@ -1806,9 +1885,15 @@ func chromeHeight(m AppModel) int {
 // overflow rule). First-frame safety: returns 0 when m.width == 0
 // so bodyDims doesn't over-subtract before the first WindowSizeMsg
 // arrives -- mirrors chromeHeight's first-frame guard.
+//
+// Phase 11 D-503: fast path mirrors chromeHeight's cache read; slow path
+// falls back to ui.RenderCrumbs.
 func crumbsHeight(m AppModel) int {
 	if m.width == 0 {
 		return 0
+	}
+	if m.computeChromeKey() == m.chromeCacheKey && m.chromeCrumbsCache != "" {
+		return lipgloss.Height(m.chromeCrumbsCache)
 	}
 	return lipgloss.Height(ui.RenderCrumbs(m.status.Segments(), m.palette, m.width))
 }
