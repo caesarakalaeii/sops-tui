@@ -60,6 +60,19 @@ func (r HealthCheckResult) IsEmpty() bool {
 		len(r.StaleFiles) == 0 && len(r.Errors) == 0
 }
 
+// HasErrLevelFindings returns true when the result contains any Err-severity
+// finding: WeakSecrets, Duplicates, or Errors. StaleFiles are deliberately
+// excluded — Phase 10 D-401 demotes staleness BELOW Warn (visible per-file but
+// does not raise the logo to Err).
+//
+// This is the predicate the AppModel.resolveLogoState() classifier consults.
+// It is distinct from IsEmpty() which DOES include StaleFiles in its zero-check.
+func (r HealthCheckResult) HasErrLevelFindings() bool {
+	return len(r.WeakSecrets) > 0 ||
+		len(r.Duplicates) > 0 ||
+		len(r.Errors) > 0
+}
+
 // ShannonEntropy computes the Shannon entropy of s in bits per character.
 // Returns 0.0 for empty strings.
 func ShannonEntropy(s string) float64 {

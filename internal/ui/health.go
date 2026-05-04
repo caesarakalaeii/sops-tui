@@ -179,6 +179,20 @@ func (m HealthModel) FindingCount() int {
 	return len(m.results.WeakSecrets) + len(m.results.Duplicates) + len(m.results.StaleFiles)
 }
 
+// LastResult returns the most recent HealthCheckResult set via SetResults.
+// Phase 10 D-401: consumed by AppModel.resolveLogoState() to classify aggregate
+// health severity (Weak ∪ Duplicate ∪ Errors via HasErrLevelFindings — StaleFiles
+// excluded). Returns the zero-value HealthCheckResult when no scan has run yet;
+// HasErrLevelFindings() returns false on the zero value, so the classifier
+// short-circuits to env-derived severity.
+//
+// Read-receiver method (return-by-value): SetResults mutates and uses a pointer
+// receiver, but the read path is safe as a value receiver since HealthCheckResult
+// is a struct of slice headers (slice underlying arrays are NOT copied).
+func (m HealthModel) LastResult() health.HealthCheckResult {
+	return m.results
+}
+
 // Hints returns the 5-hint persistent menu set for HealthModel per D-09.
 // Derives from HealthKeyMap.ShortHelp() per D-301 (total derivation).
 func (m HealthModel) Hints() []keys.MenuHint {

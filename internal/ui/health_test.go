@@ -177,3 +177,36 @@ func TestHealthModelFindingCount(t *testing.T) {
 	require.Equal(t, 6, m.FindingCount(),
 		"FindingCount = WeakSecrets(2) + Duplicates(1) + StaleFiles(3); errors excluded")
 }
+
+// TestHealthModel_LastResult verifies the Phase 10 D-401 read accessor returns
+// the most recent results set via SetResults. Used by AppModel.resolveLogoState()
+// to classify aggregate health severity per-frame without duplicating state.
+func TestHealthModel_LastResult(t *testing.T) {
+	t.Run("zero-value HealthModel returns zero-value HealthCheckResult", func(t *testing.T) {
+		m := ui.HealthModel{}
+		got := m.LastResult()
+		assert.Empty(t, got.WeakSecrets, "no scan run yet -> empty weak secrets")
+		assert.Empty(t, got.Duplicates, "no scan run yet -> empty duplicates")
+		assert.Empty(t, got.StaleFiles, "no scan run yet -> empty stale files")
+		assert.Empty(t, got.Errors, "no scan run yet -> empty errors")
+		assert.False(t, got.HasErrLevelFindings(),
+			"zero-value LastResult must classify as below-Err per D-401")
+	})
+
+	t.Run("LastResult returns stored results after SetResults", func(t *testing.T) {
+		m := ui.NewHealthModel(80, 24)
+		want := health.HealthCheckResult{
+			WeakSecrets: []health.WeakSecret{
+				{FilePath: "f.yaml", KeyPath: "token", Reason: "too short"},
+			},
+			Errors: []string{"boom.yaml: decrypt failed"},
+		}
+		m.SetResults(want)
+		got := m.LastResult()
+		assert.Len(t, got.WeakSecrets, 1, "WeakSecrets length preserved")
+		assert.Len(t, got.Errors, 1, "Errors length preserved")
+		assert.Equal(t, "f.yaml", got.WeakSecrets[0].FilePath)
+		assert.True(t, got.HasErrLevelFindings(),
+			"non-empty findings must classify Err-level per D-401")
+	})
+}

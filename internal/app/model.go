@@ -1397,7 +1397,9 @@ func (m AppModel) View() tea.View {
 	// Phase 8 D-213 + D-216: chrome consumes m.infoPanel cache;
 	// crumbs row is unconditional (independent of chrome tier per
 	// D-216) -- the conditional guard from Phase 7 D-17 is removed.
-	chrome := ui.RenderChrome(hints, ui.LogoInfo, m.infoPanel, m.width)
+	// Phase 10 D-403: logo severity is resolved per-frame from
+	// (env, flashSeverity, lastHealthResult) via resolveLogoState().
+	chrome := ui.RenderChrome(hints, m.resolveLogoState(), m.infoPanel, m.width)
 	crumbs := ui.RenderCrumbs(m.status.Segments(), m.width)
 	statusBar := m.status.View(m.width)
 	sections := []string{chrome, crumbs, wrapped, statusBar}
@@ -1592,6 +1594,47 @@ func (m AppModel) titleForState() string {
 	return ""
 }
 
+// resolveLogoState computes the aggregate logo severity from env, flash
+// severity, and health findings. Pure function of state — re-evaluated every
+// View() frame; no caching, no sticky state, no per-frame I/O (D-403).
+//
+// Severity precedence: Err > Warn > Info (D-404). The single-pass switch walks
+// Err checks first, then Warn checks, falls through to LogoInfo as the
+// baseline.
+//
+// Inputs (all already on the model — no cross-package wiring beyond
+// FlashSeverity()/LastResult()/Env() accessors):
+//   - m.status.FlashSeverity(): FlashSevErr -> LogoError; FlashSevWarn -> LogoWarn
+//   - m.health.LastResult().HasErrLevelFindings(): non-empty Weak ∪ Duplicate ∪
+//     Errors -> LogoError. StaleFiles excluded per D-401 (predicate excludes
+//     them so stale-only health stays at the env-derived baseline).
+//   - m.status.Env(): !AgeAvailable || !SopsYamlAvailable -> LogoWarn (D-402).
+//
+// Phase 10 wiring: both ui.RenderChrome callsites in this file (View() chrome
+// composition + chromeHeight() helper) read this resolver instead of passing
+// ui.LogoInfo unconditionally.
+func (m AppModel) resolveLogoState() ui.LogoStatus {
+	// Err checks (D-401) — walk first per D-404 precedence.
+	if m.status.FlashSeverity() == ui.FlashSevErr {
+		return ui.LogoError
+	}
+	if m.health.LastResult().HasErrLevelFindings() {
+		return ui.LogoError
+	}
+
+	// Warn checks (D-402).
+	if m.status.FlashSeverity() == ui.FlashSevWarn {
+		return ui.LogoWarn
+	}
+	env := m.status.Env()
+	if !env.AgeAvailable || !env.SopsYamlAvailable {
+		return ui.LogoWarn
+	}
+
+	// Default — Info baseline (D-404 fall-through).
+	return ui.LogoInfo
+}
+
 // chromeHeight returns the rendered height of the header chrome in terminal rows.
 // Phase 7: flipped from the Phase 6 stub. Computes the real height from
 // ui.RenderChrome's output so the info-panel placeholder + menu + logo
@@ -1603,7 +1646,9 @@ func chromeHeight(m AppModel) int {
 	if m.width == 0 {
 		return 0
 	}
-	chrome := ui.RenderChrome(m.menuHints(), ui.LogoInfo, m.infoPanel, m.width)
+	// Phase 10 D-403: severity-aware logo resolves per-frame; chromeHeight
+	// must use the same logo state as View() so the height calculation matches.
+	chrome := ui.RenderChrome(m.menuHints(), m.resolveLogoState(), m.infoPanel, m.width)
 	return lipgloss.Height(chrome)
 }
 

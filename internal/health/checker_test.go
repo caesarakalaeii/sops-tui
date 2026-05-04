@@ -182,3 +182,54 @@ func TestHealthCheckResult(t *testing.T) {
 		assert.False(t, r.IsEmpty(), "HealthCheckResult with Errors should not be empty")
 	})
 }
+
+// TestHealthCheckResult_HasErrLevelFindings verifies the Phase 10 D-401 predicate
+// excludes StaleFiles from the Err-level signal so stale-only results stay below
+// Warn (logo stays Info per D-402).
+func TestHealthCheckResult_HasErrLevelFindings(t *testing.T) {
+	t.Run("zero-value result returns false", func(t *testing.T) {
+		r := health.HealthCheckResult{}
+		assert.False(t, r.HasErrLevelFindings(), "zero-value HealthCheckResult must not raise to Err")
+	})
+
+	t.Run("StaleFiles only returns false (D-401 demotion)", func(t *testing.T) {
+		r := health.HealthCheckResult{
+			StaleFiles: []health.StaleFile{{FilePath: "old.yaml", DaysSince: 120}},
+		}
+		assert.False(t, r.HasErrLevelFindings(),
+			"D-401: stale files alone must NOT raise the logo to Err")
+	})
+
+	t.Run("WeakSecrets present returns true", func(t *testing.T) {
+		r := health.HealthCheckResult{
+			WeakSecrets: []health.WeakSecret{{FilePath: "f", KeyPath: "k", Reason: "too short"}},
+		}
+		assert.True(t, r.HasErrLevelFindings(),
+			"weak secrets must raise to Err per D-401")
+	})
+
+	t.Run("Duplicates present returns true", func(t *testing.T) {
+		r := health.HealthCheckResult{
+			Duplicates: []health.Duplicate{{ValueHash: "abc123"}},
+		}
+		assert.True(t, r.HasErrLevelFindings(),
+			"duplicates must raise to Err per D-401")
+	})
+
+	t.Run("Errors present returns true", func(t *testing.T) {
+		r := health.HealthCheckResult{
+			Errors: []string{"failed to decrypt a.yaml"},
+		}
+		assert.True(t, r.HasErrLevelFindings(),
+			"scan errors must raise to Err per D-401")
+	})
+
+	t.Run("StaleFiles plus WeakSecrets returns true (any non-stale finding raises)", func(t *testing.T) {
+		r := health.HealthCheckResult{
+			StaleFiles:  []health.StaleFile{{FilePath: "old.yaml"}},
+			WeakSecrets: []health.WeakSecret{{FilePath: "f", KeyPath: "k", Reason: "short"}},
+		}
+		assert.True(t, r.HasErrLevelFindings(),
+			"any non-stale finding must raise to Err even with stale files present")
+	})
+}
