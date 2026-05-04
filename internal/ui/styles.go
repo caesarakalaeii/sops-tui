@@ -6,25 +6,34 @@
 package ui
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 )
 
 // Color hex values per 01-UI-SPEC.md §Color. These constants hold the raw hex strings
 // so they can be verified in tests and used to construct lipgloss colors.
+//
+// Phase 10 D-415 flipped three accents toward Catppuccin Mocha's hot-pink/purple
+// register (mauve / peach / maroon) for closer k9s visual parity. The other 5
+// constants (Bg / Surface / Success / Muted / Fg) are byte-identical to v1.0.
 const (
 	// ColorBgHex is the terminal background fill color (60% usage).
 	ColorBgHex = "#1e1e2e"
 	// ColorSurfaceHex is used for status bar, help overlay, and error box backgrounds (30% usage).
 	ColorSurfaceHex = "#313244"
 	// ColorAccentHex is reserved for selection highlights, active breadcrumbs, tree indicators,
-	// and help key labels (10% usage).
-	ColorAccentHex = "#89b4fa"
+	// and help key labels (10% usage). Catppuccin Mauve (Phase 10 D-415).
+	ColorAccentHex = "#cba6f7"
 	// ColorSuccessHex indicates healthy status (sops/age/.sops.yaml available).
 	ColorSuccessHex = "#a6e3a1"
 	// ColorWarningHex indicates soft warnings (age key missing, .sops.yaml missing).
-	ColorWarningHex = "#f9e2af"
+	// Catppuccin Peach (Phase 10 D-415).
+	ColorWarningHex = "#fab387"
 	// ColorErrorHex indicates hard errors (sops binary missing, error box borders).
-	ColorErrorHex = "#f38ba8"
+	// Catppuccin Maroon (Phase 10 D-415).
+	ColorErrorHex = "#eba0ac"
 	// ColorMutedHex is used for dim text, separators, and borders.
 	ColorMutedHex = "#6c7086"
 	// ColorFgHex is the default foreground text color on dark background.
@@ -52,6 +61,103 @@ var (
 	// ColorFg is the default foreground text color on dark background.
 	ColorFg = lipgloss.Color(ColorFgHex)
 )
+
+// Phase 10 (D-420): 16-color fallback variants for Profile <= colorprofile.ANSI.
+// Each index hand-verified in 10-RESEARCH.md §"ANSI 16-Color Verification Table"
+// — every chrome bg/fg pair is distinct under 4-bit downsampling.
+//
+// PaletteFor(profile) selects between these ANSI variants and the 24-bit
+// Catppuccin Mocha variants above based on the active color profile.
+var (
+	// ColorAccentANSI is bright magenta (13) — distinct from Warning yellow (11)
+	// + Error red (9) under 4-bit. Replaces 24-bit Mauve when palette.Fallback.
+	ColorAccentANSI = lipgloss.ANSIColor(13)
+	// ColorBgANSI is black (0) — terminal default background.
+	ColorBgANSI = lipgloss.ANSIColor(0)
+	// ColorSurfaceANSI is bright black / dark grey (8) — surface overlay / status bar bg.
+	ColorSurfaceANSI = lipgloss.ANSIColor(8)
+	// ColorFgANSI is bright white (15) — primary foreground text.
+	ColorFgANSI = lipgloss.ANSIColor(15)
+	// ColorMutedANSI is white / light grey (7) — secondary text + borders.
+	ColorMutedANSI = lipgloss.ANSIColor(7)
+	// ColorSuccessANSI is bright green (10) — sops/age/.sops.yaml available indicators.
+	ColorSuccessANSI = lipgloss.ANSIColor(10)
+	// ColorWarningANSI is bright yellow (11) — soft env warnings + Warn flash bg.
+	ColorWarningANSI = lipgloss.ANSIColor(11)
+	// ColorErrorANSI is bright red (9) — hard env errors + Err flash bg.
+	ColorErrorANSI = lipgloss.ANSIColor(9)
+)
+
+// Palette is the resolved color set passed into chrome renderers. RenderChrome
+// / RenderCrumbs / RenderMenu / RenderInfoPanel accept a Palette parameter and
+// consult its fields rather than importing colorprofile directly. The Fallback
+// bool gates Plan 3's bracket-chip rendering on Ascii/ANSI profiles (D-422).
+//
+// Phase 10 D-421. Field type is image/color.Color (the standard library
+// interface that both lipgloss.Color() string-returning function values and
+// lipgloss.ANSIColor() typed values satisfy) so a single struct can hold
+// either the 24-bit or the 16-color variant set without conversion.
+type Palette struct {
+	// Accent — selection highlights, active breadcrumb chip bg, mnemonic labels.
+	Accent color.Color
+	// Bg — terminal background (60% usage, dark base).
+	Bg color.Color
+	// Surface — status bar, help overlay, error box, inactive chip bg (30% usage).
+	Surface color.Color
+	// Fg — default foreground text on dark background.
+	Fg color.Color
+	// Muted — dim text, separators, borders, ellipsis chip fg.
+	Muted color.Color
+	// Success — healthy env indicators (sops/age/.sops.yaml available).
+	Success color.Color
+	// Warning — soft env warnings + Warn-severity flash bg.
+	Warning color.Color
+	// Error — hard env errors + Err-severity flash bg + error box border.
+	Error color.Color
+	// Fallback is true when the palette is the 16-color ANSI variant set
+	// (profile <= colorprofile.ANSI). Plan 3's RenderCrumbs gates bracket-
+	// chip rendering on this bool — paired bg/fg collapses on 16-color
+	// terminals so the active chip drops bg fill and uses Underline+Bold
+	// SGR codes (which survive every downsample) instead.
+	Fallback bool
+}
+
+// PaletteFor returns the resolved Palette for the requested color profile.
+// Profile <= colorprofile.ANSI returns the 16-color fallback variants
+// (Fallback=true); otherwise returns the 24-bit Catppuccin Mocha variants
+// (Fallback=false). Per D-421 the accessor is the single switch point for
+// profile-aware variant selection — chrome renderers consult the Palette
+// fields, never colorprofile.Profile directly.
+//
+// NOTE: D-421 in CONTEXT.md said "Palette(profile)" but that name collides
+// with the Palette struct type. The accessor is renamed to PaletteFor
+// (verb form) per pattern-mapper deviation #4.
+func PaletteFor(profile colorprofile.Profile) Palette {
+	if profile <= colorprofile.ANSI {
+		return Palette{
+			Accent:   ColorAccentANSI,
+			Bg:       ColorBgANSI,
+			Surface:  ColorSurfaceANSI,
+			Fg:       ColorFgANSI,
+			Muted:    ColorMutedANSI,
+			Success:  ColorSuccessANSI,
+			Warning:  ColorWarningANSI,
+			Error:    ColorErrorANSI,
+			Fallback: true,
+		}
+	}
+	return Palette{
+		Accent:   ColorAccent,
+		Bg:       ColorBg,
+		Surface:  ColorSurface,
+		Fg:       ColorFg,
+		Muted:    ColorMuted,
+		Success:  ColorSuccess,
+		Warning:  ColorWarning,
+		Error:    ColorError,
+		Fallback: false,
+	}
+}
 
 // Spacing tokens per 01-UI-SPEC.md §Spacing Scale.
 // Values are in terminal cells (columns for horizontal, rows for vertical).
