@@ -92,7 +92,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ### Regression & Performance
 
-- [ ] **UI-20**: All v1.0 functional flows (file discovery, reveal, edit, diff, rotate, clipboard, git, recipient management, health) keep passing their integration tests after the chrome lands; no v1.0 feature regresses
+- [x] **UI-20**: All v1.0 functional flows (file discovery, reveal, edit, diff, rotate, clipboard, git, recipient management, health) keep passing their integration tests after the chrome lands; no v1.0 feature regresses
 - [ ] **UI-21**: `BenchmarkAppView` stays ≤50 µs/op at 200×60 with chrome rendered; no `lipgloss.NewStyle()` calls appear inside `View()` (styles declared as package vars)
 
 ## v2 Requirements
@@ -180,7 +180,7 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 | UI-13 | Phase 10 | Complete (Plan 02 + Plan 03 — Plan 02: 8 Color*ANSI variants + Palette/PaletteFor + profile detection + tea.WithColorProfile; Plan 03: CrumbChipFallbackStyle + CrumbChipActiveFallbackStyle bracket-fallback chip rendering wired in RenderCrumbs body via palette.Fallback gate; 4-profile teatest matrix proves SGR downsample correctness across Ascii/ANSI/ANSI256/TrueColor) |
 | UI-14 | Phase 10 | Complete (Plan 01 + Plan 03 — Plan 01: [W]/[E] prefix at flash render-time + bg-tinted FlashWarnBarStyle/FlashErrBarStyle = redundant text+color encoding; Plan 03: Underline+Bold redundant active-chip encoding on bracket-fallback path survives 16-color downsample where bg colors collapse) |
 | UI-16 | Phase 10 | Complete (Plan 03 — 6-width golden matrix at 40×12 / 60×24 / 80×24 / 100×30 / 120×40 / 200×60; TestRenderCrumbs_FirstAndLastSegmentsPreserved locks D-425 critical-data-survival regression in CI) |
-| UI-20 | Phase 11 | Pending |
+| UI-20 | Phase 11 | SC1 evidence ready by Plan 11-02 — 3 TestRegression_* sanity tests added in internal/app/regression_test.go (TestRegression_ClipboardAutoClearWithChrome — typed flash API + clipboard timeout regression surface; TestRegression_RecipientFormMenuHints — D-309 menuHints dispatcher regression for nested form states; TestRegression_HealthOverlayOnNarrowWidth — D-425 narrow-width crumb first/last-preservation under health overlay path); all 3 pass at HEAD; full repo test suite green across 9 packages; verifier-level gate sweep (TestChromeASCIIOnly|TestChromeNormalBorderOnly|TestViewNoNewStyle|TestSubmodelViewsNoNewStyle|TestMenuHints_Drift|TestRenderCrumbs_FirstAndLastSegmentsPreserved|TestResize_*|TestBenchmarkAppView_UnderBudget|TestChromeCache_HitRateAtSteadyState|TestRegression_*) all green. Awaiting `/gsd-verify-work` to mark Complete via 11-VERIFICATION.md SC1 9-row inventory matrix (D-506) — no v1.0 functional integration tests broken by chrome lands. |
 | UI-21 | Phase 11 | SC2 closed by Plan 11-01 — chrome cache wired (chromeKey + chromeCache + chromeCrumbsCache + wrappedCache + Update wrapper Rule 1 deviation); BenchmarkAppView reports 39-46 µs/op (60× improvement from 2.4-2.8 ms baseline); TestBenchmarkAppView_UnderBudget gate ACTIVE; TestChromeCache_HitRateAtSteadyState locks value-receiver discipline; TestViewNoNewStyle still green. Awaiting `/gsd-verify-work` to mark Complete. |
 
 **Coverage:**
@@ -189,4 +189,4 @@ Goal: Reshape the UI so it looks and behaves like k9s — persistent keybinding 
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-05-04 — Phase 11 Plan 01 lands chrome cache + bench gate flip; UI-21 SC2 closed (TestBenchmarkAppView_UnderBudget gate ACTIVE; bench at ~42 µs/op); awaiting `/gsd-verify-work` for Complete mark*
+*Last updated: 2026-05-04 — Phase 11 Plan 02 lands 3 chrome-interaction sanity tests + README "Verified Terminals" + GitHub issue template + manual sweep CHECKPOINT-PENDING; UI-20 [x] (SC1 evidence ready: 3 TestRegression_* tests pass + full repo + verifier gate sweep green); UI-21 [SC2 closed by Plan 11-01]; awaiting `/gsd-verify-work` for both Complete marks via 11-VERIFICATION.md*

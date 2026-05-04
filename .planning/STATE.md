@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
 status: in_progress
-stopped_at: Phase 11 Plan 01 EXECUTED — chrome cache + bench gate flip wired in 4 atomic commits (39c1291 + 9925d59 + 689f18f + 4313a19). SC2 closed — TestBenchmarkAppView_UnderBudget gate ACTIVE; bench reports 39-46 µs/op (60× improvement from 2.4-2.8 ms baseline; ~16% headroom under 50 µs/op budget). 4 Rule 1 deviations applied to close the gap (chromeHeight cache fast path, wrappedCache, Update wrapper, manual JoinVertical) — all documented in 11-01-SUMMARY.md. m.quitting flag wired (D-512 alt-screen exit cleanup). TestChromeCache_HitRateAtSteadyState locks value-receiver discipline. Full repo test suite green across 9 packages. Plan 11-02 ready to execute (wave 2; SC1+SC3+SC4+SC5 closure: 3 regression sanity teatests + Linux 4-combo manual sweep + README "Verified Terminals" + GitHub issue template).
-last_updated: "2026-05-04T14:55:00.000Z"
+stopped_at: Phase 11 Plan 02 EXECUTED — 3 chrome-interaction sanity tests + README "Verified Terminals" + GitHub issue template + manual sweep CHECKPOINT-PENDING placeholder shipped in 3 atomic commits (667fe5b + 5dd0b44 + 9ae974f). All 3 TestRegression_* tests pass; full repo suite green across 9 packages; verifier-level gate sweep green; bench gate at 27.8-28.5 µs/op (~44% headroom under 50µs locked target — Plan 11-01 SC2 closure unaffected). Manual sweep + 4 PNG capture surfaced as documented human-action checkpoint (cannot be automated; binary built at /tmp/sops-tui-v1.1-rc); CHECKPOINT-PENDING.md captures per-combo checklist (4 combos × ≥6 items) + substitution policy + resume signal. Phase 11 ready for /gsd-verify-work given the manual sweep proceeds (or is acknowledged as deferred to v1.1.x). UI-20 SC1 evidence ready (3 TestRegression_* tests). UI-21 already closed by Plan 11-01.
+last_updated: "2026-05-04T15:09:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Developers can manage all their SOPS-encrypted secrets from a single terminal interface without remembering CLI flags or writing shell scripts.
-**Current focus:** Phase 11 — regression + perf gates (Plan 01 EXECUTED 2026-05-04; Plan 02 pending)
+**Current focus:** Phase 11 — regression + perf gates (Plan 01 + Plan 02 EXECUTED 2026-05-04; manual sweep CHECKPOINT-PENDING; ready for /gsd-verify-work)
 
 ## Current Position
 
 Milestone: v1.1 — k9s visual parity
-Phase: 11 (Executing — 1/2 plans complete)
-Plan: 11-02 (next — wave 2 depends_on 11-01; SC1+SC3+SC4+SC5 closure)
-Status: Plan 11-01 EXECUTED with 4 atomic commits (39c1291 Task 1 cache fields + helpers + cache hit-rate test; 9925d59 Task 2 ~25 chromeKey-mutation sites instrumented + View rewrite + m.quitting wiring; 689f18f Rule 1 deviations: wrappedCache + Update wrapper + manual JoinVertical + chromeHeight/crumbsHeight fast path; 4313a19 Task 3 t.Skip removal + bench doc updates). 11-01-SUMMARY.md captures pre/post bench (2.4-2.8 ms → ~42 µs/op = 60× improvement), pprof snippet (StatusBarModel.View dominant remaining cost at 66%; RenderChrome / RenderMenu / WrapTitled gone from hot path), 51 refreshChromeCache call sites (≥25 audit threshold), m.quitting single-mutation/single-read pattern, 4 deviations documented. Full repo test suite green across 9 packages.
+Phase: 11 (Both plans executed — 2/2 plans complete; awaiting manual sweep + /gsd-verify-work)
+Plan: 11-02 EXECUTED (wave 2; SC1+SC3+SC4+SC5 closure)
+Status: Plan 11-02 EXECUTED with 3 atomic commits (667fe5b Task 1 — 3 chrome-interaction sanity tests in regression_test.go; 5dd0b44 Task 2 — README "Verified Terminals" H2 + 8-row matrix + .github/ISSUE_TEMPLATE/terminal-bug.yml with 6 required fields; 9ae974f Task 3 placeholder — CHECKPOINT-PENDING.md per-combo checklist + substitution policy + resume signal; binary built at /tmp/sops-tui-v1.1-rc for sweep). 11-02-SUMMARY.md captures: 3 tests passing, bench numbers (27.8-28.5 µs/op = unchanged from Plan 11-01), full repo suite + verifier gate sweep green, README diff, issue template field list, screenshots PENDING, manual sweep checklist ready for developer fill-in, no deviations from plan. Plan 11-01 + 11-02 together close UI-20 (3 TestRegression_* tests as SC1 evidence) and UI-21 (bench gate ACTIVE) pending /gsd-verify-work final sign-off.
 Last activity: 2026-05-04
 
-Progress (v1.1 only): [███████████] 90% (5/6 phases complete, 18/19 plans complete; Phase 11 = 1 plan remaining)
+Progress (v1.1 only): [████████████] 100% (6/6 phases work complete, 19/19 plans executed; Phase 11 awaiting /gsd-verify-work + optional manual sweep)
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress (v1.1 only): [███████████] 90% (5/6 phases comple
 | Phase 10 P02 | 25m | 6 tasks | 26 files |
 | Phase 10 P03 | 16m | 5 tasks | 32 files |
 | Phase 11 P01 | 23m | 3 tasks (+1 deviation commit) | 3 files |
+| Phase 11 P02 | 5m | 4 tasks (3 atomic commits + Task 3 placeholder) | 4 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 11 Plan 01]: Four Rule 1 deviations applied to close the 50 µs gap (chrome-only cache hit ~1.2 ms — pprof showed WrapTitled 70% + JoinVertical 41% dominated post-cache cost): (1) wrappedCache + wrappedCacheBody + wrappedCacheTitle fields refreshed alongside chromeCache when body/title changes; (2) Update() restructured as thin wrapper around updateInner(), wrapper always calls refreshChromeCache before returning — eliminates fan-out audit for non-chromeKey-mutating branches (DecryptKeyMsg, ClipboardClearMsg, sub-model j/k routes); (3) lipgloss.JoinVertical replaced with manual `\n` concat in View (~500 µs saved per frame; sections are known-width); (4) chromeHeight + crumbsHeight gain cache-hit fast paths (lipgloss.Height(m.chromeCache) when computeChromeKey == m.chromeCacheKey), slow path retained for Update branches that call bodyDims before refreshChromeCache. All deviations documented in 11-01-SUMMARY.md.
 - [Phase 11 Plan 01]: Status bar deliberately NOT cached — flash timer + clipboard-hot indicator must update per frame; ~80 µs/frame fixed cost is the dominant remaining View cost (renderEnvIndicators 28.6% cumulative). pprof confirms RenderChrome / RenderMenu / WrapTitled gone from hot path — only StatusBarModel.View remains (66% cumulative).
 - [Phase 11 Plan 01]: Forward-deviation note for Plan 11-02 — m.quitting wiring is COMPLETE in Plan 11-01 (Quit branch + View top branch); Plan 11-02 manual sweep can verify alt-screen exit cleanliness empirically. Update wrapper means regression sanity teatests in Plan 11-02 will see automatic cache refresh on every Update without explicit refreshChromeCache wiring. infoPanel staleness vector (CONTEXT D-502 trade-off): chromeKey omits infoPanel; mitigation = Plan 11-01 Update wrapper deviation propagates infoPanel updates immediately because Update wrapper always refreshes cache.
+- [Phase 11 Plan 02]: 3 chrome-interaction sanity tests landed in internal/app/regression_test.go (package app_test, 194 lines) — all 3 tests pass on first run with no helper additions; reuses setupDetailWithNodes / asAppModel / send / defaultEnv / modelInDetailWithRevealedLeaf helpers from model_test.go + model_clipboard_test.go. TestRegression_ClipboardAutoClearWithChrome (ctrl+y → FlashClearMsg → ClipboardClearMsg sequence; verifies [clip] gone + no [W]/[E] flash leak); TestRegression_RecipientFormMenuHints (drive into stateRecipientForm via key 'a' from stateDetail; verifies [Enter]/[Esc] form-level mnemonics present, [j]/[k] FileList mnemonics absent — tests bracketed forms specifically to avoid false positives on body text); TestRegression_HealthOverlayOnNarrowWidth (sub-tests at 80×24 and 60×24; injects empty HealthCheckResultMsg{} so overlay paints "Secret Health Check" + "No issues found" + "All secrets passed health checks." empty-state). Closes D-507 verbatim — NOT teatest, uses Update-loop pattern.
+- [Phase 11 Plan 02]: README.md "Verified Terminals" H2 inserted between Stack and Requirements (planner discretion per CONTEXT.md D-510 "Claude's Discretion"; reads naturally — Stack documents what project IS BUILT WITH, Verified Terminals documents what it IS TESTED ON, Requirements documents what user NEEDS TO RUN). 8-row markdown table: 4 verified Linux combos (alacritty, ghostty, tmux-nested, vscode-integrated) + 4 community-feedback combos (macOS Terminal, iTerm2, Windows Terminal, WSL2) each linking to issue template (5 link occurrences total). Closes D-510.
+- [Phase 11 Plan 02]: .github/ISSUE_TEMPLATE/terminal-bug.yml created — GitHub Forms YAML with all 6 required fields per D-510 (terminal-name, terminal-version, os, expected, observed, repro) + 2 optional (screenshot, notes); markdown intro distinguishes chrome vs functional bugs; OS as dropdown with 5 options (Linux/macOS/Windows/WSL2/Other) for cleaner triage filtering; title prefix "[Terminal] <short summary>"; labels "terminal-bug" + "needs-triage". YAML parses cleanly via yaml.safe_load.
+- [Phase 11 Plan 02]: Task 3 (manual sweep + 4 PNG capture) deliberately surfaced as documented human-action checkpoint via .planning/phases/11-regression-perf-gates/screenshots/CHECKPOINT-PENDING.md placeholder — auto mode rules explicitly say human-action checkpoints cannot be automated. Placeholder records per-combo checklist (4 combos × ≥6 items each), substitution policy, resume signal, and Plan 11-01 m.quitting mechanism reference (model.go:1086-1089 + 1497-1503). Binary built at /tmp/sops-tui-v1.1-rc for the sweep run.
+- [Phase 11 Plan 02]: NO deviations from plan — all 4 tasks executed exactly as written. The plan's <read_first> sections accurately predicted DefaultRecipientFormKeyMap WithHelp values (Enter/Esc), HealthCheck binding key 'H', recipient form entry via key 'a' from stateDetail, and empty HealthCheckResultMsg{} rendering. The only intentional decision diverging from plan wording is Task 2's OS field as `dropdown` (vs free-text) per CONTEXT.md "planner discretion".
+- [Phase 11 Plan 02]: Bench gate stable post-Plan-11-02 — 27,808 / 27,820 / 28,528 ns/op across 3 runs (~44% headroom under 50µs locked target; previously 39-46 µs/op range from Plan 11-01 execution; observed improvement during second measurement run is within sample variance). Plan 11-01 SC2 closure unaffected by Plan 11-02 additions (regression tests don't touch the View hot path).
+- [Phase 11 Plan 02]: Forward-deviation notes for /gsd-verify-work — SC1 evidence: 3 TestRegression_* tests pass at HEAD (cite internal/app/regression_test.go for inventory matrix). SC3 evidence: PENDING manual sweep — if 4 PNGs arrive before /gsd-verify-work runs, cite inline; if deferred to v1.1.x, mark SC3 as "Linux 4-combo sweep PENDING — see CHECKPOINT-PENDING.md". SC4 evidence: m.quitting mechanism (model.go:1086-1089 + 1497-1503) ready for cite; manual sweep observation will be user-facing proof. SC5 prep: 15-row "Looks Done But Isn't" table built by /gsd-verify-work via re-run gates per D-516.
 
 ### Pending Todos
 
@@ -224,6 +232,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-04T14:55:00.000Z
-Stopped at: Phase 11 Plan 01 EXECUTED — chrome cache + bench gate flip wired in 4 atomic commits (39c1291 + 9925d59 + 689f18f + 4313a19). SC2 closed (UI-21 ready for `/gsd-verify-work` Complete mark). 11-01-SUMMARY.md captures bench numbers (~42 µs/op, 60× improvement) + pprof + 4 Rule 1 deviations. Plan 11-02 ready to execute (wave 2 SC1+SC3+SC4+SC5 closure: 3 regression sanity teatests + Linux 4-combo manual sweep + README + GitHub issue template).
-Resume file: .planning/phases/11-regression-perf-gates/11-02-PLAN.md (next plan to execute)
+Last session: 2026-05-04T15:09:00.000Z
+Stopped at: Phase 11 Plan 02 EXECUTED — 3 regression sanity tests + README + GitHub issue template + manual sweep CHECKPOINT-PENDING placeholder shipped in 3 atomic commits (667fe5b + 5dd0b44 + 9ae974f). All 3 TestRegression_* pass; full repo suite + verifier gate sweep green; bench gate stable at 27.8-28.5 µs/op. 11-02-SUMMARY.md captures per-test results, README diff, issue template fields, screenshots PENDING (per documented human-action checkpoint), no deviations. Both Plan 11-01 + 11-02 work complete. Phase 11 ready for `/gsd-verify-work` to build 11-VERIFICATION.md (SC1-SC5 closure) given the manual sweep proceeds (or is acknowledged as deferred). UI-20 SC1 evidence ready (3 TestRegression_* tests). UI-21 already closed by Plan 11-01.
+Resume file: .planning/phases/11-regression-perf-gates/screenshots/CHECKPOINT-PENDING.md (manual sweep awaiting developer) OR `/gsd-verify-work 11` (verifier ready to run; can either cite screenshots inline or mark SC3 as PENDING)

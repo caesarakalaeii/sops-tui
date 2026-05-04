@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: Header Info Panel + Crumb Chips** - Top-left info panel, colored breadcrumb chips above body, shrunk status bar
 - [x] **Phase 9: Keybinding Discoverability** - `Hints() []MenuHint` interface, per-view menu hydration, `?` overlay retained (completed 2026-05-04)
 - [x] **Phase 10: Theming + Accessibility** - Logo severity coupling, k9s-tuned palette, 16-color fallback, redundant encoding, narrow-terminal survival (completed 2026-05-04)
-- [ ] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep
+- [x] **Phase 11: Regression + Perf Gates** - v1.0 integration tests pass, `BenchmarkAppView` ≤ 50 µs/op, terminal compat sweep (Plans 11-01 + 11-02 EXECUTED 2026-05-04; awaiting `/gsd-verify-work` for SC1-SC5 closure; manual 4-combo Linux sweep surfaced as CHECKPOINT-PENDING)
 
 ## Phase Details
 
@@ -292,7 +292,7 @@ Plans:
 - [x] 11-01-PLAN.md — Chrome cache wiring (chromeKey + chromeCache + chromeCrumbsCache + refreshChromeCache helper) + Update branch instrumentation across 41 m.state mutation sites + recipientAction sites + Quit branch + WindowSizeMsg + View read-cache rewrite + bench gate flip (delete t.Skip on chrome_test.go:311) + TestChromeCache_HitRateAtSteadyState (100/100 key stability) + m.quitting flag wiring (folded in per RESEARCH §Open Questions #3) (SUMMARY: 11-01-SUMMARY.md)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 11-02-PLAN.md — 3 chrome-interaction sanity tests in regression_test.go (clipboard auto-clear, recipient form menu hints, health overlay narrow width via Update-loop pattern, NOT teatest) + 4-combo Linux manual sweep checkpoint with PNG screenshots (alacritty, ghostty, tmux-nested, vscode-integrated) + README "Verified Terminals" H2 + .github/ISSUE_TEMPLATE/terminal-bug.yml (GitHub Forms YAML) + final gate sweep
+- [x] 11-02-PLAN.md — 3 chrome-interaction sanity tests in regression_test.go (clipboard auto-clear, recipient form menu hints, health overlay narrow width via Update-loop pattern, NOT teatest); README "Verified Terminals" H2 with 8-row matrix (4 verified Linux + 4 community-feedback combos); .github/ISSUE_TEMPLATE/terminal-bug.yml (GitHub Forms YAML, 6 required + 2 optional fields); 4-combo Linux manual sweep surfaced as CHECKPOINT-PENDING.md placeholder (per-combo checklist + substitution policy + resume signal; binary built at /tmp/sops-tui-v1.1-rc) — sweep itself awaiting developer action on real terminals; final gate sweep green at HEAD (full repo + verifier-level + bench gate at 27.8-28.5 µs/op) (SUMMARY: 11-02-SUMMARY.md)
 
 **Cross-cutting constraints:**
 - Cache key locked to D-502 4-field minimum (state, recipientAction, IsSearchActive, width) — no palette / logoStatus / infoPanelData / flashGen
