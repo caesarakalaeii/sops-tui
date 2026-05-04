@@ -1510,12 +1510,16 @@ func suppressHiddenFromMenu(hidden []key.Binding, hints []keys.MenuHint) []keys.
 }
 
 // menuHints returns the persistent-menu hint set for the current
-// (state, recipientAction, IsSearchActive) tuple per D-10 / Pitfall 3.
-// Search-active override per D-11 takes precedence over the default
-// stateFileList dispatch. Sub-model Hints() methods are queried directly;
-// stateRecipientList and stateFormatMenu use inline package-var hint
-// sets since neither has an owning sub-model (Pitfall 3 for RecipientList;
-// D-09 for FormatMenu).
+// (state, IsSearchActive) tuple per D-10 (amended by Phase 9 D-309).
+//
+// Phase 7 D-10 specced a (state, recipientAction, IsSearchActive) signature,
+// but the recipientAction parameter was never wired — confirm states use
+// separate sessionState values (stateRecipientConfirm, stateBulkReKeyConfirm)
+// so the dispatcher needs only (state, IsSearchActive). Phase 9 D-309
+// formalizes this simplification: the recipientAction FIELD on AppModel
+// remains used in Update() business logic (line 262 declaration, 6 usage
+// sites) but is NOT read by menuHints. The keymap ShortHelp() per state is
+// the single source of truth — see internal/keys/bindings.go.
 func (m AppModel) menuHints() []keys.MenuHint {
 	if m.state == stateFileList && m.fileList.IsSearchActive() {
 		return keys.HintsFromBindings(keys.DefaultFileListSearchKeyMap.ShortHelp())

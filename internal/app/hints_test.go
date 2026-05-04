@@ -1,7 +1,9 @@
-// Package app — Phase 7 menuHints() dispatcher matrix and titleForState() table tests.
+// Package app — Phase 7 menuHints() dispatcher matrix and titleForState() table tests,
+// hardened in Phase 9 (keybinding discoverability — D-309 supersedes Phase 7 D-10's
+// recipientAction parameter; dispatcher dispatches on (state, IsSearchActive) only).
 //
-// Verifies every branch of the (state, recipientAction-via-state, IsSearchActive)
-// dispatcher per UI-SPEC §"Hints dispatch tuple" and every D-15 title string.
+// Verifies every branch of the (state, IsSearchActive) dispatcher per UI-SPEC
+// §"Hints dispatch tuple" (Phase 9-amended) and every D-15 title string.
 //
 // Note: Never use type any. Never use lipgloss.AdaptiveColor (issue #1036).
 package app
