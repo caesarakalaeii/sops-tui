@@ -346,7 +346,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case FilesDiscoveredMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Error discovering files: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Error discovering files: " + msg.Err.Error())
 			return m, nil
 		}
 		m.files = msg.Files
@@ -386,7 +386,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case FilesParsedMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Error parsing file: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Error parsing file: " + msg.Err.Error())
 			m.state = stateFileList
 			return m, nil
 		}
@@ -437,7 +437,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case DecryptKeyMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Decrypt error: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Decrypt error: " + msg.Err.Error())
 			return m, nil
 		}
 		m.detail.RevealNode(msg.KeyPath, msg.Value)
@@ -446,7 +446,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case DecryptAllMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Decrypt error: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Decrypt error: " + msg.Err.Error())
 			return m, nil
 		}
 		m.detail.RevealAllNodes(msg.Values)
@@ -477,24 +477,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.TmpPath != "" {
 				os.Remove(msg.TmpPath) // Pitfall 3: clean up on all error paths
 			}
-			m.status, _ = m.status.Flash("Editor error: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Editor error: " + msg.Err.Error())
 			return m, nil
 		}
 		// Read the (possibly edited) content from the temp file
 		edited, err := os.ReadFile(msg.TmpPath)
 		os.Remove(msg.TmpPath) // Pitfall 3: clean up immediately after read
 		if err != nil {
-			m.status, _ = m.status.Flash("Read error: " + err.Error())
+			m.status, _ = m.status.FlashWarn("Read error: " + err.Error())
 			return m, nil
 		}
 		// YAML-aware comparison (Pitfall 6: byte comparison misses key reordering)
 		diffs, err := compareDecryptedYAML(msg.OriginalContent, edited)
 		if err != nil {
-			m.status, _ = m.status.Flash("Diff error: " + err.Error())
+			m.status, _ = m.status.FlashWarn("Diff error: " + err.Error())
 			return m, nil
 		}
 		if len(diffs) == 0 {
-			m.status, _ = m.status.Flash("No changes detected")
+			m.status, _ = m.status.FlashWarn("No changes detected")
 			return m, nil
 		}
 		// Show multi-key diff overlay
@@ -510,7 +510,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ui.EditConfirmMsg:
 		// User confirmed edit in textinput — transition to stateDiff if values differ.
 		if msg.OldValue == msg.NewValue {
-			m.status, _ = m.status.Flash("No changes")
+			m.status, _ = m.status.FlashWarn("No changes")
 			return m, nil
 		}
 		w, h := bodyDims(m)
@@ -527,9 +527,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ui.EditBlockedMsg:
 		// User pressed e on an un-editable node — flash appropriate message.
 		if msg.Reason != "" {
-			m.status, _ = m.status.Flash(msg.Reason)
+			m.status, _ = m.status.FlashWarn(msg.Reason)
 		} else {
-			m.status, _ = m.status.Flash("Reveal first with r")
+			m.status, _ = m.status.FlashWarn("Reveal first with r")
 		}
 		return m, nil
 
@@ -540,7 +540,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ReEncryptDoneMsg:
 		// Result of sops.SetKey or sops.EncryptFile subprocess call.
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Re-encryption failed: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Re-encryption failed: " + msg.Err.Error())
 		} else if m.rotateFormat != 0 {
 			// Rotation completed — flash format-specific message
 			m.status, _ = m.status.Flash("Rotated to " + ui.FormatLabel(m.rotateFormat))
@@ -588,7 +588,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ui.RotateErrorMsg:
-		m.status, _ = m.status.Flash("Rotation failed: " + msg.Err.Error())
+		m.status, _ = m.status.FlashErr("Rotation failed: " + msg.Err.Error())
 		return m, nil
 
 	case ui.RotateFormatMenuMsg:
@@ -669,7 +669,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case GitHistoryMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Git history error: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Git history error: " + msg.Err.Error())
 			m.state = m.prevState
 			return m, nil
 		}
@@ -678,7 +678,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case HealthCheckResultMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Health scan failed: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Health scan failed: " + msg.Err.Error())
 			m.state = stateFileList
 			return m, nil
 		}
@@ -694,7 +694,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ReKeyDoneMsg:
 		if m.bulkReKey != nil {
 			if msg.Err != nil {
-				m.status, _ = m.status.Flash("Re-key failed: " + msg.Err.Error())
+				m.status, _ = m.status.FlashErr("Re-key failed: " + msg.Err.Error())
 				m.bulkReKey.skipped++
 			} else {
 				m.bulkReKey.completed++
@@ -706,7 +706,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case RecipientDoneMsg:
 		if msg.Err != nil {
-			m.status, _ = m.status.Flash("Re-key failed: " + msg.Err.Error())
+			m.status, _ = m.status.FlashErr("Re-key failed: " + msg.Err.Error())
 		} else {
 			m.status, _ = m.status.Flash("Recipient " + msg.Action + ". File re-encrypted.")
 		}
@@ -940,7 +940,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				newVal, err := ui.GenerateValue(selected)
 				if err != nil {
 					m.state = m.prevState
-					m.status, _ = m.status.Flash("Generation failed: " + err.Error())
+					m.status, _ = m.status.FlashErr("Generation failed: " + err.Error())
 					return m, nil
 				}
 				w, h := bodyDims(m)
@@ -1010,7 +1010,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if filePath != "" {
 					parsed, err := parser.ParseFile(filePath, rule, isEnc)
 					if err != nil {
-						m.status, _ = m.status.Flash("Error reading metadata: " + err.Error())
+						m.status, _ = m.status.FlashErr("Error reading metadata: " + err.Error())
 						return m, nil
 					}
 					meta := ui.MetadataContent{
@@ -1082,7 +1082,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				if !node.Revealed {
-					m.status, _ = m.status.Flash("Reveal first with r")
+					m.status, _ = m.status.FlashWarn("Reveal first with r")
 					return m, nil
 				}
 				return m.copyToClipboard(node.DecryptedValue)
@@ -1099,7 +1099,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
 				if m.gitRepoRoot == "" {
-					m.status, _ = m.status.Flash("No git repository found")
+					m.status, _ = m.status.FlashWarn("No git repository found")
 					return m, nil
 				}
 				w, h := bodyDims(m)
@@ -1135,7 +1135,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == stateDetail && !m.detail.IsSearchActive() {
 				recipients := m.currentParsed.Metadata.AgeRecipients
 				if len(recipients) == 0 {
-					m.status, _ = m.status.Flash("No age recipients configured for this file")
+					m.status, _ = m.status.FlashWarn("No age recipients configured for this file")
 					return m, nil
 				}
 				m.recipientList = recipients
@@ -1219,7 +1219,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if key.Matches(msg, keys.DefaultFileListKeyMap.BulkReKey) {
 				selected := m.fileList.SelectedItems()
 				if len(selected) == 0 {
-					m.status, _ = m.status.Flash("Select files with space first")
+					m.status, _ = m.status.FlashWarn("Select files with space first")
 					return m, nil
 				}
 				var queue []sops.DiscoveredFile
@@ -1248,7 +1248,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == stateFileList && !m.fileList.IsSearchActive() {
 			if key.Matches(msg, keys.DefaultFileListKeyMap.HealthCheck) {
 				if len(m.files) == 0 {
-					m.status, _ = m.status.Flash("No files to scan")
+					m.status, _ = m.status.FlashWarn("No files to scan")
 					return m, nil
 				}
 				// Use DiffModel as a confirmation gate before decrypting all files (D-09).
@@ -1437,12 +1437,12 @@ var ClipboardTimeout = clipboardTimeout
 func (m AppModel) copyToClipboard(value string) (AppModel, tea.Cmd) {
 	if clipboard.Unsupported {
 		var statusCmd tea.Cmd
-		m.status, statusCmd = m.status.Flash("Clipboard not available (install xclip or wl-clipboard)")
+		m.status, statusCmd = m.status.FlashWarn("Clipboard not available (install xclip or wl-clipboard)")
 		return m, statusCmd
 	}
 	if err := clipboard.WriteAll(value); err != nil {
 		var statusCmd tea.Cmd
-		m.status, statusCmd = m.status.Flash("Clipboard error: " + err.Error())
+		m.status, statusCmd = m.status.FlashErr("Clipboard error: " + err.Error())
 		return m, statusCmd
 	}
 	m.clipboardGen++
@@ -2007,7 +2007,7 @@ func (m *AppModel) showBulkReKeyConfirm(file sops.DiscoveredFile) {
 		m.bulkReKey.completed+1, m.bulkReKey.total, file.Name))
 	parsed, err := parser.ParseFile(file.AbsPath, file.Rule, true)
 	if err != nil {
-		m.status, _ = m.status.Flash("Re-key: could not read recipients: " + err.Error())
+		m.status, _ = m.status.FlashErr("Re-key: could not read recipients: " + err.Error())
 		m.bulkReKey.skipped++
 		m.advanceBulkReKey()
 		return
