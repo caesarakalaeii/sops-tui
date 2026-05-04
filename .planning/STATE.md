@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: — k9s Visual Parity
-status: ready_to_execute
-stopped_at: Phase 10 plans created — 3 plans (severity classifier + flash typed-API; palette tune + profile detection + ANSI variants; bracket-fallback chips + 4-profile matrix + narrow-terminal sweep). Verified by plan-checker (PASSED, 3 non-blocking WARNINGs). Ready for execute-phase.
-last_updated: "2026-05-04T09:50:00.000Z"
+status: in_progress
+stopped_at: Phase 10 Plan 01 complete — severity classifier + flash typed-API + 42-callsite re-classification landed; resolveLogoState wired into both RenderChrome callsites. Ready for Plan 02 (palette tune + profile detection + 16-color fallback).
+last_updated: "2026-05-04T11:30:00.000Z"
 last_activity: 2026-05-04
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 35
-  completed_plans: 32
-  percent: 91
+  completed_plans: 33
+  percent: 94
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v1.1 — k9s visual parity
 Phase: 10
-Plan: Not started
-Status: Phase complete — ready for verification
+Plan: 02 (next)
+Status: Phase 10 Plan 01 complete — severity classifier + flash typed-API shipped; ready to execute Plan 02 palette tune + profile detection.
 Last activity: 2026-05-04
 
-Progress (v1.1 only): [██████░░] 70% (4/7 phases complete, 14/20 plans complete)
+Progress (v1.1 only): [███████░] 75% (4/7 phases complete, 15/20 plans complete)
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress (v1.1 only): [██████░░] 70% (4/7 phases complete, 14/20
 | Phase 08 P02 | 25m | 2 tasks | 4 files |
 | Phase 09 P01 | 10m 3s | 6 tasks | 14 files |
 | Phase 09 P02 | 8m | 4 tasks | 15 files |
+| Phase 10 P01 | 35m | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 09 Plan 02]: D-309 amendment applied — menuHints() doc-block now documents (state, IsSearchActive) and cites D-309 as supersession of Phase 7 D-10's recipientAction triple.
 - [Phase 09 Plan 02]: 13 ANSI-stripped golden files (1496 bytes total) lock per-state RenderMenu output. PII-free (TestMenuGoldenNoPII passes, T-09-01 mitigated).
 - [Phase 09]: Phase 9 COMPLETE — SC1-SC5 closed. All 2 plans shipped. Ready for /gsd-verify-work.
+- [Phase 10 Plan 01]: FlashSeverity enum (FlashSevInfo=0/Warn=1/Err=2) + typed FlashInfo/FlashWarn/FlashErr methods + Flash preserved as thin alias for FlashInfo (zero-callsite-break migration). FlashSeverity() accessor returns FlashSevInfo when m.flash == "" so resolveLogoState() short-circuits to env-derived severity on empty flash.
+- [Phase 10 Plan 01]: resolveLogoState() pure-function-of-state classifier wired into both RenderChrome callsites (View() at line 1400 + chromeHeight() at line 1647); single-pass switch walks Err checks first then Warn checks per D-404 precedence; severity derived from (m.status.FlashSeverity, m.health.LastResult().HasErrLevelFindings, m.status.Env). HasErrLevelFindings excludes StaleFiles per D-401 demotion.
+- [Phase 10 Plan 01]: 42-callsite flash sweep applied per D-407 — 15 FlashErr (decrypt/edit/rotate/git history/health scan/re-key/generation/clipboard/metadata error paths), 12 FlashWarn (Read error/Diff error/No changes/Reveal first/git/recipient/file selection/clipboard-not-available soft validations), 15 Flash kept as Info alias (success/progress/Cancelled/Copied/Re-keying status). Tally matches canonical migration map exactly. Zero goldens churn — palette flip is Plan 2.
+- [Phase 10 Plan 01]: Test-only shims pattern landed — internal/app/export_test.go with ResolveLogoStateForTest + StatusForTest + WithStatusForTest + HealthForTest + WithHealthForTest. _test.go suffix keeps shims out of production binary.
+- [Phase 10 Plan 01]: Forward-deviations for Plan 2 — FlashWarnBarStyle/FlashErrBarStyle wired through ColorWarning/ColorError named-vars so Plan 2 hex flips propagate automatically; the 13 statusbar tests assert pre-flip hex SGR substrings (48;2;249;226;175 / 48;2;243;139;168) which Plan 2 must update to Peach/Maroon SGR substrings; NewAppModel(env, sopsYamlPath) signature unchanged in Plan 1; severity_test.go's newCleanAppModel helper will need profile param when Plan 2 adds it.
 
 ### Pending Todos
 
@@ -191,6 +197,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-05-04T09:50:00.000Z
-Stopped at: Phase 10 plans created — 3 plans verified by plan-checker (PASSED, 3 non-blocking WARNINGs). Ready for execute-phase.
-Resume file: .planning/phases/10-theming-accessibility/10-01-PLAN.md
+Last session: 2026-05-04T11:30:00.000Z
+Stopped at: Phase 10 Plan 01 complete — severity classifier + flash typed-API + 42-callsite re-classification landed (3 commits a3fe389/3f9cf98/8381a11). Ready for Plan 02 (palette tune + profile detection + 16-color fallback).
+Resume file: .planning/phases/10-theming-accessibility/10-02-PLAN.md

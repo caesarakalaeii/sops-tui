@@ -269,7 +269,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Severity classifier + flash typed-API + flash bg tint + redundant prefix
+- [x] 10-01-PLAN.md — Severity classifier + flash typed-API + flash bg tint + redundant prefix (SUMMARY: 10-01-SUMMARY.md)
 - [ ] 10-02-PLAN.md — Palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback variants + Palette accessor + renderer signature cascade
 - [ ] 10-03-PLAN.md — Bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + critical-data-survival regression
 **UI hint**: yes
