@@ -267,6 +267,11 @@ Plans:
   4. Every color-coded state (info / warn / error, active vs inactive chip, env indicators, flash severity) uses redundant shape or text encoding (`[I]` / `[W]` / `[E]` prefixes, inverted bg+fg for active, underline for focus) so the UI remains usable for colorblind users
   5. Rendering at 40×12 through 200×60 never corrupts the layout; narrow-terminal rendering may be visually dense but must not truncate critical data or overflow the viewport (middle-segment crumb ellipsis kicks in when needed)
 **Plans:** 3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Severity classifier + flash typed-API + flash bg tint + redundant prefix
+- [ ] 10-02-PLAN.md — Palette tune (Mauve/Peach/Maroon) + profile detection + 16-color fallback variants + Palette accessor + renderer signature cascade
+- [ ] 10-03-PLAN.md — Bracket-fallback chip rendering + 4-profile teatest matrix + 60×24/100×30 narrow-terminal goldens + critical-data-survival regression
 **UI hint**: yes
 
 ### Phase 11: Regression + Perf Gates
