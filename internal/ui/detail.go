@@ -641,8 +641,11 @@ func renderRow(row flatRow, node *TreeNode, _ int) string {
 			sb.WriteString(node.Value)
 			sb.WriteString("  ")
 			sb.WriteString(BadgePlain.Render("[plain]"))
+		} else if node.Value != "" {
+			// Non-encrypted leaf with a value (e.g., file is not SOPS-encrypted).
+			// Show the value directly — no mask, no badge.
+			sb.WriteString(node.Value)
 		} else {
-			// Default fallback: masked value (Phase 1 behavior)
 			sb.WriteString(DimText.Render("***"))
 		}
 	}
