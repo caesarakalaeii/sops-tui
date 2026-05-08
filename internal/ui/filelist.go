@@ -44,26 +44,20 @@ type FileItem struct {
 // Appends [unencrypted] badge when IsEncrypted is false.
 // Appends git badge [M]/[A]/[?] when the file has uncommitted changes (D-09).
 // Implements list.DefaultItem.
+//
+// NOTE: In tree mode, FileListModel wraps each FileItem in a fileTreeItem
+// which renders the basename + tree connectors. FileItem.Title() is kept for
+// backward-compat callers (existing tests + cross-file flat rendering paths).
 func (i FileItem) Title() string {
 	base := i.Name
 	if i.Selected {
 		base = SelectionIndicatorStyle.Render("[+]") + " " + base
 	}
-	if !i.IsEncrypted {
-		base += " " + BadgeUnencrypted.Render("[unencrypted]")
-	}
-	switch i.GitStatus {
-	case "M":
-		base += " " + BadgeModified.Render("[M]")
-	case "A":
-		base += " " + BadgeAdded.Render("[A]")
-	case "?":
-		base += " " + BadgeUntracked.Render("[?]")
-	}
-	return base
+	return base + fileBadges(i)
 }
 
-// Description returns the absolute path shown as a secondary line.
+// Description returns the absolute path. Used only by the legacy flat rendering
+// path; in tree mode the wrapper returns "" so rows are single-line.
 // Implements list.DefaultItem.
 func (i FileItem) Description() string { return i.Path }
 
@@ -91,6 +85,10 @@ func (c CrossFileListItem) FilterValue() string { return c.DisplayTitle }
 // FileListModel wraps charm.land/bubbles/v2/list.Model and provides
 // vim-style navigation (j/k/g/G/ctrl-d/u) via the custom FileListKeyMap.
 // Supports inline fuzzy search via SearchModel.
+//
+// Items are rendered as a directory tree built from FileItem.Name. Collapse
+// state lives in `collapsed` keyed by directory full-path so it survives
+// rebuilds (toggles, selection changes, search activate/deactivate).
 type FileListModel struct {
 	list            list.Model
 	keys            keys.FileListKeyMap
@@ -98,45 +96,118 @@ type FileListModel struct {
 	height          int
 	searchActive    bool
 	search          SearchModel
-	allItems        []FileItem // full unfiltered list
-	crossFileMode   bool       // true when searching across files+keys
-	crossFileTitles []string   // the "filename > key.path" strings for fuzzy matching
+	allItems        []FileItem      // full unfiltered list
+	tree            *treeNode       // rebuilt from allItems whenever it changes
+	collapsed       map[string]bool // dirs currently collapsed (keyed by fullPath)
+	savedCollapsed  map[string]bool // snapshot taken on filter activation
+	filterPattern   string          // current filter pattern (empty when not filtering)
+	crossFileMode   bool            // true when searching across files+keys
+	crossFileTitles []string        // the "filename > key.path" strings for fuzzy matching
 }
 
 // NewFileListModel creates a FileListModel with the given items and dimensions.
-// Items are displayed using the default bubbles delegate.
+// Items are rendered as a directory tree (dirs expanded by default).
 // Built-in help, status bar, and filter UI are disabled — sops-tui provides
 // its own overlay (D-08) and status bar (D-10).
 func NewFileListModel(items []FileItem, width, height int) FileListModel {
-	listItems := make([]list.Item, len(items))
-	for idx, item := range items {
-		listItems[idx] = item
-	}
-
 	delegate := list.NewDefaultDelegate()
-	l := list.New(listItems, delegate, width, height)
-	l.Title = "SOPS Files"
+	delegate.ShowDescription = false
 
-	// Disable built-in chrome — sops-tui owns these surfaces.
+	l := list.New(nil, delegate, width, height)
+	l.Title = "SOPS Files"
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetShowFilter(false)
 	l.SetFilteringEnabled(false)
 
-	return FileListModel{
-		list:     l,
-		keys:     keys.DefaultFileListKeyMap,
-		width:    width,
-		height:   height,
-		allItems: items,
-		search:   NewSearchModel(width),
+	m := FileListModel{
+		list:      l,
+		keys:      keys.DefaultFileListKeyMap,
+		width:     width,
+		height:    height,
+		allItems:  items,
+		collapsed: map[string]bool{},
+		search:    NewSearchModel(width),
 	}
+	m.tree = buildTree(m.allItems)
+	m.refreshRows()
+	return m
+}
+
+// refreshRows recomputes the visible rows from the tree honoring `collapsed`
+// and the active filter, then pushes them into the embedded list. Tries to
+// preserve the cursor on the same row when possible.
+func (m *FileListModel) refreshRows() {
+	if m.tree == nil {
+		m.tree = buildTree(m.allItems)
+	}
+
+	var match func(FileItem) bool
+	if m.filterPattern != "" {
+		matches := ApplyFilter(m.filterPattern, fileItemNames(m.allItems))
+		matchSet := make(map[string]struct{}, len(matches))
+		for _, mt := range matches {
+			matchSet[m.allItems[mt.Index].Path] = struct{}{}
+		}
+		match = func(f FileItem) bool {
+			_, ok := matchSet[f.Path]
+			return ok
+		}
+	}
+
+	// Snapshot current cursor so we can try to restore it after the rebuild.
+	var prevSel list.Item
+	if it := m.list.SelectedItem(); it != nil {
+		prevSel = it
+	}
+
+	rows := flatten(m.tree, m.collapsed, match)
+	m.list.SetItems(rows)
+
+	// Try to restore the cursor on the same logical row (file by Path,
+	// directory by fullPath).
+	switch prev := prevSel.(type) {
+	case fileTreeItem:
+		idx := findFileTreeIndex(rows, prev.file)
+		if idx >= 0 {
+			m.list.Select(idx)
+			return
+		}
+	case dirItem:
+		for i, r := range rows {
+			if d, ok := r.(dirItem); ok && d.fullPath == prev.fullPath {
+				m.list.Select(i)
+				return
+			}
+		}
+	}
+
+	// Fallback: select the first file (or first row if there are no files).
+	if first := findFirstFileIndex(rows); first >= 0 {
+		m.list.Select(first)
+	} else if len(rows) > 0 {
+		m.list.Select(0)
+	}
+}
+
+// fileItemNames returns just the Name field of each item — used as the corpus
+// for fuzzy filtering. ApplyFilter takes []string.
+func fileItemNames(items []FileItem) []string {
+	out := make([]string, len(items))
+	for i, it := range items {
+		out[i] = it.Name
+	}
+	return out
 }
 
 // ActivateSearch activates inline fuzzy search mode.
 // Returns the Focus cmd from the textinput.
 func (m *FileListModel) ActivateSearch() tea.Cmd {
 	m.searchActive = true
+	// Snapshot expansion state so Esc restores exactly what was visible
+	// before the search.
+	m.savedCollapsed = copyBoolMap(m.collapsed)
+	m.filterPattern = ""
 	return m.search.SetActive(true)
 }
 
@@ -152,16 +223,19 @@ func (m *FileListModel) ActivateCrossFileSearch(titles []string) tea.Cmd {
 
 // DeactivateSearch deactivates search mode and restores the full item list.
 func (m *FileListModel) DeactivateSearch() {
+	wasCrossFile := m.crossFileMode
 	m.searchActive = false
 	m.crossFileMode = false
 	m.crossFileTitles = nil
 	m.search.Reset()
-	// Restore full item list
-	listItems := make([]list.Item, len(m.allItems))
-	for i, item := range m.allItems {
-		listItems[i] = item
+	m.filterPattern = ""
+
+	// Restore expansion snapshot from before the filter was active.
+	if !wasCrossFile && m.savedCollapsed != nil {
+		m.collapsed = copyBoolMap(m.savedCollapsed)
 	}
-	m.list.SetItems(listItems)
+	m.savedCollapsed = nil
+	m.refreshRows()
 }
 
 // IsSearchActive returns whether search mode is currently active.
@@ -189,6 +263,10 @@ func (m FileListModel) SelectedCrossFileIndex() int {
 // before delegating to the embedded list (which handles j/k/up/down).
 // Per RESEARCH.md Open Questions Q1 RESOLVED: we do not rely on bubbles/list
 // default KeyMap for g/G/ctrl-d/u — we handle them explicitly.
+//
+// Tree-specific intercepts:
+//   - Enter on a directory toggles its expand/collapse state.
+//   - Space on a directory recursively selects/deselects every file beneath it.
 func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 	if m.searchActive {
 		switch msg := msg.(type) {
@@ -205,6 +283,9 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 				}
 				m.searchActive = false
 				m.search.Reset()
+				m.filterPattern = ""
+				m.savedCollapsed = nil
+				m.refreshRows()
 				return m, nil
 			}
 		}
@@ -236,25 +317,13 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Normal file-list search: filter against allItems by name
-		pattern := m.search.Value()
-		if pattern == "" {
-			listItems := make([]list.Item, len(m.allItems))
-			for i, item := range m.allItems {
-				listItems[i] = item
-			}
-			m.list.SetItems(listItems)
-		} else {
-			names := make([]string, len(m.allItems))
-			for i, item := range m.allItems {
-				names[i] = item.Name
-			}
-			matches := ApplyFilter(pattern, names)
-			filtered := make([]list.Item, 0, len(matches))
-			for _, match := range matches {
-				filtered = append(filtered, m.allItems[match.Index])
-			}
-			m.list.SetItems(filtered)
+		// Normal file-list search: filter against allItems by Name, dim
+		// non-matching files, auto-expand ancestors of matches.
+		newPattern := m.search.Value()
+		if newPattern != m.filterPattern {
+			m.filterPattern = newPattern
+			m.expandAncestorsOfMatches()
+			m.refreshRows()
 		}
 		return m, cmd
 	}
@@ -290,28 +359,95 @@ func (m FileListModel) Update(msg tea.Msg) (FileListModel, tea.Cmd) {
 			m.list.Select(idx)
 			return m, nil
 		case key.Matches(msg, m.keys.ToggleSelect):
-			// Toggle selection state on the highlighted item (D-05).
-			if item, ok := m.SelectedItem(); ok {
-				for idx := range m.allItems {
-					if m.allItems[idx].Path == item.Path {
-						m.allItems[idx].Selected = !m.allItems[idx].Selected
-						break
-					}
+			// Space on a directory: recursively toggle Selected on every file
+			// underneath. Otherwise toggle the highlighted file.
+			if it := m.list.SelectedItem(); it != nil {
+				if d, ok := it.(dirItem); ok {
+					m.toggleDirSelection(d.fullPath)
+				} else if f, ok := it.(fileTreeItem); ok {
+					m.toggleFileSelection(f.file.Path)
 				}
-				// Rebuild list items so Title() reflects the new Selected state.
-				listItems := make([]list.Item, len(m.allItems))
-				for idx, it := range m.allItems {
-					listItems[idx] = it
-				}
-				m.list.SetItems(listItems)
+				m.refreshRowsKeepCursor()
 			}
 			return m, nil
+		}
+		// Enter on a directory toggles expand/collapse. We don't consume
+		// Enter on a file — AppModel needs to see it to navigate to detail.
+		if msg.String() == "enter" || msg.String() == "l" {
+			if it := m.list.SelectedItem(); it != nil {
+				if d, ok := it.(dirItem); ok {
+					if m.collapsed[d.fullPath] {
+						delete(m.collapsed, d.fullPath)
+					} else {
+						m.collapsed[d.fullPath] = true
+					}
+					m.refreshRowsKeepCursor()
+					return m, nil
+				}
+			}
 		}
 	}
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
+}
+
+// refreshRowsKeepCursor rebuilds rows but preserves the cursor on the same
+// row by Path/fullPath identity. Used after toggle operations where the
+// cursor should stay where it is.
+func (m *FileListModel) refreshRowsKeepCursor() {
+	m.refreshRows()
+}
+
+// toggleFileSelection flips Selected on the FileItem with the given Path.
+func (m *FileListModel) toggleFileSelection(path string) {
+	for idx := range m.allItems {
+		if m.allItems[idx].Path == path {
+			m.allItems[idx].Selected = !m.allItems[idx].Selected
+			return
+		}
+	}
+}
+
+// toggleDirSelection toggles Selected on every file under the given directory
+// path. The new state is the inverse of the FIRST file's current state — so
+// pressing Space on a partially-selected dir collapses to "all selected" if
+// the first file was unselected, "all unselected" if it was selected. Empty
+// dirs are no-ops.
+func (m *FileListModel) toggleDirSelection(dirPath string) {
+	files := collectDirFiles(m.tree, dirPath)
+	if len(files) == 0 {
+		return
+	}
+	target := !files[0].Selected
+	want := make(map[string]struct{}, len(files))
+	for _, f := range files {
+		want[f.Path] = struct{}{}
+	}
+	for idx := range m.allItems {
+		if _, ok := want[m.allItems[idx].Path]; ok {
+			m.allItems[idx].Selected = target
+		}
+	}
+	// The tree caches FileItem snapshots from buildTree; rebuild so dim/
+	// connector renderers see the new Selected state.
+	m.tree = buildTree(m.allItems)
+}
+
+// expandAncestorsOfMatches uncollapses every ancestor of every matching file
+// so matches are always visible. Called on filter pattern change.
+func (m *FileListModel) expandAncestorsOfMatches() {
+	if m.filterPattern == "" {
+		return
+	}
+	matches := ApplyFilter(m.filterPattern, fileItemNames(m.allItems))
+	for _, mt := range matches {
+		dir := fileParentDir(m.allItems[mt.Index].Name)
+		for _, anc := range ancestorPaths(dir) {
+			delete(m.collapsed, anc)
+		}
+	}
 }
 
 // View renders the file list. If there are no items, the empty state is shown
@@ -349,29 +485,33 @@ func (m *FileListModel) SetSize(width, height int) {
 	}
 }
 
-// SelectedItem returns the currently selected FileItem and whether a selection exists.
-// Returns (FileItem{}, false) if the list is empty or selection is invalid.
+// SelectedItem returns the currently highlighted FileItem and whether the
+// cursor sits on a file (not a directory). Returns (FileItem{}, false) for
+// directories, empty lists, or cross-file rows.
 func (m FileListModel) SelectedItem() (FileItem, bool) {
 	item := m.list.SelectedItem()
 	if item == nil {
 		return FileItem{}, false
 	}
-	fi, ok := item.(FileItem)
-	return fi, ok
+	if f, ok := item.(fileTreeItem); ok {
+		return f.file, true
+	}
+	if fi, ok := item.(FileItem); ok {
+		// Defensive fallback: if a caller plumbed a raw FileItem in (e.g.,
+		// during cross-file flow restoration), still unwrap it.
+		return fi, true
+	}
+	return FileItem{}, false
 }
 
 // SelectedFileItem returns the currently selected FileItem including Rule and IsEncrypted.
-// Returns (FileItem{}, false) if the list is empty or selection is invalid.
+// Returns (FileItem{}, false) when the cursor sits on a directory or the list is empty.
 func (m FileListModel) SelectedFileItem() (FileItem, bool) {
-	item := m.list.SelectedItem()
-	if item == nil {
-		return FileItem{}, false
-	}
-	fi, ok := item.(FileItem)
-	return fi, ok
+	return m.SelectedItem()
 }
 
-// ItemCount returns the total number of items in the list.
+// ItemCount returns the total number of FILES in the list (directories excluded).
+// Used by AppModel for the status-bar item count.
 func (m FileListModel) ItemCount() int {
 	return len(m.allItems)
 }
@@ -402,9 +542,18 @@ func (m *FileListModel) ClearSelections() {
 	for idx := range m.allItems {
 		m.allItems[idx].Selected = false
 	}
-	listItems := make([]list.Item, len(m.allItems))
-	for idx, it := range m.allItems {
-		listItems[idx] = it
+	m.tree = buildTree(m.allItems)
+	m.refreshRows()
+}
+
+// copyBoolMap clones a map[string]bool. Returns nil on a nil input.
+func copyBoolMap(in map[string]bool) map[string]bool {
+	if in == nil {
+		return nil
 	}
-	m.list.SetItems(listItems)
+	out := make(map[string]bool, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
