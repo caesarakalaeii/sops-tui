@@ -214,12 +214,14 @@ type DetailKeyMap struct {
 	AddRecipient key.Binding
 	// RemoveRecipient opens the remove-recipient list for the current file (RCP-02).
 	RemoveRecipient key.Binding
+	// AddSecret opens the add-secret modal to insert a new key/value into the current file.
+	AddSecret key.Binding
 }
 
 // ShortHelp returns a concise set of bindings shown in the collapsed help footer.
 // Implements help.KeyMap.
 func (k DetailKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame, k.AddRecipient, k.RemoveRecipient}
+	return []key.Binding{k.Up, k.Down, k.Reveal, k.RevealAll, k.Edit, k.Back, k.Search, k.Help, k.Quit, k.Copy, k.Blame, k.AddRecipient, k.RemoveRecipient, k.AddSecret}
 }
 
 // FullHelp returns grouped bindings for the expanded help overlay.
@@ -228,17 +230,18 @@ func (k DetailKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.GoTop, k.GoBottom, k.HalfUp, k.HalfDown},
 		{k.Expand, k.Collapse, k.Back, k.Search, k.Info, k.Blame},
-		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy, k.AddRecipient, k.RemoveRecipient},
+		{k.Reveal, k.RevealAll, k.Edit, k.EditFile, k.Rotate, k.Copy, k.AddRecipient, k.RemoveRecipient, k.AddSecret},
 		{k.Help, k.Quit},
 	}
 }
 
 // HiddenFromMenu reports bindings that participate in the ? full-screen overlay
 // (FullHelp) but are suppressed from the persistent menu. Blame is the
-// canonical example — a 13-binding ShortHelp exceeds the 12-slot menu cap,
-// so the least-frequently-used binding is hidden (D-303, D-307).
+// canonical example — the 14-binding ShortHelp exceeds the 12-slot menu cap,
+// so the least-frequently-used bindings are hidden (D-303, D-307). AddSecret
+// (n) joins Blame (b) as hidden: both stay discoverable via the ? overlay.
 func (k DetailKeyMap) HiddenFromMenu() []key.Binding {
-	return []key.Binding{k.Blame}
+	return []key.Binding{k.Blame, k.AddSecret}
 }
 
 // DefaultDetailKeyMap is the default instance of DetailKeyMap with
@@ -324,6 +327,10 @@ var DefaultDetailKeyMap = DetailKeyMap{
 	RemoveRecipient: key.NewBinding(
 		key.WithKeys("d"),
 		key.WithHelp("d", "remove recipient"),
+	),
+	AddSecret: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "add secret"),
 	),
 }
 
@@ -622,6 +629,48 @@ func (k RecipientFormKeyMap) FullHelp() [][]key.Binding {
 // DefaultRecipientFormKeyMap is the default instance with description strings matching
 // the literal hint values returned before Phase 9 (description-string lock — TestRecipientFormHints stays green).
 var DefaultRecipientFormKeyMap = RecipientFormKeyMap{
+	Confirm: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("Enter", "confirm"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("Esc", "cancel"),
+	),
+}
+
+// AddSecretFormKeyMap holds keybindings for the add-secret modal overlay —
+// a two-field form (key path + value) for inserting a new secret into the
+// current file. Implements help.KeyMap via ShortHelp() and FullHelp().
+type AddSecretFormKeyMap struct {
+	// NextField moves focus between the key-path and value inputs (tab).
+	NextField key.Binding
+	// Confirm validates and submits the new key/value (enter).
+	Confirm key.Binding
+	// Cancel cancels the add-secret flow (esc).
+	Cancel key.Binding
+}
+
+// ShortHelp returns the bindings rendered in the persistent menu for the add-secret form state.
+// Implements help.KeyMap.
+func (k AddSecretFormKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.NextField, k.Confirm, k.Cancel}
+}
+
+// FullHelp returns grouped bindings for the expanded help overlay.
+// Implements help.KeyMap. Single group — AddSecretForm has only 3 bindings.
+func (k AddSecretFormKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.NextField, k.Confirm, k.Cancel},
+	}
+}
+
+// DefaultAddSecretFormKeyMap is the default instance of AddSecretFormKeyMap.
+var DefaultAddSecretFormKeyMap = AddSecretFormKeyMap{
+	NextField: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("Tab", "next field"),
+	),
 	Confirm: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("Enter", "confirm"),

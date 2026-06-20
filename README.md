@@ -2,7 +2,7 @@
 
 A k9s-inspired terminal UI for managing [SOPS](https://github.com/getsops/sops)-encrypted secrets.
 
-Browse, decrypt, edit, and rotate your SOPS secrets — all from the terminal.
+Browse, decrypt, edit, add, and rotate your SOPS secrets — all from the terminal.
 
 ## Features
 
@@ -10,8 +10,26 @@ Browse, decrypt, edit, and rotate your SOPS secrets — all from the terminal.
 - **Inspect** — View encrypted keys at a glance without decrypting
 - **Decrypt & View** — Reveal secret values on demand
 - **Edit** — Modify values with automatic re-encryption
+- **Add** — Insert a new key/value into a file (`n` in the detail view)
 - **Rotate** — Generate new random values for secrets
 - **k9s-style UX** — Keyboard-driven, vim-like navigation, command palette
+
+## Keybindings
+
+Press `?` in any view for the full, context-aware list. Common detail-view keys:
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Move down / up |
+| `enter` / `l` | Expand · `h` collapse |
+| `r` / `R` | Reveal / hide one · all values |
+| `e` / `E` | Edit value inline · in `$EDITOR` |
+| `n` | Add a new secret (key path + value) |
+| `X` | Rotate (generate a new random value) |
+| `a` / `d` | Add / remove an age recipient |
+| `ctrl+y` | Copy revealed value to clipboard |
+| `b` | Git history for the file |
+| `esc` | Back to the file list |
 
 ## Status
 

@@ -647,6 +647,49 @@ func TestRecipientListStateTransition(t *testing.T) {
 		"d with no recipients must flash 'No age recipients', got: %q", v.Content)
 }
 
+// TestAddSecretFormStateTransition verifies that pressing n from stateDetail
+// transitions to stateAddSecretForm.
+func TestAddSecretFormStateTransition(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2, cmd := m.Update(tea.KeyPressMsg{Code: 'n'})
+	v := m2.View()
+	assert.Contains(t, v.Content, "Add Secret",
+		"stateAddSecretForm must show 'Add Secret', got: %q", v.Content)
+	assert.NotNil(t, cmd, "stateAddSecretForm activation must return a non-nil cmd (focus)")
+}
+
+// TestEscFromAddSecretForm verifies that Esc from stateAddSecretForm returns to stateDetail.
+func TestEscFromAddSecretForm(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	m2 := send(t, m, tea.KeyPressMsg{Code: 'n'})
+	m3 := send(t, m2, tea.KeyPressMsg{Code: tea.KeyEsc})
+	v := m3.View()
+	assert.NotContains(t, v.Content, "Add Secret",
+		"Esc from stateAddSecretForm must dismiss the form, got: %q", v.Content)
+}
+
+// TestAddSecretConfirmShowsDiff verifies that entering a key/value and pressing
+// Enter routes the new secret into the diff-confirm overlay.
+func TestAddSecretConfirmShowsDiff(t *testing.T) {
+	m := modelInDetailWithRevealedLeaf(t)
+	// Open the add-secret form.
+	cur := send(t, m, tea.KeyPressMsg{Code: 'n'})
+	// Type the key path.
+	for _, r := range "api.token" {
+		cur = send(t, cur, tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	// Tab to the value field and type the value.
+	cur = send(t, cur, tea.KeyPressMsg{Code: tea.KeyTab})
+	for _, r := range "s3cret" {
+		cur = send(t, cur, tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	// Confirm.
+	cur = send(t, cur, tea.KeyPressMsg{Code: tea.KeyEnter})
+	v := cur.View()
+	assert.Contains(t, v.Content, "api.token",
+		"diff overlay must show the new secret's key path, got: %q", v.Content)
+}
+
 // TestBulkReKeyNoSelection verifies that pressing K with no selected files
 // flashes "Select files with space first".
 func TestBulkReKeyNoSelection(t *testing.T) {

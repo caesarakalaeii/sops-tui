@@ -72,7 +72,7 @@ func TestMenuHints_StateDetail(t *testing.T) {
 	m := buildAppModel(t)
 	m.state = stateDetail
 	hints := m.menuHints()
-	require.Equal(t, 13, len(hints), "Detail.Hints() returns 13 entries (one Visible=false)")
+	require.Equal(t, 14, len(hints), "Detail.Hints() returns 14 entries (two Visible=false)")
 }
 
 // TestMenuHints_StateMetadata — delegation.
@@ -198,6 +198,7 @@ func TestTitleForState_AllStates(t *testing.T) {
 		{"health", func(m *AppModel) { m.state = stateHealth }, "Health (0 findings)"},
 		{"recipientList", func(m *AppModel) { m.state = stateRecipientList }, "Recipients (0)"},
 		{"recipientForm", func(m *AppModel) { m.state = stateRecipientForm }, "RecipientForm"},
+		{"addSecretForm", func(m *AppModel) { m.state = stateAddSecretForm }, "AddSecret"},
 		{"formatMenu", func(m *AppModel) { m.state = stateFormatMenu }, "Format"},
 	}
 	for _, tc := range cases {

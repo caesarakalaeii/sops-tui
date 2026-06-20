@@ -37,6 +37,7 @@ var submodelFiles = []string{
 	"health.go",
 	"history.go",
 	"recipientform.go",
+	"addsecretform.go",
 	"infopanel.go", // Phase 8 D-219
 	"crumbs.go",    // Phase 8 D-219
 }
