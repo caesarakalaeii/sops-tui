@@ -162,6 +162,14 @@ func TestMenuHints_Drift(t *testing.T) {
 			expectedHintsWithSuppression(keys.DefaultFormatMenuKeyMap),
 			m.menuHints())
 	})
+
+	t.Run("stateAddSecretForm", func(t *testing.T) {
+		m := buildAppModel(t)
+		m.state = stateAddSecretForm
+		require.Equal(t,
+			expectedHintsWithSuppression(keys.DefaultAddSecretFormKeyMap),
+			m.menuHints())
+	})
 }
 
 // TestMenuGolden locks the rendered persistent menu per (state, IsSearchActive)
@@ -206,6 +214,7 @@ func TestMenuGolden(t *testing.T) {
 	run("recipient_form", func(m *AppModel) { m.state = stateRecipientForm })
 	run("recipient_list", func(m *AppModel) { m.state = stateRecipientList })
 	run("format_menu", func(m *AppModel) { m.state = stateFormatMenu })
+	run("add_secret_form", func(m *AppModel) { m.state = stateAddSecretForm })
 }
 
 // TestMenuGoldenNoPII enforces threat T-09-01: no golden file may capture

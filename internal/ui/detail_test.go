@@ -598,14 +598,14 @@ func TestRotateKeyOnArrayIndexed(t *testing.T) {
 		"must set correct block reason")
 }
 
-// TestDetailHints verifies DetailModel.Hints() returns 13 entries (matching
-// DetailKeyMap.ShortHelp()) with exactly one (Blame, "b") marked Visible=false
-// per D-09 12-slot curation.
+// TestDetailHints verifies DetailModel.Hints() returns 14 entries (matching
+// DetailKeyMap.ShortHelp()) with exactly two (Blame "b", AddSecret "n") marked
+// Visible=false per D-09 12-slot curation.
 func TestDetailHints(t *testing.T) {
 	m := ui.NewDetailModel("test.yaml", sampleTree(), 80, 24, true, "")
 	hints := m.Hints()
-	require.Equal(t, 13, len(hints),
-		"Detail must expose 13 hints from ShortHelp() before curation")
+	require.Equal(t, 14, len(hints),
+		"Detail must expose 14 hints from ShortHelp() before curation")
 
 	visible := 0
 	invisibleMnemonics := []string{}
@@ -618,6 +618,6 @@ func TestDetailHints(t *testing.T) {
 	}
 	require.Equal(t, 12, visible,
 		"Detail must curate to exactly 12 visible hints to fit the menu cap")
-	require.Equal(t, []string{"b"}, invisibleMnemonics,
-		"the only invisible hint must be Blame (b) per D-06")
+	require.Equal(t, []string{"b", "n"}, invisibleMnemonics,
+		"the invisible hints must be Blame (b) and AddSecret (n) per D-06")
 }

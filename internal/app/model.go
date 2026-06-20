@@ -71,6 +71,8 @@ const (
 	stateRecipientList
 	// stateBulkReKeyConfirm is the per-file confirmation during bulk re-key (RCP-03, D-06).
 	stateBulkReKeyConfirm
+	// stateAddSecretForm is the modal overlay for entering a new key/value to add to a file.
+	stateAddSecretForm
 )
 
 // StateDiff, StateEdit, StateFormatMenu, StateHistory are exported for tests to verify the constants exist.
@@ -85,6 +87,7 @@ const (
 	StateRecipientConfirm = stateRecipientConfirm
 	StateRecipientList    = stateRecipientList
 	StateBulkReKeyConfirm = stateBulkReKeyConfirm
+	StateAddSecretForm    = stateAddSecretForm
 )
 
 // FilesDiscoveredMsg carries the result of SOPS file discovery.
@@ -271,6 +274,11 @@ type AppModel struct {
 	// Phase 5 fields
 	health          ui.HealthModel
 	recipientForm   ui.RecipientFormModel
+	addSecretForm   ui.AddSecretFormModel // modal for adding a new key/value (stateAddSecretForm)
+	// addedSecretKeyPath is non-empty while an add-secret write is in flight;
+	// on ReEncryptDoneMsg success it triggers a re-parse so the new key surfaces
+	// in the detail tree (sops set created a key not yet present in m.detail).
+	addedSecretKeyPath string
 	bulkReKey       *bulkReKeyState  // nil when not in bulk re-key mode
 	recipientAction string           // "add", "remove", or "healthcheck" sentinel
 	recipientPubkey string           // pubkey being added/removed (for sops call after confirm)
@@ -339,6 +347,7 @@ func NewAppModel(env ui.EnvStatus, sopsYamlPath string, profile colorprofile.Pro
 		history:       ui.NewHistoryModel("", 0, 0),
 		metadata:      ui.NewMetadataModel(ui.MetadataContent{}, 0, 0),
 		recipientForm: ui.NewRecipientFormModel(0, 0),
+		addSecretForm: ui.NewAddSecretFormModel(0, 0, nil),
 		// Phase 10 D-419 + D-421: profile detected once at startup; palette
 		// computed once via ui.PaletteFor(profile) — pure-function path.
 		profile: profile,
@@ -418,6 +427,7 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.history.SetSize(w, h)
 		m.health.SetSize(w, h)
 		m.recipientForm.SetSize(w, h)
+		m.addSecretForm.SetSize(w, h)
 		m = m.refreshChromeCache()
 		return m, nil
 
@@ -622,6 +632,12 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Result of sops.SetKey or sops.EncryptFile subprocess call.
 		if msg.Err != nil {
 			m.status, _ = m.status.FlashErr("Re-encryption failed: " + msg.Err.Error())
+			m.addedSecretKeyPath = "" // clear in-flight add-secret marker on failure
+		} else if m.addedSecretKeyPath != "" {
+			// New secret added — the key is not yet in the detail tree, so a
+			// re-parse is dispatched below to surface it. Keep the marker set
+			// so the dispatch branch fires; it is cleared there.
+			m.status, _ = m.status.Flash("Secret added")
 		} else if m.rotateFormat != 0 {
 			// Rotation completed — flash format-specific message
 			m.status, _ = m.status.Flash("Rotated to " + ui.FormatLabel(m.rotateFormat))
@@ -641,6 +657,31 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.state = stateDetail
 		m = m.refreshChromeCache()
+		// Add-secret success: re-parse the file so the newly created key appears
+		// in the detail tree (sops set added a key not present in m.detail).
+		if msg.Err == nil && m.addedSecretKeyPath != "" {
+			m.addedSecretKeyPath = ""
+			filePath := m.currentFile.AbsPath
+			rule := m.currentFile.Rule
+			isEnc := m.currentFile.IsEncrypted
+			parseCmd := func() tea.Msg {
+				parsed, err := parser.ParseFile(filePath, rule, isEnc)
+				return FilesParsedMsg{Parsed: parsed, Err: err}
+			}
+			if m.sopsYamlPath != "" && m.gitRepoRoot != "" {
+				relPaths := make([]string, len(m.files))
+				for i, f := range m.files {
+					relPaths[i] = f.Name
+				}
+				sopsDir := filepath.Dir(m.sopsYamlPath)
+				gitCmd := func() tea.Msg {
+					statuses, err := gitpkg.GetFileStatuses(sopsDir, relPaths)
+					return GitStatusMsg{Statuses: statuses, GitAvailable: true, Err: err}
+				}
+				return m, tea.Batch(parseCmd, gitCmd)
+			}
+			return m, parseCmd
+		}
 		// After write operations, refresh git status to reflect any new uncommitted changes (D-11).
 		if msg.Err == nil && m.sopsYamlPath != "" && m.gitRepoRoot != "" {
 			relPaths := make([]string, len(m.files))
@@ -854,6 +895,35 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		// stateAddSecretForm: delegate to AddSecretFormModel; on confirm route the
+		// new key/value through the diff-confirm → sops set flow (which creates the key).
+		if m.state == stateAddSecretForm {
+			var cmd tea.Cmd
+			m.addSecretForm, cmd = m.addSecretForm.Update(msg)
+			if m.addSecretForm.Confirmed() {
+				keyPath := m.addSecretForm.KeyPath()
+				newValue := m.addSecretForm.Value()
+				w, h := bodyDims(m)
+				m.diff = ui.NewDiffModel(
+					"Add secret: "+keyPath,
+					[]ui.DiffEntry{{KeyPath: keyPath, OldValue: "", NewValue: newValue}},
+					w, h,
+				)
+				m.editFilePath = m.currentFile.AbsPath
+				m.addedSecretKeyPath = keyPath // marks a re-parse after the write succeeds
+				m.prevState = stateDetail
+				m.state = stateDiff
+				m = m.refreshChromeCache()
+				return m, nil
+			}
+			if m.addSecretForm.Cancelled() {
+				m.state = m.prevState
+				m = m.refreshChromeCache()
+				return m, nil
+			}
+			return m, cmd
+		}
+
 		// stateRecipientList: numbered key selection for remove-recipient (D-03).
 		if m.state == stateRecipientList {
 			switch msg.String() {
@@ -1014,6 +1084,7 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.diff.Cancelled() {
 				m.editorEditedContent = nil // T-03-12: clear on cancel too
+				m.addedSecretKeyPath = ""   // discard pending add-secret on cancel
 				m.state = m.prevState
 				m.status, _ = m.status.Flash("Cancelled")
 				m = m.refreshChromeCache()
@@ -1244,6 +1315,20 @@ func (m AppModel) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prevState = m.state
 				m.state = stateRecipientForm
 				m.recipientAction = "add"
+				m = m.refreshChromeCache()
+				return m, cmd
+			}
+		}
+
+		// n key: open add-secret form from stateDetail.
+		if key.Matches(msg, keys.DefaultDetailKeyMap.AddSecret) {
+			if m.state == stateDetail && !m.detail.IsSearchActive() {
+				w, h := bodyDims(m)
+				existing := collectKeyPaths(m.detail.Nodes(), "")
+				m.addSecretForm = ui.NewAddSecretFormModel(w, h, existing)
+				cmd := m.addSecretForm.Activate()
+				m.prevState = m.state
+				m.state = stateAddSecretForm
 				m = m.refreshChromeCache()
 				return m, cmd
 			}
@@ -1574,6 +1659,8 @@ func (m AppModel) renderBody() string {
 		return m.health.View()
 	case stateRecipientForm:
 		return m.recipientForm.View()
+	case stateAddSecretForm:
+		return m.addSecretForm.View()
 	case stateRecipientConfirm:
 		return m.diff.View()
 	case stateRecipientList:
@@ -1772,6 +1859,8 @@ func (m AppModel) menuHints() []keys.MenuHint {
 		return m.health.Hints()
 	case stateRecipientForm:
 		return m.recipientForm.Hints()
+	case stateAddSecretForm:
+		return m.addSecretForm.Hints()
 	case stateRecipientList:
 		return keys.HintsFromBindings(keys.DefaultRecipientListKeyMap.ShortHelp())
 	case stateFormatMenu:
@@ -1805,6 +1894,8 @@ func (m AppModel) titleForState() string {
 		return fmt.Sprintf("Recipients (%d)", len(m.recipientList))
 	case stateRecipientForm:
 		return "RecipientForm"
+	case stateAddSecretForm:
+		return "AddSecret"
 	case stateFormatMenu:
 		return "Format"
 	}
