@@ -20,7 +20,10 @@
   outputs =
     # `...` rather than a closed { self, nixpkgs }: adding a second input later
     # would otherwise fail with "called with unexpected argument 'self'".
-    { nixpkgs, ... }:
+    #
+    # `self` is load-bearing, not decoration: it is the only anchor a wrapper
+    # can carry that a `cd` cannot move. See rootPreamble.
+    { self, nixpkgs, ... }:
     let
       lib = nixpkgs.lib;
 
@@ -151,50 +154,186 @@
       # `build` and `test`, which drops away once ~/go/pkg/mod is warm.
       #
       # `text` is bash under `set -euo pipefail`, shellcheck'd at BUILD time, and
-      # it runs in the caller's current directory so an agent can test
-      # uncommitted edits.
-      commands = pkgs: {
-        build = {
-          # Produces the real artifact at the repo root, where .gitignore
-          # already expects it (`/sops-tui`). -trimpath is the reproducible-build
-          # convention recorded in CLAUDE.md; CGO_ENABLED=0 comes from envVars so
-          # it applies to every verb, not just this one.
+      # every verb acts on $REPO_ROOT -- THIS repo -- no matter which directory
+      # it was invoked from. It must never read or write a path outside it. See
+      # rootPreamble for how $REPO_ROOT is pinned, and requireWorkTree below for
+      # what the two writing verbs do when there is no working tree to write to.
+      commands =
+        pkgs:
+        let
+          # `fmt` and `build` MUTATE. $REPO_ROOT is the live working tree when
+          # the caller stands in a checkout and the immutable store copy of the
+          # tracked files otherwise -- and writing to the latter is a
+          # permission-denied from /nix/store, dressed up as twelve confusing
+          # gofmt errors (this tree is genuinely not gofmt-clean, so it would
+          # actually try). The one thing they must never do instead is fall back
+          # to the caller's directory: that is the defect this whole preamble
+          # exists to kill. So they stop, and say what to do.
           #
-          # go build takes its flags BEFORE the package argument, so "$@" lands
-          # after the package and is only useful for naming extra packages --
-          # pass build flags via GOFLAGS instead.
-          description = "(network on first run) compile ./cmd/sops-tui to $REPO_ROOT/sops-tui";
-          text = ''
-            go build -trimpath -o "$REPO_ROOT/sops-tui" "$REPO_ROOT/cmd/sops-tui" "$@"
+          # Read-only verbs (`lint`, `test`) need no such guard -- the store
+          # copy answers them correctly from any cwd, which is the point: a lint
+          # gate that cannot be run from CI's cwd is a lint gate that lies.
+          requireWorkTree = verb: ''
+            if [ "$REPO_ROOT" = "$FLAKE_SRC" ]; then
+              echo "dev-${verb}: refusing to run -- you are not standing in a sops-tui checkout, and ${verb} writes files." >&2
+              echo "dev-${verb}: the only tree visible from here is this flake's read-only source copy at $REPO_ROOT." >&2
+              echo "dev-${verb}: cd into a checkout (or 'nix develop <checkout>') and run it again. Your current directory was left alone." >&2
+              exit 1
+            fi
           '';
+
+          # `dev-run` is the one verb whose subject IS the caller's directory:
+          # the TUI discovers .sops.yaml from its own cwd
+          # (validator.DefaultOptions -> os.Getwd, internal/validator/startup.go)
+          # and takes no path argument, so pointing it at this repo -- which has
+          # no .sops.yaml -- would make the verb useless. Only the COMPILE gets
+          # anchored, and that needs a helper:
+          #   * `go run "$REPO_ROOT/cmd/sops-tui"` (what this used to be) is
+          #     rejected outright from anywhere else with "directory ... outside
+          #     main module or its selected dependencies" -- a Go package
+          #     pattern is resolved against the module in the CURRENT directory,
+          #     so it cannot be absolute.
+          #   * `go -C "$REPO_ROOT" run ./cmd/sops-tui` chdirs the go process,
+          #     and the built binary inherits that cwd -- verified: the child
+          #     reports $REPO_ROOT, not the caller's directory.
+          #   * `-exec` is Go's documented hook for handing the freshly built
+          #     binary to another program (normally qemu or wine). Two lines is
+          #     all it takes to step back into the directory the user was in,
+          #     arguments intact. It also keeps `run` working from outside a
+          #     checkout, where $REPO_ROOT is read-only: `go run` links into the
+          #     build cache, never into the module directory.
+          runInCallerDir = pkgs.writeShellApplication {
+            name = "dev-run-in-caller-dir";
+            meta.description = "internal to dev-run: exec a go-built binary back in the caller's directory";
+            text = ''
+              cd "$CALLER_PWD"
+              exec "$@"
+            '';
+          };
+        in
+        {
+          build = {
+            # Produces the real artifact at the repo root, where .gitignore
+            # already expects it (`/sops-tui`). -trimpath is the
+            # reproducible-build convention recorded in CLAUDE.md; CGO_ENABLED=0
+            # comes from envVars so it applies to every verb, not just this one.
+            #
+            # `cd` first, then a relative package: see runInCallerDir above for
+            # why the absolute `"$REPO_ROOT/cmd/sops-tui"` this used to pass
+            # could only ever work from inside the module.
+            #
+            # go build takes its flags BEFORE the package argument, so "$@"
+            # lands after the package and is only useful for naming extra
+            # packages -- pass build flags via GOFLAGS instead.
+            description = "(network on first run) compile ./cmd/sops-tui to $REPO_ROOT/sops-tui";
+            text = ''
+              ${requireWorkTree "build"}
+              cd "$REPO_ROOT"
+              go build -trimpath -o "$REPO_ROOT/sops-tui" ./cmd/sops-tui "$@"
+            '';
+          };
+          test = {
+            # `./...` is relative to the process cwd and the main module is the
+            # one containing it, so the `cd` is what makes this THIS repo's test
+            # suite rather than the test suite of whatever module the caller
+            # happened to be sitting in.
+            #
+            # Package list first, then "$@": `go test` explicitly documents
+            # "[packages] [build/test flags & test binary flags]", so
+            # `nix run .#test -- -run TestFoo -v` works.
+            description = "(network on first run) go test ./... -- sops and age-keygen are on PATH, so the e2e tests do not self-skip";
+            text = ''
+              cd "$REPO_ROOT"
+              go test ./... "$@"
+            '';
+          };
+          lint = {
+            # golangci-lint defaults to `./...` from the cwd, which is exactly
+            # the false-green machine this `cd` disarms: invoked from an
+            # unrelated directory it used to lint zero Go files and report "0
+            # issues", exit 0, while the same command inside the repo reported
+            # 20. Now both report 20. `--path-mode` is deliberately left alone;
+            # relative paths in the output are relative to $REPO_ROOT.
+            description = "golangci-lint over the module";
+            text = ''
+              cd "$REPO_ROOT"
+              golangci-lint run "$@"
+            '';
+          };
+          fmt = {
+            # The most dangerous verb in the file: `go fmt` shells out to
+            # `gofmt -l -w`, so before the `cd` (and before requireWorkTree)
+            # this rewrote the Go sources of whatever directory it was invoked
+            # from. Both guards are needed -- the cd alone would have turned
+            # "reformat the caller's tree" into "reformat /nix/store", which
+            # only fails by luck.
+            #
+            # The default is the whole tree, and an argument replaces it rather
+            # than being appended: `go fmt` is documented as
+            # "go fmt [-n] [-x] [packages]" and stops parsing flags at the first
+            # package, so the old `./... "$@"` made every flag a syntax error
+            # ("named files must be .go files: -n"). Now `dev-fmt -n ./...`
+            # dry-runs and `dev-fmt ./internal/ui` narrows, both relative to the
+            # repo root, never to the caller.
+            description = "gofmt the tree, or only the packages you name (rewrites files)";
+            text = ''
+              ${requireWorkTree "fmt"}
+              cd "$REPO_ROOT"
+              go fmt "''${@:-./...}"
+            '';
+          };
+          run = {
+            # Bubble Tea needs a real terminal: under `nix run` with no tty this
+            # exits with an open/ioctl error rather than hanging, which is the
+            # failure mode we want. `sops` and the clipboard helpers are already
+            # on PATH from the toolchain, but an age key at
+            # ~/.config/sops/age/keys.txt and a .sops.yaml in the working
+            # directory are the user's to provide -- the startup validator
+            # reports both as soft warnings.
+            #
+            # CALLER_PWD is exported rather than passed inside -exec: the value
+            # is a path and -exec splits its argument on spaces.
+            description = "start the TUI in the current directory (needs a real terminal; run it from a repo that has a .sops.yaml)";
+            text = ''
+              CALLER_PWD="$PWD"
+              export CALLER_PWD
+              cd "$REPO_ROOT"
+              go run -exec ${runInCallerDir}/bin/dev-run-in-caller-dir ./cmd/sops-tui "$@"
+            '';
+          };
         };
-        test = {
-          # Package list first, then "$@": `go test` explicitly documents
-          # "[packages] [build/test flags & test binary flags]", so
-          # `nix run .#test -- -run TestFoo -v` works.
-          description = "(network on first run) go test ./... -- sops and age-keygen are on PATH, so the e2e tests do not self-skip";
-          text = ''go test ./... "$@"'';
-        };
-        lint = {
-          description = "golangci-lint over the module";
-          text = ''golangci-lint run "$@"'';
-        };
-        fmt = {
-          description = "gofmt the tree (rewrites files)";
-          text = ''go fmt ./... "$@"'';
-        };
-        run = {
-          # Bubble Tea needs a real terminal: under `nix run` with no tty this
-          # exits with an open/ioctl error rather than hanging, which is the
-          # failure mode we want. `sops` and the clipboard helpers are already
-          # on PATH from the toolchain, but an age key at
-          # ~/.config/sops/age/keys.txt and a .sops.yaml in the working
-          # directory are the user's to provide -- the startup validator
-          # reports both as soft warnings.
-          description = "start the TUI (needs a real terminal; run it from a repo that has a .sops.yaml)";
-          text = ''go run "$REPO_ROOT/cmd/sops-tui" "$@"'';
-        };
-      };
+
+      # ======================================================================
+      # PER-REPO BLOCK 5 -- recognising a checkout of THIS repo
+      # ======================================================================
+      # $REPO_ROOT prefers the live working tree over the immutable store copy,
+      # but only when the caller is standing in a checkout of THIS repo: `git
+      # rev-parse --show-toplevel` answers with whatever repo the caller happens
+      # to be in, which may be somebody else's entirely, and `dev-fmt` rewrites
+      # whatever it is pointed at. Only the repo can answer "is this me", so the
+      # answer lives here rather than in the generic machinery.
+      #
+      # For a Go module that answer is the module path on the first line of
+      # go.mod: unique to this repo, and the one line in the file that never
+      # changes. (Elsewhere in the fleet: the name field in pyproject.toml or
+      # package.json.) Deliberately NOT comparing whole files or git revisions
+      # -- both go stale the moment you edit anything, and a stale probe would
+      # make dev-fmt refuse to write to the very checkout it is standing in.
+      #
+      # A second clone, or a `git worktree`, of this same repo therefore also
+      # counts as "me" -- intended: the checkout you are standing in is the one
+      # you meant, and it is the only one whose uncommitted edits you can see.
+      # What this rules out is the case that forced the rewrite: a directory that
+      # is not this repo at all.
+      #
+      # $1 is the candidate directory, $2 the store copy to compare it against.
+      # Non-zero means "not this repo", and the caller then keeps the store copy.
+      isThisRepo = ''
+        [ -f "$1/go.mod" ] && [ -f "$2/go.mod" ] || return 1
+        read -r candidateModule < "$1/go.mod" || return 1
+        read -r flakeModule < "$2/go.mod" || return 1
+        [ -n "$flakeModule" ] && [ "$candidateModule" = "$flakeModule" ]
+      '';
 
       # ======================================================================
       # GENERIC MACHINERY -- byte-identical across the fleet, do not edit
@@ -210,14 +349,55 @@
           export LD_LIBRARY_PATH="${lib.makeLibraryPath (nativeLibs pkgs)}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
         '';
 
-      # Every command gets $REPO_ROOT. `nix run` and `nix develop` both start in
-      # whatever directory they were invoked from, so a bare relative path
-      # silently acts on the wrong tree as soon as an agent works from a
-      # subdirectory. Note we do NOT cd there: commands act on the caller's cwd
-      # on purpose.
+      # Every command gets $REPO_ROOT, and $REPO_ROOT is THIS repo -- never
+      # "whatever directory the caller happened to be standing in".
+      #
+      # This was `git rev-parse --show-toplevel 2>/dev/null || pwd`, under a
+      # comment claiming the commands act on the caller's cwd on purpose. Both
+      # halves of what that bought were reproduced from an unrelated directory
+      # before this replacement was written:
+      #   * `nix run <flake>#fmt` reformatted the CALLER's Go files. `go fmt`
+      #     shells out to `gofmt -l -w`; it mutates.
+      #   * `nix run <flake>#lint` printed "0 issues" and exited 0, having
+      #     inspected no Go files at all, while the same command inside the repo
+      #     exited 1 with 20 findings. The flake-URL form is exactly what CI and
+      #     a cold agent use, so the gate that mattered was the lying one.
+      #
+      # Two anchors exist and both are needed:
+      #   $FLAKE_SRC -- every git-TRACKED file of this repo, copied into the
+      #     store when the flake was evaluated. Identical from every cwd,
+      #     immutable, and re-copied on each `nix run`, so never stale. Correct
+      #     for `lint` and `test`; useless to anything that writes.
+      #   the live working tree -- the only thing `fmt` can rewrite, and the
+      #     only tree that shows edits which are not committed yet. Knowable
+      #     only at runtime, and only when the caller is standing in it: a store
+      #     path cannot be mapped back to the checkout it was copied from, which
+      #     is why this cannot be a one-liner.
+      # So: the working tree when the caller is in a checkout of THIS repo
+      # (isThisRepo, which git alone cannot decide), the store copy otherwise,
+      # and the caller's cwd never. The two writing verbs additionally refuse
+      # rather than aim at /nix/store -- requireWorkTree, in the command map.
+      #
+      # The price, stated plainly: interpolating `self` makes every wrapper
+      # depend on the source snapshot, so the first `nix run` after a tracked
+      # edit rebuilds a wrapper -- a writeTextFile plus shellcheck, well under a
+      # second. Untracked files are invisible in the store copy, so from outside
+      # a checkout the read-only verbs see the tracked tree: exactly what the
+      # flake reference asked for, and the reason `git add` comes before `nix`.
       rootPreamble = ''
-        REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-        export REPO_ROOT
+        FLAKE_SRC=${lib.escapeShellArg "${self}"}
+        REPO_ROOT="$(
+          isThisRepo() {
+            ${isThisRepo}
+          }
+          callerRoot="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+          if [ -n "$callerRoot" ] && isThisRepo "$callerRoot" "$FLAKE_SRC"; then
+            printf '%s\n' "$callerRoot"
+          else
+            printf '%s\n' "$FLAKE_SRC"
+          fi
+        )"
+        export FLAKE_SRC REPO_ROOT
       '';
 
       # One derivation per command, reused by both `apps` and the dev shell, so
