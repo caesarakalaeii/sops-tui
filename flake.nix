@@ -163,11 +163,12 @@
         let
           # `fmt` and `build` MUTATE. $REPO_ROOT is the live working tree when
           # the caller stands in a checkout and the immutable store copy of the
-          # tracked files otherwise -- and writing to the latter is a
-          # permission-denied from /nix/store, dressed up as twelve confusing
-          # gofmt errors (this tree is genuinely not gofmt-clean, so it would
-          # actually try). The one thing they must never do instead is fall back
-          # to the caller's directory: that is the defect this whole preamble
+          # tracked files otherwise -- and the store copy cannot be written to.
+          # Verified rather than assumed: `go fmt` there does try, and answers
+          # with `open internal/app/model.go.<random>: read-only file system`
+          # once per unformatted file (this tree is not gofmt-clean today, so it
+          # would really try). The one thing these two must never do instead is
+          # fall back to the caller's directory -- the defect this whole preamble
           # exists to kill. So they stop, and say what to do.
           #
           # Read-only verbs (`lint`, `test`) need no such guard -- the store
