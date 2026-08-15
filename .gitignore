@@ -29,3 +29,8 @@ Thumbs.db
 
 # Runtime debug logs
 tea_debug.log
+
+# Nix
+/result
+/result-*
+.direnv/
